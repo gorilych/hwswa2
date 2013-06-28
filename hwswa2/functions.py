@@ -10,18 +10,25 @@ __version__ = '0.01'
 
 from hwswa2.globals import (apppath,configspec,config,exitcode)
 
-##################################
-### Main function
-def main():
-  config = read_configuration()
-  logger = init_logger()
-  logger.info("Application started")
-  logger.debug("Configuration: %s" % config )
-  config['servers'] = yaml.load(open(config['serversfile']))['servers']
-  logger.debug("Read info from servers file: %s" % config['servers'])
-  config['command']()
-  logger.info("Application finished")
+def exitapp():
   exit(exitcode)
+
+def info(msg):
+  config['logger'].info(msg)
+
+def debug(msg):
+  config['logger'].debug(msg)
+
+def read_servers():
+  config['servers']  = yaml.load(open(config['serversfile']))['servers']
+  debug("Read info from servers file: %s" % config['servers'])
+
+def read_networks():
+  config['networks'] = yaml.load(open(config['networksfile']))['networks']
+  debug("Read info from networks file: %s" % config['networks'])
+
+def run_command():
+  config['command']()
 
 ##################################
 ### Reads configuration from command line args and main.cfg
@@ -83,26 +90,22 @@ def read_configuration():
 ##################################
 ### Check only specified servers
 def check():
-  logger = logging.getLogger()
-  logger.debug("Checking servers: %s" % config['servernames'])
+  debug("Checking servers: %s" % config['servernames'])
 
 ##################################
 ### Check all servers
 def checkall():
-  logger = logging.getLogger()
-  logger.debug("Checking all servers")
+  debug("Checking all servers")
 
 ##################################
 ### Prepare only specified servers
 def prepare():
-  logger = logging.getLogger()
-  logger.debug("Preparing servers: %s" % config['servernames'])
+  debug("Preparing servers: %s" % config['servernames'])
 
 ##################################
 ### Prepare all servers
 def prepareall():
-  logger = logging.getLogger()
-  logger.debug("Preparing all servers")
+  debug("Preparing all servers")
 
 
 
@@ -110,10 +113,9 @@ def prepareall():
 ### Initializes logger
 def init_logger():
   logging.basicConfig(filename=config['logfile'], filemode = 'a', level=logging.INFO,
-                      format="%(asctime)s %(levelname)s %(filename)s %(funcName)s %(message)s")
-  logger = logging.getLogger()
+                      format="%(asctime)s %(levelname)s %(message)s")
+  config['logger'] = logging.getLogger()
   if config['debug']:
-    logger.setLevel(logging.DEBUG)
-  return logger  
+    config['logger'].setLevel(logging.DEBUG)
 
 
