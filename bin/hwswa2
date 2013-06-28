@@ -1,0 +1,16 @@
+#!/bin/bash
+
+LANG=C
+
+SCRIPTFILE="$0"
+if ! [ -L "$SCRIPTFILE" ]; then
+ BINPATH="$(cd $(dirname "$SCRIPTFILE"); pwd)"
+else
+ BINPATH="$(cd $(dirname "$(readlink "$SCRIPTFILE")"); pwd)"
+fi
+export BINPATH
+
+export PYTHONPATH=$BINPATH/../libs
+
+exec python "$BINPATH/../hwswa2/main.py" "$@"
+
