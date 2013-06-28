@@ -20,7 +20,7 @@ config   = { 'configdir'    : apppath + '/' + 'config',
              'check_reboot' : False }
 config['configfile']   = config['configdir'] + '/' + 'main.cfg'
 config['serversfile']  = config['configdir'] + '/' + 'servers'
-config['networksfile'] = config['configdir'] + '/' + 'networks',
+config['networksfile'] = config['configdir'] + '/' + 'networks'
 config['logfile']      = config['logdir']    + '/' + 'hwswa2.log'
 config['reportsdir']   = config['logdir']    + '/' + 'reports'
 
