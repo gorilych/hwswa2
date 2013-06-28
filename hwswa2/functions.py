@@ -106,6 +106,11 @@ def read_configuration():
 ### Check only specified servers
 def check():
   debug("Checking servers: %s" % config['servernames'])
+  allnames = [ elem['name'] for elem in config['servers'] ]
+  for name in config['servernames']:
+    if not name in allnames:
+      error("Cannot find server %s in servers list" % name)
+      exitapp(1)
 
 ##################################
 ### Check all servers
@@ -116,6 +121,11 @@ def checkall():
 ### Prepare only specified servers
 def prepare():
   debug("Preparing servers: %s" % config['servernames'])
+  allnames = [ elem['name'] for elem in config['servers'] ]
+  for name in config['servernames']:
+    if not name in allnames:
+      error("Cannot find server %s in servers list" % name)
+      exitapp(1)
 
 ##################################
 ### Prepare all servers
