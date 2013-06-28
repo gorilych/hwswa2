@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import sys
 import argparse
 import logging
@@ -116,6 +117,8 @@ def prepareall():
 ##################################
 ### Initializes logger
 def init_logger():
+  if not os.path.exists(os.path.dirname(config['logfile'])):
+    os.makedirs(os.path.dirname(config['logfile']))
   logging.basicConfig(filename=config['logfile'], filemode = 'a', level=logging.INFO,
                       format="%(asctime)s %(levelname)s %(message)s")
   config['logger'] = logging.getLogger()
