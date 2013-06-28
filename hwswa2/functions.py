@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import sys
 import argparse
 import logging
 from configobj import ConfigObj
@@ -10,7 +11,7 @@ __version__ = '0.01'
 
 from hwswa2.globals import (apppath,configspec,config,exitcode)
 
-def exitapp():
+def exitapp(exitcode=exitcode):
   exit(exitcode)
 
 def info(msg):
@@ -18,6 +19,9 @@ def info(msg):
 
 def debug(msg):
   config['logger'].debug(msg)
+
+def error(msg):
+  sys.stderr.write(msg + '\n')
 
 def read_servers():
   config['servers']  = yaml.load(open(config['serversfile']))['servers']
