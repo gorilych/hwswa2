@@ -27,10 +27,20 @@ def error(msg):
 def read_servers():
   config['servers']  = yaml.load(open(config['serversfile']))['servers']
   debug("Read info from servers file: %s" % config['servers'])
+  # check for dups
+  names = [ elem['name'] for elem in config['servers'] ]
+  if len(names) != len(set(names)):
+    error("Found duplicates in servers file! Exiting ...")
+    exitapp(1)
 
 def read_networks():
   config['networks'] = yaml.load(open(config['networksfile']))['networks']
   debug("Read info from networks file: %s" % config['networks'])
+  # check for dups
+  names = [ elem['name'] for elem in config['networks'] ]
+  if len(names) != len(set(names)):
+    error("Found duplicates in networks file! Exiting ...")
+    exitapp(1)
 
 def run_command():
   config['command']()
