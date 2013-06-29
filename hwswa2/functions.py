@@ -12,10 +12,7 @@ import hwswa2.commands as commands
 
 __version__ = '0.01'
 
-from hwswa2.globals import (apppath,configspec,config,exitcode)
-
-def exitapp(exitcode=exitcode):
-  exit(exitcode)
+from hwswa2.globals import apppath, configspec, config
 
 def info(msg):
   config['logger'].info(msg)
@@ -33,7 +30,7 @@ def read_servers():
   names = [ elem['name'] for elem in config['servers'] ]
   if len(names) != len(set(names)):
     error("Found duplicates in servers file! Exiting ...")
-    exitapp(1)
+    exit(1)
 
 def read_networks():
   config['networks'] = yaml.load(open(config['networksfile']))['networks']
@@ -42,7 +39,7 @@ def read_networks():
   names = [ elem['name'] for elem in config['networks'] ]
   if len(names) != len(set(names)):
     error("Found duplicates in networks file! Exiting ...")
-    exitapp(1)
+    exit(1)
 
 def run_command():
   config['command']()
@@ -106,7 +103,6 @@ def read_configuration():
   # update defaults by values from command line args
   # values from command line take precedence over configuration file options
   config.update(vars(args))
-  return config  
 
 ##################################
 ### Initializes logger

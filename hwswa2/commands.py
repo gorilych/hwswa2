@@ -10,7 +10,7 @@ def check():
   for name in config['servernames']:
     if not name in allnames:
       hwswa2.functions.error("Cannot find server %s in servers list" % name)
-      hwswa2.functions.exitapp(1)
+      exit(1)
 
 def checkall():
   """Check all servers"""
@@ -23,7 +23,7 @@ def prepare():
   for name in config['servernames']:
     if not name in allnames:
       hwswa2.functions.error("Cannot find server %s in servers list" % name)
-      hwswa2.functions.exitapp(1)
+      exit(1)
 
 def prepareall():
   """Prepare all servers"""
@@ -35,5 +35,5 @@ def shell():
   allnames = [ elem['name'] for elem in config['servers'] ]
   if not config['servername'] in allnames:
     hwswa2.functions.error("Cannot find server %s in servers list" % config['servername'])
-    hwswa2.functions.exitapp(1)
+    exit(1)
 
