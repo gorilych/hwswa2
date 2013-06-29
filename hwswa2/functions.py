@@ -1,27 +1,16 @@
 #!/usr/bin/python
 
-import os
-import sys
 import argparse
 import logging
 from configobj import ConfigObj
 from validate import Validator
 import yaml
-import hwswa2.commands as commands
-
-
-__version__ = '0.01'
 
 from hwswa2.globals import apppath, configspec, config
+from hwswa2.log import info, debug, error
+import hwswa2.commands as commands
 
-def info(msg):
-  config['logger'].info(msg)
-
-def debug(msg):
-  config['logger'].debug(msg)
-
-def error(msg):
-  sys.stderr.write(msg + '\n')
+__version__ = '0.01'
 
 def read_servers():
   config['servers']  = yaml.load(open(config['serversfile']))['servers']
@@ -103,16 +92,4 @@ def read_configuration():
   # update defaults by values from command line args
   # values from command line take precedence over configuration file options
   config.update(vars(args))
-
-##################################
-### Initializes logger
-def init_logger():
-  if not os.path.exists(os.path.dirname(config['logfile'])):
-    os.makedirs(os.path.dirname(config['logfile']))
-  logging.basicConfig(filename=config['logfile'], filemode = 'a', level=logging.INFO,
-                      format="%(asctime)s %(levelname)s %(message)s")
-  config['logger'] = logging.getLogger()
-  if config['debug']:
-    config['logger'].setLevel(logging.DEBUG)
-
 
