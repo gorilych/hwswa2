@@ -109,45 +109,6 @@ def read_configuration():
   return config  
 
 ##################################
-### Check only specified servers
-def check():
-  debug("Checking servers: %s" % config['servernames'])
-  allnames = [ elem['name'] for elem in config['servers'] ]
-  for name in config['servernames']:
-    if not name in allnames:
-      error("Cannot find server %s in servers list" % name)
-      exitapp(1)
-
-##################################
-### Check all servers
-def checkall():
-  debug("Checking all servers")
-
-##################################
-### Prepare only specified servers
-def prepare():
-  debug("Preparing servers: %s" % config['servernames'])
-  allnames = [ elem['name'] for elem in config['servers'] ]
-  for name in config['servernames']:
-    if not name in allnames:
-      error("Cannot find server %s in servers list" % name)
-      exitapp(1)
-
-##################################
-### Prepare all servers
-def prepareall():
-  debug("Preparing all servers")
-
-##################################
-### Open interactive shell to specific server
-def shell():
-  debug("Opening interactive shell to server %s" % config['servername'])
-  allnames = [ elem['name'] for elem in config['servers'] ]
-  if not config['servername'] in allnames:
-    error("Cannot find server %s in servers list" % config['servername'])
-    exitapp(1)
-
-##################################
 ### Initializes logger
 def init_logger():
   if not os.path.exists(os.path.dirname(config['logfile'])):
