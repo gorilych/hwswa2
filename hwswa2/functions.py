@@ -7,6 +7,8 @@ import logging
 from configobj import ConfigObj
 from validate import Validator
 import yaml
+import hwswa2.commands as commands
+
 
 __version__ = '0.01'
 
@@ -65,21 +67,21 @@ def read_configuration():
 
   parser_check = subparsers.add_parser('check', help='check specific servers')
   parser_check.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
-  parser_check.set_defaults(command=check)
+  parser_check.set_defaults(command=commands.check)
 
   parser_prepare = subparsers.add_parser('prepare', help='prepare specific servers')
   parser_prepare.add_argument('servernames', nargs='+', help='server name to prepare', metavar='server')
-  parser_prepare.set_defaults(command=prepare)
+  parser_prepare.set_defaults(command=commands.prepare)
 
   parser_checkall = subparsers.add_parser('checkall', help='check all servers', add_help=False)
-  parser_checkall.set_defaults(command=checkall)
+  parser_checkall.set_defaults(command=commands.checkall)
 
   parser_prepareall = subparsers.add_parser('prepareall', help='prepare all servers', add_help=False)
-  parser_prepareall.set_defaults(command=prepareall)
+  parser_prepareall.set_defaults(command=commands.prepareall)
 
   parser_shell = subparsers.add_parser('shell', help='open shell to server')
   parser_shell.add_argument('servername', metavar='server')
-  parser_shell.set_defaults(command=shell)
+  parser_shell.set_defaults(command=commands.shell)
 
   args = parser.parse_args()
     
