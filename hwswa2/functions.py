@@ -76,7 +76,11 @@ def read_configuration():
 
   parser_prepareall = subparsers.add_parser('prepareall', help='prepare all servers', add_help=False)
   parser_prepareall.set_defaults(command=prepareall)
-  
+
+  parser_shell = subparsers.add_parser('shell', help='open shell to server')
+  parser_shell.add_argument('servername', metavar='server')
+  parser_shell.set_defaults(command=shell)
+
   args = parser.parse_args()
     
   ### Parse configuration file
@@ -132,7 +136,14 @@ def prepare():
 def prepareall():
   debug("Preparing all servers")
 
-
+##################################
+### Open interactive shell to specific server
+def shell():
+  debug("Opening interactive shell to server %s" % config['servername'])
+  allnames = [ elem['name'] for elem in config['servers'] ]
+  if not config['servername'] in allnames:
+    error("Cannot find server %s in servers list" % config['servername'])
+    exitapp(1)
 
 ##################################
 ### Initializes logger
