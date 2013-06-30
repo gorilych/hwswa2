@@ -40,5 +40,9 @@ def shell():
   if not server:
     error("Cannot find server %s in servers list" % servername)
     exit(1)
-  ssh.shell(server)
+  try:
+    ssh.shell(server)
+  except:
+    error("Failed to connect to server %s" % servername)
+    exit(1)
 
