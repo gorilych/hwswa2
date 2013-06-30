@@ -20,6 +20,7 @@ def init_logger():
     os.makedirs(os.path.dirname(config['logfile']))
   logging.basicConfig(filename=config['logfile'], filemode = 'a', level=logging.INFO,
                       format="%(asctime)s %(levelname)s %(message)s")
+  logging.captureWarnings(True)
   config['logger'] = logging.getLogger()
   if config['debug']:
     config['logger'].setLevel(logging.DEBUG)
