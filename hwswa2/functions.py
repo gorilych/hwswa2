@@ -69,6 +69,11 @@ def read_configuration():
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.set_defaults(command=commands.shell)
 
+  parser_shell = subparsers.add_parser('exec', help='open shell to server')
+  parser_shell.add_argument('servername', metavar='server')
+  parser_shell.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
+  parser_shell.set_defaults(command=commands.exec_cmd)
+
   args = parser.parse_args()
     
   ### Parse configuration file

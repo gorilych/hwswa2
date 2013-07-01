@@ -36,3 +36,25 @@ def accessible(server):
     return True
   except:
     return False
+
+def exec_cmd(server, sshcmd):
+  hostname = server['address']
+  if 'port' in server:
+    port = server['port']
+  else:
+    port = 22
+  username = server['account']['login']
+  password = server['account']['password']
+  client = paramiko.SSHClient()
+  client.load_system_host_keys()
+  client.set_missing_host_key_policy(paramiko.WarningPolicy())
+  client.connect(hostname, port, username, password)
+  channel = client.get_transport().open_session()
+  channel.get_pty()
+  channel.settimeout(5)
+  channel.exec_command(sshcmd)
+  interactive.interactive_shell(channel)
+  status = channel.recv_exit_status()
+  channel.close()
+  client.close()
+  return status
