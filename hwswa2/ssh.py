@@ -37,7 +37,7 @@ def accessible(server):
   except:
     return False
 
-def exec_cmd(server, sshcmd):
+def exec_cmd_i(server, sshcmd):
   hostname = server['address']
   if 'port' in server:
     port = server['port']
