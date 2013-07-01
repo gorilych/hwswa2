@@ -1,5 +1,5 @@
 import paramiko
-import interactive
+import hwswa2.interactive as interactive
 
 def shell(server):
   hostname = server['address']
