@@ -4,4 +4,4 @@ accounts:
    password: testpassword
 servers:
  - {name: localhost, address: 127.0.0.1, role: PVCLIN, account: *testaccount}
- - {name: localhost2, address: 127.0.0.1, role: PVCLIN, account: *testaccount}  
+ - {name: localhost2, address: 127.0.0.1, port: 21, role: PVCLIN, account: *testaccount}  
