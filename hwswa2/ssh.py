@@ -1,3 +1,5 @@
+import stat
+import os
 import paramiko
 import hwswa2.interactive as interactive
 
@@ -60,8 +62,15 @@ def exec_cmd(server, sshcmd, input_data=None):
 def put(server, localpath, remotepath):
   client = connect(server)
   sftp = client.open_sftp()
-  sftp.put(localpath,remotepath,confirm=True)
-  client.close()
+  try:
+    attrs = sftp.stat(remotepath)
+    if stat.S_ISDIR(attrs.st_mode):
+      remotepath = remotepath + '/' + os.path.basename(localpath)
+    sftp.put(localpath,remotepath,confirm=True)
+    client.close()
+  except:
+    sftp.put(localpath,remotepath,confirm=True)
+    client.close()
 
 def mktemp(server, template='hwswa2.XXXXX'):
   """Creates directory using mktemp and returns its name"""
