@@ -54,8 +54,8 @@ def exec_cmd(server, sshcmd, input_data=None):
   if input_data:
     stdin.write(input_data)
     stdin.flush()
-  stdout_data = stdout.readlines()
-  stderr_data = stderr.readlines()
+  stdout_data = stdout.read().splitlines()
+  stderr_data = stderr.read().splitlines()
   status = stdout.channel.recv_exit_status()
   client.close()
   return stdout_data, stderr_data, status
