@@ -1,7 +1,8 @@
 import paramiko
 import hwswa2.interactive as interactive
 
-def shell(server):
+def connect(server):
+  """Connects to server and returns SSHClient object"""
   hostname = server['address']
   if 'port' in server:
     port = server['port']
@@ -13,42 +14,26 @@ def shell(server):
   client.load_system_host_keys()
   client.set_missing_host_key_policy(paramiko.WarningPolicy())
   client.connect(hostname, port, username, password)
+  return client
+
+def shell(server):
+  client = connect(server)
   chan = client.invoke_shell()
   interactive.interactive_shell(chan)
   chan.close()
   client.close()
 
 def accessible(server):
-  """Checks, if it is possible to establish ssh connection"""
-  hostname = server['address']
-  if 'port' in server:
-    port = server['port']
-  else:
-    port = 22
-  username = server['account']['login']
-  password = server['account']['password']
-  client = paramiko.SSHClient()
-  client.load_system_host_keys()
-  client.set_missing_host_key_policy(paramiko.WarningPolicy())
   try:
-    client.connect(hostname, port, username, password)
+    client = connect(server)
     client.close()
     return True
   except:
     return False
 
 def exec_cmd_i(server, sshcmd):
-  hostname = server['address']
-  if 'port' in server:
-    port = server['port']
-  else:
-    port = 22
-  username = server['account']['login']
-  password = server['account']['password']
-  client = paramiko.SSHClient()
-  client.load_system_host_keys()
-  client.set_missing_host_key_policy(paramiko.WarningPolicy())
-  client.connect(hostname, port, username, password)
+  """Executes command interactively"""
+  client = connect(server)
   channel = client.get_transport().open_session()
   channel.get_pty()
   channel.settimeout(5)
@@ -61,17 +46,7 @@ def exec_cmd_i(server, sshcmd):
 
 def exec_cmd(server, sshcmd, input_data=None):
   """Executes command and returns tuple of stdout, stderr and status"""
-  hostname = server['address']
-  if 'port' in server:
-    port = server['port']
-  else:
-    port = 22
-  username = server['account']['login']
-  password = server['account']['password']
-  client = paramiko.SSHClient()
-  client.load_system_host_keys()
-  client.set_missing_host_key_policy(paramiko.WarningPolicy())
-  client.connect(hostname, port, username, password)
+  client = connect(server)
   stdin, stdout, stderr = client.exec_command(sshcmd)
   if input_data:
     stdin.write(input_data)
