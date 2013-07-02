@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import os.path
+import yaml
 from hwswa2.globals import config
 from hwswa2.log import info, debug, error
 import hwswa2.ssh as ssh
@@ -14,6 +16,34 @@ def check():
     if not name in allnames:
       error("Cannot find server %s in servers list" % name)
       exit(1)
+  for name in config['servernames']:
+    result = _check(get_server(name))
+    _save_report(name, result)
+
+def _check(server):
+  name = server['name']
+  role = server['role']
+  result = {'name': name, 'role': role, 'parameters': {}}
+  parameters = yaml.load(open('checks/' + role.lower() + '.yaml'))['parameters']
+  for param in parameters:
+    val = parameters[param]
+    if isinstance(val, (str, unicode)): # simple command
+      stdout, stderr, status = ssh.exec_cmd(server, val)
+      param_result = '\n'.join(stdout)
+      result[param] = param_result
+  # plan:
+  # 1. copy remote scripts
+  # 2. prepare PATH variable
+  # 3. read role.yaml/parameters
+  # 4. for each parameter run command and store result
+  # 5. check reboot: send reboot cmd, wait till accessible
+  # 6. dump result into reports/server.yaml
+  # 7. do cleanup
+  return result
+  
+def _save_report(name, result):
+  path = os.path.join(config['reportsdir'], name)
+  yaml.dump(result, open(path, 'w'))
 
 def checkall():
   """Check all servers"""
