@@ -63,7 +63,7 @@ def put(server, localpath, remotepath):
   sftp.put(localpath,remotepath,confirm=True)
   client.close()
 
-def mktemp(server, template='hwswa2.XXXXX')
+def mktemp(server, template='hwswa2.XXXXX'):
   """Creates directory using mktemp and returns its name"""
   sshcmd = 'mktemp -d -p \`pwd\` %s' % template
   dirname, stderr, status = exec_cmd(server, sshcmd)
