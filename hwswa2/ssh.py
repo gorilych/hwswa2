@@ -56,3 +56,19 @@ def exec_cmd(server, sshcmd, input_data=None):
   status = stdout.channel.recv_exit_status()
   client.close()
   return stdout_data, stderr_data, status
+
+def put(server, localpath, remotepath):
+  client = connect(server)
+  sftp = client.open_sftp()
+  sftp.put(localpath,remotepath,confirm=True)
+  client.close()
+
+def mktemp(server, template='hwswa2.XXXXX')
+  """Creates directory using mktemp and returns its name"""
+  sshcmd = 'mktemp -d -p \`pwd\` %s' % template
+  dirname, stderr, status = exec_cmd(server, sshcmd)
+  if status:
+    return dirname
+  else:
+    raise Exception("Failed to create directory on server %s, stderr: %s " % (server, stderr))
+  
