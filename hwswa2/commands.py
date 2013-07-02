@@ -61,3 +61,22 @@ def exec_cmd():
   else:
     error("Failed to connect to server %s" % servername)
     exit(1)
+
+def _exec_cmd():
+  """Exec command on specified server non-interactively"""
+  servername = config['servername']
+  sshcmd = " ".join(config['sshcmd'])
+  debug("Executing `%s` on server %s" % (sshcmd, servername))
+  server = get_server(servername)
+  if not server:
+    error("Cannot find server %s in servers list" % servername)
+    exit(1)
+  if ssh.accessible(server):
+    stdout, stderr, exitstatus = ssh.exec_cmd(server, sshcmd)
+    print("stdout = %s" % stdout)
+    print("stderr = %s" % stderr)
+    print("exitstatus = %s" % exitstatus)
+  else:
+    error("Failed to connect to server %s" % servername)
+    exit(1)
+
