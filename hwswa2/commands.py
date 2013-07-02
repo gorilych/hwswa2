@@ -80,3 +80,18 @@ def _exec_cmd():
     error("Failed to connect to server %s" % servername)
     exit(1)
 
+def put():
+  """Copy file to server"""
+  servername = config['servername']
+  localpath  = config['localpath']
+  remotepath = config['remotepath']
+  debug("Copying '%s' to '%s' on server %s" % (localpath, remotepath, servername))
+  server = get_server(servername)
+  if not server:
+    error("Cannot find server %s in servers list" % servername)
+    exit(1)
+  if ssh.accessible(server):
+    ssh.put(server, localpath, remotepath)
+  else:
+    error("Failed to connect to server %s" % servername)
+    exit(1)
