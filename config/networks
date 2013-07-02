@@ -1,10 +1,10 @@
 examples:
- - {name: frontnet,  address: 10.200.200.0, mask: 255.255.255.0}
- - {name: backnet,   address: 192.168.1.0,  mask: 255.255.255.0}
- - {name: heartbeat, address: 192.168.2.0,  mask: 255.255.255.0}
+ - {name: frontnet,  address: 10.200.200.0, prefix: 24}
+ - {name: backnet,   address: 192.168.1.0,  prefix: 24}
+ - {name: heartbeat, address: 192.168.2.0,  prefix: 24}
 
 networks:
- - {name: frontnet,  address: 10.200.200.0, mask: 255.255.255.0}
- - {name: backnet,   address: 192.168.1.0,  mask: 255.255.255.0}  
- - {name: heartbeat, address: 192.168.2.0,  mask: 255.255.255.0}  
+ - {name: frontnet,  address: 10.200.200.0, prefix: 24}
+ - {name: backnet,   address: 192.168.1.0,  prefix: 24}  
+ - {name: heartbeat, address: 192.168.2.0,  prefix: 24}  
 
