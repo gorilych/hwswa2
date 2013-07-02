@@ -1,5 +1,6 @@
 import stat
 import os
+import os.path
 import paramiko
 import hwswa2.interactive as interactive
 
@@ -60,17 +61,27 @@ def exec_cmd(server, sshcmd, input_data=None):
   return stdout_data, stderr_data, status
 
 def put(server, localpath, remotepath):
+  if not os.path.exists(localpath):
+    raise Exception("Local path does not exist: %s" % localpath)
   client = connect(server)
   sftp = client.open_sftp()
-  try:
-    attrs = sftp.stat(remotepath)
-    if stat.S_ISDIR(attrs.st_mode):
-      remotepath = remotepath + '/' + os.path.basename(localpath)
-    sftp.put(localpath,remotepath,confirm=True)
-    client.close()
-  except:
-    sftp.put(localpath,remotepath,confirm=True)
-    client.close()
+  if os.path.isfile(localpath):
+    if exists(server, remotepath):
+      attrs = sftp.stat(remotepath)
+      if stat.S_ISDIR(attrs.st_mode):
+        remotepath = os.path.join(remotepath, os.path.basename(localpath))
+      sftp.put(localpath,remotepath,confirm=True)
+    else:
+      sftp.put(localpath,remotepath,confirm=True)
+  if os.path.isdir(localpath):
+    if exists(server, remotepath): 
+      rname = os.path.join(remotepath, os.path.basename(localpath))
+      mkdir(server, rname)
+      put_dir_content(server, localpath, rname)
+    else:
+      mkdir(server, remotepath)
+      put_dir_content(server, localpath, remotepath)
+  client.close()
 
 def mktemp(server, template='hwswa2.XXXXX'):
   """Creates directory using mktemp and returns its name"""
@@ -80,4 +91,28 @@ def mktemp(server, template='hwswa2.XXXXX'):
     return dirname
   else:
     raise Exception("Failed to create directory on server %s, stderr: %s " % (server, stderr))
-  
+
+def mkdir(server, path):
+  client = connect(server)
+  sftp = client.open_sftp()
+  sftp.mkdir(path)
+  client.close()
+
+def exists(server, path):
+  client = connect(server)
+  sftp = client.open_sftp()
+  try:
+    sftp.stat(path)
+    return True
+  except:
+    return False
+
+def put_dir_content(server, localdir, remotedir):
+  for f in os.listdir(localdir):
+    lname = os.path.join(localdir, f)
+    rname = os.path.join(remotedir, f)
+    if os.path.isfile(lname):
+      put(server, lname, rname)
+    if os.path.isdir(lname):
+      mkdir(server, rname)
+      put_dir_content(server, lname, rname)
