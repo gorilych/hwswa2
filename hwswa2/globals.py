@@ -19,8 +19,8 @@ config   = { 'configdir'    : apppath + '/' + 'config',
              'debug'        : False,
              'check_reboot' : False }
 config['configfile']   = config['configdir'] + '/' + 'main.cfg'
-config['serversfile']  = config['configdir'] + '/' + 'servers'
-config['networksfile'] = config['configdir'] + '/' + 'networks'
+config['serversfile']  = config['configdir'] + '/' + 'servers.yaml'
+config['networksfile'] = config['configdir'] + '/' + 'networks.yaml'
 config['logfile']      = config['logdir']    + '/' + 'hwswa2.log'
 config['reportsdir']   = config['logdir']    + '/' + 'reports'
 
