@@ -25,13 +25,25 @@ def _check(server):
   role = server['role']
   result = {'name': name, 'role': role, 'parameters': {}}
   checksdir = config['checksdir']
+
+  # prepare remote end (copy remote scripts, etc)
+  arch = ssh.get_cmd_out(server, 'uname --machine')
+  if arch.endswith('64'):
+    rscriptdir = config['rscriptdir'] + '/bin64'
+  else:
+    rscriptdir = config['rscriptdir'] + '/bin32'
+  remote_hwswa2_dir = ssh.mktemp(server)
+  binpath = os.path.join(remote_hwswa2_dir, 'bin')
+  tmppath = os.path.join(remote_hwswa2_dir, 'tmp')
+  ssh.mkdir(server, tmppath)
+  ssh.put(server, rscriptdir, binpath)
+  cmd_prefix = 'export PATH=%s:$PATH ;' % binpath
+
   parameters = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))['parameters']
   for param in parameters:
     val = parameters[param]
     if isinstance(val, (str, unicode)): # simple command
-      stdout, stderr, status = ssh.exec_cmd(server, val)
-      param_result = '\n'.join(stdout)
-      result[param] = param_result
+      result['parameters'][param] = ssh.get_cmd_out(server, cmd_prefix + val)
   # plan:
   # 1. copy remote scripts
   # 2. prepare PATH variable
