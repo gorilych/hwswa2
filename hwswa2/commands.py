@@ -42,9 +42,14 @@ def _check(server):
   ssh.put(server, rscriptdir, binpath)
   cmd_prefix = 'export PATH=%s:$PATH ;' % binpath
 
+  # get parameters
   parameters = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))['parameters']
   parameters['_type'] = 'dictionary'
   result['parameters'] = _get_param_value(server, parameters, cmd_prefix)
+
+  # clean up
+  ssh.remove(server, remote_hwswa2_dir)
+
   # plan:
   # 1. copy remote scripts
   # 2. prepare PATH variable

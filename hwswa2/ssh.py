@@ -66,6 +66,9 @@ def get_cmd_out(server, sshcmd, input_data=None):
   stdout_data, stderr_data, status = exec_cmd(server, sshcmd, input_data)
   return '\n'.join(stdout_data)
 
+def remove(server, path):
+  exec_cmd(server, "rm -rf %s" % path)
+
 def put(server, localpath, remotepath):
   debug("Copying %s to %s:%s" %(localpath, server['name'], remotepath))
   if not os.path.exists(localpath):
