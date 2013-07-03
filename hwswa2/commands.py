@@ -43,10 +43,8 @@ def _check(server):
   cmd_prefix = 'export PATH=%s:$PATH ;' % binpath
 
   parameters = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))['parameters']
-  for param in parameters:
-    val = parameters[param]
-    if isinstance(val, (str, unicode)): # simple command
-      result['parameters'][param] = ssh.get_cmd_out(server, cmd_prefix + val)
+  parameters['_type'] = 'dictionary'
+  result['parameters'] = _get_param_value(server, parameters, cmd_prefix)
   # plan:
   # 1. copy remote scripts
   # 2. prepare PATH variable
@@ -56,7 +54,25 @@ def _check(server):
   # 6. dump result into reports/server.yaml
   # 7. do cleanup
   return result
-  
+
+def _get_param_value(server, param, cmd_prefix=None, deps=None):
+  val = None
+  if isinstance(param, (str, unicode)):
+    val = ssh.get_cmd_out(server, _prepare_cmd(param, cmd_prefix, deps))
+  elif param['_type'] == 'dictionary':
+    val = {}
+    for p in param:
+      if not p.startswith('_'):
+        val[p] = _get_param_value(server, param[p], cmd_prefix, deps)
+  return val
+
+def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
+  if cmd_prefix:
+    cmd = cmd_prefix + cmd
+  if deps:
+    cmd = cmd % deps
+  return cmd
+
 def _save_report(name, result):
   path = os.path.join(config['reportsdir'], name)
   yaml.dump(result, open(path, 'w'))
