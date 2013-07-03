@@ -15,8 +15,6 @@ configspec = ConfigObj(["debug=boolean()",
 config   = { 'configdir'    : apppath + '/' + 'config',
              'logdir'       : apppath + '/' + 'logs',
              'checksdir'    : apppath + '/' + 'checks',
-             'rscriptdir'   : apppath   + '/' + 'remote-scripts',
-             'rscript'      : 'remote.script.sh',
              'debug'        : False,
              'check_reboot' : False }
 config['configfile']   = config['configdir'] + '/' + 'main.cfg'
@@ -24,6 +22,7 @@ config['serversfile']  = config['configdir'] + '/' + 'servers.yaml'
 config['networksfile'] = config['configdir'] + '/' + 'networks.yaml'
 config['logfile']      = config['logdir']    + '/' + 'hwswa2.log'
 config['reportsdir']   = config['logdir']    + '/' + 'reports'
+config['rscriptdir']   = config['checksdir'] + '/' + 'remote-scripts'
 
 exitcode = 0 
 
