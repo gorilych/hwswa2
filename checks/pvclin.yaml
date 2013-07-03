@@ -1,0 +1,13 @@
+description: Checks for PVCLIN role
+parameters:
+  vz_partition: mount | grep --fixed-strings /vz
+  hostname: hostname
+requirements:
+  vz_partition_check:
+    _type: not # possible types: not, and, or, match, equal, greater, empty, zero 
+    _check:
+      _type: empty
+      _values: {vz_partition: vzp}
+      _arguments:
+        string: "%(vzp)s"
+    

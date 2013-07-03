@@ -1,0 +1,66 @@
+description: Common checks for all roles
+parameters:
+  hostname:           hostname -f
+  time_utc:           date --utc
+  time:               date
+  ntp_service_status: service ntpd status 2>&1
+  OS:                 lsb_release --short --id --release | xargs
+  architecture:       uname --hardware-platform
+  ram:       awk '$1=="MemTotal:"{printf("%.3f GB",$2/1024/1024)}' /proc/meminfo
+  swap:      awk '$1==\"SwapTotal:\"{printf(\"%.3f\",$2/1024/1024)}' /proc/meminfo
+  selinux:   which setenforce && setenforce || echo no selinux
+  yum_repos: which yum && echo $(yum repolist | sed '/repo id/,$ !d') || echo no yum
+  processors:
+    _type: dictionary
+    count:     grep --fixed-strings processor -c /proc/cpuinfo
+    model:     grep --fixed-strings --max-count=1 'model name' /proc/cpuinfo
+    frequency: grep --fixed-strings --max-count=1 'cpu MHz' /proc/cpuinfo 
+               | awk '{printf("%.1fGHz",$NF/1000)}'
+  disks:
+    _type: table
+    _fields: [mountpoint, size, fs_type]
+    _separator: ' '
+    _command: df --human-readable --print-type --exclude tmpfs --exclude devtmpfs
+                --portability | tac | head --lines=-1 | awk '{print $NF,$3,$2}'
+  network:
+    _type: dictionary 
+    name_servers: awk '$1=="nameserver"{print $2}' /etc/resolv.conf | xargs
+    dns_check: host -t soa google.com
+    network_interfaces:
+      _type: list
+      _generator: {name: name}
+      name:   ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
+              | awk '{print $2}' | tr -d ':'
+      state:  ip --oneline link show dev $(name)s 
+              | grep --only-matching --extended-regexp ' state (UP|DOWN|UNKNOWN) ' 
+              | awk '{print $2}'
+      hwaddr: ip --oneline link show dev $(name)s
+              | grep --only-matching --extended-regexp ' link/.*'
+              | awk '{print $2}'
+      gateway: /sbin/ip route list dev $(name)s | grep ^default | awk '{print $3}'
+      ip:
+        _type: table
+        _fields: [address, prefix, network]
+        _separator: ' '
+        _uses: {networks: networks_file}
+        _script: |
+          #!/bin/bash
+          { /sbin/ip -family inet -oneline address list scope global dev $(name)s;
+            /sbin/ip -family inet6 -oneline address list scope global dev $(name)s; } \
+          | awk '{print $4}' | tr '/' ' ' \
+          | while read ip prefix; do
+              netaddr=$( { /sbin/ip -family inet route list dev $(name)s;
+                           /sbin/ip -family inet6 route list dev $(name)s; } \
+                         | grep " src $ip" | awk '{print $1}') | sed 's%/[0-9]*$%%'
+              if [ -z "$netaddr" ]; then
+                netname="no_route_with_this_ip_as_src"
+              else
+                netname=$(grep --fixed-strings "address: $netaddr" "$(networks_file)s" \
+                          | grep --fixed-strings "prefix: $prefix" \
+                          | grep --only-matching --extended-regexp "name: [^ ]+ " \
+                          | awk '{print $2}')
+              fi
+              [ -z "$netname" ] && netname=$netaddr
+              echo $ip $prefix $netname
+          done
+          exit 0
