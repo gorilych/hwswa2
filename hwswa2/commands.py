@@ -24,7 +24,8 @@ def _check(server):
   name = server['name']
   role = server['role']
   result = {'name': name, 'role': role, 'parameters': {}}
-  parameters = yaml.load(open('checks/' + role.lower() + '.yaml'))['parameters']
+  checksdir = config['checksdir']
+  parameters = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))['parameters']
   for param in parameters:
     val = parameters[param]
     if isinstance(val, (str, unicode)): # simple command

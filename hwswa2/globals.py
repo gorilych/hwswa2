@@ -14,6 +14,7 @@ configspec = ConfigObj(["debug=boolean()",
 # default parameters
 config   = { 'configdir'    : apppath + '/' + 'config',
              'logdir'       : apppath + '/' + 'logs',
+             'checksdir'    : apppath + '/' + 'checks',
              'rscriptdir'   : apppath   + '/' + 'remote-scripts',
              'rscript'      : 'remote.script.sh',
              'debug'        : False,
