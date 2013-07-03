@@ -3,6 +3,7 @@ import os
 import os.path
 import paramiko
 import hwswa2.interactive as interactive
+from hwswa2.log import debug
 
 def connect(server):
   """Connects to server and returns SSHClient object"""
@@ -49,6 +50,7 @@ def exec_cmd_i(server, sshcmd):
 
 def exec_cmd(server, sshcmd, input_data=None):
   """Executes command and returns tuple of stdout, stderr and status"""
+  debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
   stdin, stdout, stderr = client.exec_command(sshcmd)
   if input_data:
@@ -60,7 +62,12 @@ def exec_cmd(server, sshcmd, input_data=None):
   client.close()
   return stdout_data, stderr_data, status
 
+def get_cmd_out(server, sshcmd, input_data=None):
+  stdout_data, stderr_data, status = exec_cmd(server, sshcmd, input_data)
+  return '\n'.join(stdout_data)
+
 def put(server, localpath, remotepath):
+  debug("Copying %s to %s:%s" %(localpath, server['name'], remotepath))
   if not os.path.exists(localpath):
     raise Exception("Local path does not exist: %s" % localpath)
   client = connect(server)
@@ -71,8 +78,10 @@ def put(server, localpath, remotepath):
       if stat.S_ISDIR(attrs.st_mode):
         remotepath = os.path.join(remotepath, os.path.basename(localpath))
       sftp.put(localpath,remotepath,confirm=True)
+      sftp.chmod(remotepath, os.stat(localpath).st_mode)
     else:
       sftp.put(localpath,remotepath,confirm=True)
+      sftp.chmod(remotepath, os.stat(localpath).st_mode)
   if os.path.isdir(localpath):
     if exists(server, remotepath): 
       rname = os.path.join(remotepath, os.path.basename(localpath))
@@ -85,12 +94,8 @@ def put(server, localpath, remotepath):
 
 def mktemp(server, template='hwswa2.XXXXX'):
   """Creates directory using mktemp and returns its name"""
-  sshcmd = 'mktemp -d -p \`pwd\` %s' % template
-  dirname, stderr, status = exec_cmd(server, sshcmd)
-  if status:
-    return dirname
-  else:
-    raise Exception("Failed to create directory on server %s, stderr: %s " % (server, stderr))
+  sshcmd = 'mktemp -d -p `pwd` %s' % template
+  return get_cmd_out(server, sshcmd)
 
 def mkdir(server, path):
   client = connect(server)
