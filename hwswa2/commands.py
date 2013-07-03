@@ -2,6 +2,7 @@
 
 import os.path
 import yaml
+import time
 from hwswa2.globals import config
 from hwswa2.log import info, debug, error
 import hwswa2.ssh as ssh
@@ -23,7 +24,9 @@ def check():
 def _check(server):
   name = server['name']
   role = server['role']
-  result = {'name': name, 'role': role, 'parameters': {}}
+  result = {'name': name, 'role': role, 
+            'check_time': time.asctime(time.localtime(time.time())),
+            'parameters': {}}
   checksdir = config['checksdir']
 
   # prepare remote end (copy remote scripts, etc)
