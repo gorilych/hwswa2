@@ -26,7 +26,7 @@ def _check(server):
   role = server['role']
   result = {'name': name, 'role': role, 
             'check_time': time.asctime(time.localtime(time.time())),
-            'parameters': {}}
+            'parameters': {}, 'requirements': {}}
   checksdir = config['checksdir']
 
   # prepare remote end (copy remote scripts, etc)
@@ -42,9 +42,26 @@ def _check(server):
   ssh.put(server, rscriptdir, binpath)
   cmd_prefix = 'export PATH=%s:$PATH ;' % binpath
 
-  # get parameters
-  parameters = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))['parameters']
+  # get parameters/requirements
+  role_checks = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
+  parameters = role_checks['parameters']
   parameters['_type'] = 'dictionary'
+  if 'requirements' in role_checks:
+    requirements = role_checks['requirements']
+  else:
+    requirements = {}
+
+  # process includes
+  if 'includes' in role_checks:
+    for i in role_checks['includes']:
+      i_checks = yaml.load(open(os.path.join(checksdir, i.lower() + '.yaml')))
+      if 'parameters' in i_checks:
+        i_checks['parameters'].update(parameters)
+        parameters = i_checks['parameters']
+      if 'requirements' in i_checks:
+        i_checks['requirements'].update(requirements)
+        requirements = i_checks['requirements']
+
   result['parameters'] = _get_param_value(server, parameters, cmd_prefix)
 
   # clean up
