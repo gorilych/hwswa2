@@ -35,13 +35,13 @@ parameters:
       _generator: {name: name}
       name:   ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
               | awk '{print $2}' | tr -d ':'
-      state:  ip --oneline link show dev $(name)s 
+      state:  ip --oneline link show dev %(name)s 
               | grep --only-matching --extended-regexp ' state (UP|DOWN|UNKNOWN) ' 
               | awk '{print $2}'
-      hwaddr: ip --oneline link show dev $(name)s
+      hwaddr: ip --oneline link show dev %(name)s
               | grep --only-matching --extended-regexp ' link/.*'
               | awk '{print $2}'
-      gateway: /sbin/ip route list dev $(name)s | grep ^default | awk '{print $3}'
+      gateway: /sbin/ip route list dev %(name)s | grep ^default | awk '{print $3}'
       ip:
         _type: table
         _fields: [address, prefix, network]
@@ -52,19 +52,19 @@ parameters:
         _uses: {networks: networks_file}
         _script: |
           #!/bin/bash
-          { /sbin/ip -family inet -oneline address list scope global dev $(name)s;
-            /sbin/ip -family inet6 -oneline address list scope global dev $(name)s; } \
+          { /sbin/ip -family inet -oneline address list scope global dev %(name)s;
+            /sbin/ip -family inet6 -oneline address list scope global dev %(name)s; } \
           | awk '{print $4}' | tr '/' ' ' \
           | while read ip prefix; do
-              netaddr=$( { /sbin/ip -family inet route list dev $(name)s;
-                           /sbin/ip -family inet6 route list dev $(name)s; } \
-                         | grep " src $ip" | awk '{print $1}') | sed 's%/[0-9]*$%%'
+              netaddr=$( { /sbin/ip -family inet route list dev %(name)s;
+                           /sbin/ip -family inet6 route list dev %(name)s; } \
+                         | grep " src $ip" | awk '{print $1}' | sed 's|/[0-9]*$||' )
               if [ -z "$netaddr" ]; then
                 netname="no_route_with_this_ip_as_src"
               else
-                netname=$(grep --fixed-strings "address: $netaddr" "$(networks_file)s" \
+                netname=$(grep --fixed-strings "address: $netaddr" "%(networks_file)s" \
                           | grep --fixed-strings "prefix: $prefix" \
-                          | grep --only-matching --extended-regexp "name: [^ ]+ " \
+                          | grep --only-matching --extended-regexp "name: [^ ,}]+" \
                           | awk '{print $2}')
               fi
               [ -z "$netname" ] && netname=$netaddr
