@@ -40,7 +40,7 @@ def _check(server):
   tmppath = os.path.join(remote_hwswa2_dir, 'tmp')
   ssh.mkdir(server, tmppath)
   ssh.put(server, rscriptdir, binpath)
-  cmd_prefix = 'export PATH=%s:$PATH ;' % binpath
+  cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
 
   # get parameters/requirements
   role_checks = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
@@ -86,7 +86,7 @@ def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmpp
     if '_uses' in param:
       for key in param['_uses']:
         keyfile = ssh.mktemp(server, ftype='f', path=tmppath)
-        ssh.write(server, keyfile, config[key])
+        ssh.write(server, keyfile, yaml.dump(config[key]))
         deps.update({param['_uses'][key]: keyfile})
       del param['_uses']
     # convert _script to _command
@@ -95,7 +95,6 @@ def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmpp
       ssh.write(server, scriptpath, _prepare_cmd(param['_script'], deps=deps))
       ssh.exec_cmd(server, 'chmod +x %s' % scriptpath)
       param['_command'] = scriptpath
-      del param['_script']
     # different type processing
     if param['_type'] == 'dictionary':
       val = {}
@@ -108,8 +107,24 @@ def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmpp
         rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, deps))
         if not '_separator' in param:
           param['_separator'] = ' '
-        for row in rows.split('\n'):
-          val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
+        if not rows == '':
+          for row in rows.split('\n'):
+            val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
+    elif param['_type'] == 'list':
+      val = []
+      # evaluate generator first
+      for generator in param['_generator']: # there should be only one
+        placeholder = param['_generator'][generator]
+        gen_values = ssh.get_cmd_out(server, _prepare_cmd(param[generator], cmd_prefix, deps)).split('\n')
+        del param[generator]
+        for gen_value in gen_values:
+          deps.update({placeholder: gen_value})
+          elem = {generator: gen_value}
+          # evaluate other parameters based on generator
+          for p in param:
+            if not p.startswith('_'):
+              elem[p] = _get_param_value(server, param[p], cmd_prefix, deps, binpath, tmppath)
+          val.append(elem)
   return val
 
 def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
