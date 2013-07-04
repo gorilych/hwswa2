@@ -86,6 +86,14 @@ def _get_param_value(server, param, cmd_prefix=None, deps=None):
     for p in param:
       if not p.startswith('_'):
         val[p] = _get_param_value(server, param[p], cmd_prefix, deps)
+  elif param['_type'] == 'table':
+    val = []
+    if '_command' in param:
+      rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, deps))
+      if not '_separator' in param:
+        param['_separator'] = ' '
+      for row in rows.split('\n'):
+        val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
   return val
 
 def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
