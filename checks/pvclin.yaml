@@ -1,7 +1,9 @@
 description: Checks for PVCLIN role
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ common ]
 parameters:
-  vz_partition: mount | grep --fixed-strings /vz
-  hostname: hostname
+  vz_partition: mount | grep vz 
 requirements:
   vz_partition_check:
     _type: not # possible types: not, and, or, match, equal, greater, empty, zero 
