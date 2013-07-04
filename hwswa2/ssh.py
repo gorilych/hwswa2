@@ -95,9 +95,12 @@ def put(server, localpath, remotepath):
       put_dir_content(server, localpath, remotepath)
   client.close()
 
-def mktemp(server, template='hwswa2.XXXXX'):
+def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
   """Creates directory using mktemp and returns its name"""
-  sshcmd = 'mktemp -d -p `pwd` %s' % template
+  sshcmd = 'mktemp '
+  if ftype == 'd':
+    sshcmd = sshcmd + '-d '
+  sshcmd = sshcmd + '-p %s %s' % (path, template)
   return get_cmd_out(server, sshcmd)
 
 def mkdir(server, path):
@@ -124,3 +127,12 @@ def put_dir_content(server, localdir, remotedir):
     if os.path.isdir(lname):
       mkdir(server, rname)
       put_dir_content(server, lname, rname)
+
+def write(server, path, data):
+  client = connect(server)
+  sftp = client.open_sftp()
+  file = sftp.open(path, 'w')
+  file.write(data)
+  file.close()
+  client.close()
+
