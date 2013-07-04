@@ -62,7 +62,7 @@ def _check(server):
         i_checks['requirements'].update(requirements)
         requirements = i_checks['requirements']
 
-  result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath)
+  result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath, tmppath=tmppath)
 
   # clean up
   ssh.remove(server, remote_hwswa2_dir)
@@ -77,29 +77,39 @@ def _check(server):
   # 7. do cleanup
   return result
 
-def _get_param_value(server, param, cmd_prefix=None, deps=None, binpath=None):
+def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
   val = None
   if isinstance(param, (str, unicode)):
     val = ssh.get_cmd_out(server, _prepare_cmd(param, cmd_prefix, deps))
-  elif param['_type'] == 'dictionary':
-    val = {}
-    for p in param:
-      if not p.startswith('_'):
-        val[p] = _get_param_value(server, param[p], cmd_prefix, deps, binpath)
-  elif param['_type'] == 'table':
-    val = []
+  else: # non-scalar type
+    # process _uses
+    if '_uses' in param:
+      for key in param['_uses']:
+        keyfile = ssh.mktemp(server, ftype='f', path=tmppath)
+        ssh.write(server, keyfile, config[key])
+        deps.update({param['_uses'][key]: keyfile})
+      del param['_uses']
+    # convert _script to _command
     if '_script' in param:
       scriptpath = ssh.mktemp(server, ftype='f', path=binpath)
       ssh.write(server, scriptpath, _prepare_cmd(param['_script'], deps=deps))
       ssh.exec_cmd(server, 'chmod +x %s' % scriptpath)
       param['_command'] = scriptpath
       del param['_script']
-    if '_command' in param:
-      rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, deps))
-      if not '_separator' in param:
-        param['_separator'] = ' '
-      for row in rows.split('\n'):
-        val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
+    # different type processing
+    if param['_type'] == 'dictionary':
+      val = {}
+      for p in param:
+        if not p.startswith('_'):
+          val[p] = _get_param_value(server, param[p], cmd_prefix, deps, binpath, tmppath)
+    elif param['_type'] == 'table':
+      val = []
+      if '_command' in param:
+        rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, deps))
+        if not '_separator' in param:
+          param['_separator'] = ' '
+        for row in rows.split('\n'):
+          val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
   return val
 
 def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
