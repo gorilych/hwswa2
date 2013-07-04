@@ -62,8 +62,7 @@ def _check(server):
         i_checks['requirements'].update(requirements)
         requirements = i_checks['requirements']
 
-  parameters = _put_scripts(server, binpath, parameters)
-  result['parameters'] = _get_param_value(server, parameters, cmd_prefix)
+  result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath)
 
   # clean up
   ssh.remove(server, remote_hwswa2_dir)
@@ -78,7 +77,7 @@ def _check(server):
   # 7. do cleanup
   return result
 
-def _get_param_value(server, param, cmd_prefix=None, deps=None):
+def _get_param_value(server, param, cmd_prefix=None, deps=None, binpath=None):
   val = None
   if isinstance(param, (str, unicode)):
     val = ssh.get_cmd_out(server, _prepare_cmd(param, cmd_prefix, deps))
@@ -86,9 +85,15 @@ def _get_param_value(server, param, cmd_prefix=None, deps=None):
     val = {}
     for p in param:
       if not p.startswith('_'):
-        val[p] = _get_param_value(server, param[p], cmd_prefix, deps)
+        val[p] = _get_param_value(server, param[p], cmd_prefix, deps, binpath)
   elif param['_type'] == 'table':
     val = []
+    if '_script' in param:
+      scriptpath = ssh.mktemp(server, ftype='f', path=binpath)
+      ssh.write(server, scriptpath, _prepare_cmd(param['_script'], deps=deps))
+      ssh.exec_cmd(server, 'chmod +x %s' % scriptpath)
+      param['_command'] = scriptpath
+      del param['_script']
     if '_command' in param:
       rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, deps))
       if not '_separator' in param:
@@ -96,20 +101,6 @@ def _get_param_value(server, param, cmd_prefix=None, deps=None):
       for row in rows.split('\n'):
         val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
   return val
-
-def _put_scripts(server, binpath, parameters):
-  """ Replaces _script: with _command"""
-  if '_script' in parameters:
-    scriptpath = ssh.mktemp(server, ftype='f', path=binpath)
-    ssh.write(server, scriptpath, parameters['_script'])
-    ssh.exec_cmd(server, 'chmod +x %s' % scriptpath)
-    parameters['_command'] = scriptpath
-    del parameters['_script']
-
-  for p in (p for p in parameters if not p.startswith('_')):
-    if not isinstance(parameters[p], (str, unicode)):
-      parameters[p] = _put_scripts(server, binpath, parameters[p])
-  return parameters
 
 def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
   if cmd_prefix:
