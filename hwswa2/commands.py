@@ -62,6 +62,7 @@ def _check(server):
         i_checks['requirements'].update(requirements)
         requirements = i_checks['requirements']
 
+  parameters = _put_scripts(server, binpath, parameters)
   result['parameters'] = _get_param_value(server, parameters, cmd_prefix)
 
   # clean up
@@ -95,6 +96,20 @@ def _get_param_value(server, param, cmd_prefix=None, deps=None):
       for row in rows.split('\n'):
         val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
   return val
+
+def _put_scripts(server, binpath, parameters):
+  """ Replaces _script: with _command"""
+  if '_script' in parameters:
+    scriptpath = ssh.mktemp(server, ftype='f', path=binpath)
+    ssh.write(server, scriptpath, parameters['_script'])
+    ssh.exec_cmd(server, 'chmod +x %s' % scriptpath)
+    parameters['_command'] = scriptpath
+    del parameters['_script']
+
+  for p in (p for p in parameters if not p.startswith('_')):
+    if not isinstance(parameters[p], (str, unicode)):
+      parameters[p] = _put_scripts(server, binpath, parameters[p])
+  return parameters
 
 def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
   if cmd_prefix:
