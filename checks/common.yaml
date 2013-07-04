@@ -28,6 +28,10 @@ parameters:
     dns_check: host -t soa google.com | grep -q 'has SOA record' && echo OK || echo NOT OK
     network_interfaces:
       _type: list
+      # generator will be evaluated first, each line add element to list
+      # then, for each new element, other fields will be evalueted with generator as dependency
+      # form:
+      # _generator: {field_name: placeholder_name}
       _generator: {name: name}
       name:   ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
               | awk '{print $2}' | tr -d ':'
@@ -42,6 +46,9 @@ parameters:
         _type: table
         _fields: [address, prefix, network]
         _separator: ' '
+        # _uses: {key1: placeholder1, key2: placeholder2}
+        # for each key data from config['key'] will be stored in temporary file
+        # and file name will be substitution for corresponding placeholder in script or command
         _uses: {networks: networks_file}
         _script: |
           #!/bin/bash
