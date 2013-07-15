@@ -1,0 +1,84 @@
+HWSWA2: automatization of hardware/software check
+
+Contents
+
+1. Usage
+2. Files
+3. Requirements
+
+1. =================== Usage
+
+hwswa2$ bin/hwswa2 -h
+usage: hwswa2 [-h] [--version] [-c CONFIGFILE] [-s SERVERSFILE]
+              [-n NETWORKSFILE] [-l LOGFILE] [-r REPORTSDIR] [-d]
+              {check,prepare,checkall,prepareall,shell,exec,_exec,put} ...
+
+HWSWA: tool for automatization of hardware/software check
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --version             show program's version number and exit
+  -c CONFIGFILE, --config CONFIGFILE
+                        path to config file
+  -s SERVERSFILE, --servers SERVERSFILE
+                        path to servers file
+  -n NETWORKSFILE, --networks NETWORKSFILE
+                        path to networks file
+  -l LOGFILE, --log LOGFILE
+                        path to log file
+  -r REPORTSDIR, --reports REPORTSDIR
+                        directory to store reports
+  -d, --debug           enable debug
+
+Commands:
+  {check,prepare,checkall,prepareall,shell,exec,_exec,put}
+    check               check specific servers
+    prepare             prepare specific servers
+    checkall            check all servers
+    prepareall          prepare all servers
+    shell               open shell to server
+    exec                execute command interactively
+    _exec               execute command non-interactively
+    put                 copy file to server
+
+2. =================== Files
+
+hwswa2$ ls -F
+3rd-party/  bin/  checks/  config/  docs/  hwswa2/  INSTALL  libs/  logs/  README  tests/  TODO
+hwswa2$ ls -F checks/
+common.yaml  pvclin.yaml  remote-scripts/
+hwswa2$ ls -F checks/remote-scripts/
+bin32/  bin64/
+hwswa2$ ls -F config/
+main.cfg  networks.yaml  servers.yaml
+hwswa2$ ls -F logs/
+hwswa2.log  reports/
+hwswa2$ ls -F logs/reports/
+localhost
+
+3rd-party/       - 3rd party python libraries and scripts for internal usage
+
+bin/             - location of the main script
+bin/hwswa2       - script itself
+
+checks/          - location of role check description files:
+                   <role name (lowercase)>.yaml
+checks/remote-scripts/{bin32,bin64}
+                 - location of binaries copied to remote server in order to run
+                   specific checks (like nc binary)
+
+config/main.cfg  - main configuration file. Basically, it is not needed to
+                   modify, except for specific cases, like for debug.
+
+config/networks.yaml
+                 - contains network definitions
+
+config/servers.yaml
+                 - contains server definitions (with access details)
+
+logs/hwswa2.log  - application log
+logs/reports/    - directory to store reports to
+
+3. =================== Requirements
+
+Python, python-crypto lib

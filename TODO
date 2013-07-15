@@ -1,0 +1,26 @@
+* iptables check
+
+* checks diff
+
+* parallel checks
+
+* add ssh key support
+
+* add ssh-jumper support
+
+* add sudo/su support
+
+* add inter-connection checker
+
+* add reboot-check
+
+* add prepare script functionality
+  This script is for preparing servers for deployment. It can
+  - run yum update / install required packages
+  - download distribution packages (pvclin, poa, pba)
+  - disable selinux
+  - sync time and configure ntpd
+  - disable iptables
+
+* add bulk command execution
+
