@@ -152,6 +152,9 @@ def _save_report(name, result):
 def checkall():
   """Check all servers"""
   debug("Checking all servers")
+  allnames = [ elem['name'] for elem in config['servers'] ]
+  config['servernames'] = allnames
+  check()
 
 def prepare():
   """Prepare only specified servers"""
@@ -165,6 +168,9 @@ def prepare():
 def prepareall():
   """Prepare all servers"""
   debug("Preparing all servers")
+  allnames = [ elem['name'] for elem in config['servers'] ]
+  config['servernames'] = allnames
+  prepare()
 
 def shell():
   """Open interactive shell to specific server"""
