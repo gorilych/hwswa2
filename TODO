@@ -2,7 +2,7 @@
 
 * checks diff
 
-* parallel checks
+* DONE parallel checks
 
 * add ssh key support
 
@@ -24,3 +24,6 @@
 
 * add bulk command execution
 
+* do clean-up on exception
+
+* rewrite disk checks (now shows only mounted)

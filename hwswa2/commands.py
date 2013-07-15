@@ -7,7 +7,9 @@ from hwswa2.globals import config
 from hwswa2.log import info, debug, error
 import hwswa2.ssh as ssh
 from hwswa2.aux import get_server
-
+import threading
+import Queue
+import time
 
 def check():
   """Check only specified servers"""
@@ -17,11 +19,20 @@ def check():
     if not name in allnames:
       error("Cannot find server %s in servers list" % name)
       exit(1)
+  results = Queue.Queue()
   for name in config['servernames']:
-    result = _check(get_server(name))
-    _save_report(name, result)
-
-def _check(server):
+    cth = threading.Thread(name=name, target=_check, args=(get_server(name), results))
+    cth.start()
+  while threading.active_count() > 1:
+    while not results.empty():
+      result = results.get()
+      _save_report(result['name'], result)
+    time.sleep(1)
+  while not results.empty():
+    result = results.get()
+    _save_report(result['name'], result)
+                
+def _check(server, resultsqueue):
   name = server['name']
   role = server['role']
   result = {'name': name, 'role': role, 
@@ -75,7 +86,7 @@ def _check(server):
   # 5. check reboot: send reboot cmd, wait till accessible
   # 6. dump result into reports/server.yaml
   # 7. do cleanup
-  return result
+  resultsqueue.put(result)
 
 def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
   val = None
