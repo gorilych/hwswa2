@@ -1,8 +1,12 @@
 import stat
+import time
 import os
 import os.path
+import subprocess
+import signal
 import paramiko
 import hwswa2.interactive as interactive
+import hwswa2.aux as aux
 from hwswa2.log import debug
 
 def connect(server):
@@ -35,6 +39,10 @@ def accessible(server):
   except:
     return False
 
+def pingable(server):
+  command = "ping -w 1 -q -c 1 %s" % server['address']
+  return subprocess.call(command) == 0
+
 def exec_cmd_i(server, sshcmd):
   """Executes command interactively"""
   client = connect(server)
@@ -48,11 +56,11 @@ def exec_cmd_i(server, sshcmd):
   client.close()
   return status
 
-def exec_cmd(server, sshcmd, input_data=None):
+def exec_cmd(server, sshcmd, input_data=None, timeout=10):
   """Executes command and returns tuple of stdout, stderr and status"""
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
-  stdin, stdout, stderr = client.exec_command(sshcmd)
+  stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout)
   if input_data:
     stdin.write(input_data)
     stdin.flush()
@@ -136,3 +144,33 @@ def write(server, path, data):
   file.close()
   client.close()
 
+def hostid(server):
+  return get_cmd_out(server, 'hostid')
+
+def is_it_me(server):
+  myhostid = subprocess.check_output('hostid').strip()
+  server_hostid = hostid(server)
+  debug("Is it me? Comparing %s and %s" % (myhostid, server_hostid))
+  return myhostid == server_hostid
+
+def check_reboot(server, timeout=300):
+  """Reboot the server and check the time it takes to come up"""
+  if is_it_me(server):
+    return "we are running here, no reboot"
+  starttime = time.time()
+  try: # reboot will most probably fail with socket.timeout exception
+    exec_cmd(server, 'reboot', timeout=3)
+  except: # we are going to ignore this
+    pass
+  debug("reboot command is sent, now wait till server is down")
+  # wait till shutdown:
+  if aux.wait_for_not(accessible, [server], timeout):
+    debug("Server %s is down" % server['name'])
+    delta = time.time() - starttime
+    # wait till boot
+    if aux.wait_for(accessible, [server], timeout - delta):
+      return time.time() - starttime
+    else:
+      return "server is not accessible after %s seconds" % timeout
+  else:
+    return "server does not go to reboot: still accessible after %s seconds" % timeout
