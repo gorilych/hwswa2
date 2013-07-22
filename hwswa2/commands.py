@@ -6,7 +6,7 @@ import time
 from hwswa2.globals import config
 from hwswa2.log import info, debug, error
 import hwswa2.ssh as ssh
-from hwswa2.aux import get_server
+from hwswa2.aux import get_server, passbyval
 import threading
 import Queue
 import time
@@ -40,54 +40,57 @@ def _check(server, resultsqueue):
             'parameters': {}, 'requirements': {}}
   checksdir = config['checksdir']
 
-  # prepare remote end (copy remote scripts, etc)
-  arch = ssh.get_cmd_out(server, 'uname --machine')
-  if arch.endswith('64'):
-    rscriptdir = config['rscriptdir'] + '/bin64'
+  if not ssh.accessible(server):
+    result['check_status'] = 'server is not accessible'
   else:
-    rscriptdir = config['rscriptdir'] + '/bin32'
-  remote_hwswa2_dir = ssh.mktemp(server)
-  binpath = os.path.join(remote_hwswa2_dir, 'bin')
-  tmppath = os.path.join(remote_hwswa2_dir, 'tmp')
-  ssh.mkdir(server, tmppath)
-  ssh.put(server, rscriptdir, binpath)
-  cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
+    # prepare remote end (copy remote scripts, etc)
+    arch = ssh.get_cmd_out(server, 'uname --machine')
+    if arch.endswith('64'):
+      rscriptdir = config['rscriptdir'] + '/bin64'
+    else:
+      rscriptdir = config['rscriptdir'] + '/bin32'
+    remote_hwswa2_dir = ssh.mktemp(server)
+    binpath = os.path.join(remote_hwswa2_dir, 'bin')
+    tmppath = os.path.join(remote_hwswa2_dir, 'tmp')
+    ssh.mkdir(server, tmppath)
+    ssh.put(server, rscriptdir, binpath)
+    cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
 
-  # get parameters/requirements
-  role_checks = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
-  parameters = role_checks['parameters']
-  parameters['_type'] = 'dictionary'
-  if 'requirements' in role_checks:
-    requirements = role_checks['requirements']
-  else:
-    requirements = {}
+    # get parameters/requirements
+    role_checks = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
+    parameters = role_checks['parameters']
+    parameters['_type'] = 'dictionary'
+    if 'requirements' in role_checks:
+      requirements = role_checks['requirements']
+    else:
+      requirements = {}
 
-  # process includes
-  if 'includes' in role_checks:
-    for i in role_checks['includes']:
-      i_checks = yaml.load(open(os.path.join(checksdir, i.lower() + '.yaml')))
-      if 'parameters' in i_checks:
-        i_checks['parameters'].update(parameters)
-        parameters = i_checks['parameters']
-      if 'requirements' in i_checks:
-        i_checks['requirements'].update(requirements)
-        requirements = i_checks['requirements']
+    # process includes
+    if 'includes' in role_checks:
+      for i in role_checks['includes']:
+        i_checks = yaml.load(open(os.path.join(checksdir, i.lower() + '.yaml')))
+        if 'parameters' in i_checks:
+          i_checks['parameters'].update(parameters)
+          parameters = i_checks['parameters']
+        if 'requirements' in i_checks:
+          i_checks['requirements'].update(requirements)
+          requirements = i_checks['requirements']
 
-  result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath, tmppath=tmppath)
+    result['check_status'] = 'in progress'
+    result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath, tmppath=tmppath)
 
-  # clean up
-  ssh.remove(server, remote_hwswa2_dir)
+    # clean up
+    ssh.remove(server, remote_hwswa2_dir)
+  
+    # check reboot
+    if config['check_reboot']:
+      result['reboot_check'] = ssh.check_reboot(server)
 
-  # plan:
-  # 1. copy remote scripts
-  # 2. prepare PATH variable
-  # 3. read role.yaml/parameters
-  # 4. for each parameter run command and store result
-  # 5. check reboot: send reboot cmd, wait till accessible
-  # 6. dump result into reports/server.yaml
-  # 7. do cleanup
+    result['check_status'] = 'finished'
+  
   resultsqueue.put(result)
 
+@passbyval
 def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
   val = None
   if isinstance(param, (str, unicode)):
@@ -182,6 +185,20 @@ def shell():
     exit(1)
   if ssh.accessible(server):
     ssh.shell(server)
+  else:
+    error("Failed to connect to server %s" % servername)
+    exit(1)
+
+def reboot():
+  """Reboots server and prints results"""
+  servername = config['servername']
+  debug("Rebooting server %s" % servername)
+  server = get_server(servername)
+  if not server:
+    error("Cannot find server %s in servers list" % servername)
+    exit(1)
+  if ssh.accessible(server):
+    print ssh.check_reboot(server)
   else:
     error("Failed to connect to server %s" % servername)
     exit(1)
