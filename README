@@ -83,7 +83,8 @@ logs/reports/    - directory to store reports to
 
 Python, python-crypto lib, ping executable
 
-Python-crypto rpms for CentOS 5:
+Python-crypto rpms for CentOS 5 (both rpms can be found in 3rd-party/):
 http://flexbox.sourceforge.net/centos/5/x86_64/python-crypto-2.1.0-1.el5.x86_64.rpm
 http://flexbox.sourceforge.net/centos/5/i386/python-crypto-2.1.0-1.el5.i386.rpm
+
 
