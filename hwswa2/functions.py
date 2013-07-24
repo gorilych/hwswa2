@@ -96,8 +96,9 @@ def read_configuration():
     config['configfile'] = args.configfile
   
   # add apppath definition to configuration file and read configobj from it
-  with open(config['configfile']) as f:
-      config_lines = f.readlines()
+  f = open(config['configfile'])
+  config_lines = f.readlines()
+  f.close()
   config_lines.insert(0, 'apppath=' + apppath)
   config_from_file = ConfigObj(config_lines, interpolation='Template', configspec=configspec)
   
