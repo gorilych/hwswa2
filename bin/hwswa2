@@ -12,5 +12,16 @@ export BINPATH
 
 export PYTHONPATH=$BINPATH/../libs
 
-exec python "$BINPATH/../hwswa2/main.py" "$@"
+if [ -x "$(which python26)" ]; then
+  PYTHON=$(which python26)
+else
+  PYTHON=$(which python)
+fi
 
+PYVERGT260=$($PYTHON -c "import sys; print sys.hexversion >= 0x2060000")
+
+if [ $PYVERGT260 == "True" ]; then
+  exec $PYTHON "$BINPATH/../hwswa2/main.py" "$@"
+else
+  echo "Check your python version, it should be >= 2.6.0"
+fi

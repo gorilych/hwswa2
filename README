@@ -81,10 +81,10 @@ logs/reports/    - directory to store reports to
 
 3. =================== Requirements
 
-Python, python-crypto lib, ping executable
+Python 26, python-crypto lib, GnuMP, ping executable
 
-Python-crypto rpms for CentOS 5 (both rpms can be found in 3rd-party/):
-http://flexbox.sourceforge.net/centos/5/x86_64/python-crypto-2.1.0-1.el5.x86_64.rpm
-http://flexbox.sourceforge.net/centos/5/i386/python-crypto-2.1.0-1.el5.i386.rpm
+To install Python 26 on CentOS 5 (this will not remove system python 2.4):
 
+# yum install gmp
+# rpm -ivh http://dl.fedoraproject.org/pub/epel/5/x86_64/libffi-3.0.5-1.el5.x86_64.rpm http://dl.fedoraproject.org/pub/epel/5/x86_64/python26-libs-2.6.8-2.el5.x86_64.rpm http://dl.fedoraproject.org/pub/epel/5/x86_64/python26-crypto-2.3-5.el5.x86_64.rpm http://dl.fedoraproject.org/pub/epel/5/x86_64/python26-2.6.8-2.el5.x86_64.rpm
 
