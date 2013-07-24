@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import os
 import argparse
 import logging
 from configobj import ConfigObj
