@@ -114,3 +114,8 @@ def read_configuration():
   # values from command line take precedence over configuration file options
   config.update(vars(args))
 
+  # create reportsdir
+  if not os.path.exists(config['reportsdir']):
+    os.makedirs(config['reportsdir'])
+
+
