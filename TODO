@@ -12,7 +12,7 @@
 
 * add inter-connection checker
 
-* add reboot-check
+* DONE add reboot-check
 
 * add prepare script functionality
   This script is for preparing servers for deployment. It can
@@ -27,3 +27,5 @@
 * do clean-up on exception
 
 * rewrite disk checks (now shows only mounted)
+
+* add pipe support for subcommand exec
