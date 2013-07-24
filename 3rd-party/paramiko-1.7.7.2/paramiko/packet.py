@@ -57,9 +57,12 @@ class Packetizer (object):
 
     # READ the secsh RFC's before raising these values.  if anything,
     # they should probably be lower.
-    REKEY_PACKETS = pow(2, 30)
-    REKEY_BYTES = pow(2, 30)
-    
+    REKEY_PACKETS = pow(2, 29)
+    REKEY_BYTES = pow(2, 29)
+
+    REKEY_PACKETS_OVERFLOW_MAX = pow(2,29)      # Allow receiving this many packets after a re-key request before terminating
+    REKEY_BYTES_OVERFLOW_MAX = pow(2,29)        # Allow receiving this many bytes after a re-key request before terminating
+
     def __init__(self, socket):
         self.__socket = socket
         self.__logger = None
@@ -68,14 +71,15 @@ class Packetizer (object):
         self.__need_rekey = False
         self.__init_count = 0
         self.__remainder = ''
-        
+
         # used for noticing when to re-key:
         self.__sent_bytes = 0
         self.__sent_packets = 0
         self.__received_bytes = 0
         self.__received_packets = 0
+        self.__received_bytes_overflow = 0
         self.__received_packets_overflow = 0
-        
+
         # current inbound/outbound ciphering:
         self.__block_size_out = 8
         self.__block_size_in = 8
@@ -99,13 +103,13 @@ class Packetizer (object):
         self.__keepalive_interval = 0
         self.__keepalive_last = time.time()
         self.__keepalive_callback = None
-        
+
     def set_log(self, log):
         """
         Set the python log object to use for logging.
         """
         self.__logger = log
-    
+
     def set_outbound_cipher(self, block_engine, block_size, mac_engine, mac_size, mac_key):
         """
         Switch outbound data cipher.
@@ -122,7 +126,7 @@ class Packetizer (object):
         if self.__init_count == 3:
             self.__init_count = 0
             self.__need_rekey = False
-    
+
     def set_inbound_cipher(self, block_engine, block_size, mac_engine, mac_size, mac_key):
         """
         Switch inbound data cipher.
@@ -134,32 +138,33 @@ class Packetizer (object):
         self.__mac_key_in = mac_key
         self.__received_bytes = 0
         self.__received_packets = 0
+        self.__received_bytes_overflow = 0
         self.__received_packets_overflow = 0
         # wait until the reset happens in both directions before clearing rekey flag
         self.__init_count |= 2
         if self.__init_count == 3:
             self.__init_count = 0
             self.__need_rekey = False
-    
+
     def set_outbound_compressor(self, compressor):
         self.__compress_engine_out = compressor
-    
+
     def set_inbound_compressor(self, compressor):
         self.__compress_engine_in = compressor
-        
+
     def close(self):
         self.__closed = True
         self.__socket.close()
 
     def set_hexdump(self, hexdump):
         self.__dump_packets = hexdump
-        
+
     def get_hexdump(self):
         return self.__dump_packets
-    
+
     def get_mac_size_in(self):
         return self.__mac_size_in
-    
+
     def get_mac_size_out(self):
         return self.__mac_size_out
 
@@ -168,11 +173,11 @@ class Packetizer (object):
         Returns C{True} if a new set of keys needs to be negotiated.  This
         will be triggered during a packet read or write, so it should be
         checked after every read or write, or at least after every few.
-        
+
         @return: C{True} if a new set of keys needs to be negotiated
         """
         return self.__need_rekey
-    
+
     def set_keepalive(self, interval, callback):
         """
         Turn on/off the callback keepalive.  If C{interval} seconds pass with
@@ -182,11 +187,11 @@ class Packetizer (object):
         self.__keepalive_interval = interval
         self.__keepalive_callback = callback
         self.__keepalive_last = time.time()
-    
+
     def read_all(self, n, check_rekey=False):
         """
         Read as close to N bytes as possible, blocking as long as necessary.
-        
+
         @param n: number of bytes to read
         @type n: int
         @return: the data read
@@ -262,7 +267,7 @@ class Packetizer (object):
                 break
             out = out[n:]
         return
-        
+
     def readline(self, timeout):
         """
         Read a line from the socket.  We assume no data is pending after the
@@ -277,7 +282,7 @@ class Packetizer (object):
         if (len(buf) > 0) and (buf[-1] == '\r'):
             buf = buf[:-1]
         return buf
-        
+
     def send_message(self, data):
         """
         Write a block of data using the current cipher, as an SSH block.
@@ -311,14 +316,12 @@ class Packetizer (object):
 
             self.__sent_bytes += len(out)
             self.__sent_packets += 1
-            if (self.__sent_packets % 100) == 0:
-                # stirring the randpool takes 30ms on my ibook!!
-                randpool.stir()
             if ((self.__sent_packets >= self.REKEY_PACKETS) or (self.__sent_bytes >= self.REKEY_BYTES)) \
                    and not self.__need_rekey:
                 # only ask once for rekeying
                 self._log(DEBUG, 'Rekeying (hit %d packets, %d bytes sent)' %
                           (self.__sent_packets, self.__sent_bytes))
+                self.__received_bytes_overflow = 0
                 self.__received_packets_overflow = 0
                 self._trigger_rekey()
         finally:
@@ -328,7 +331,7 @@ class Packetizer (object):
         """
         Only one thread should ever be in this function (no other locking is
         done).
-        
+
         @raise SSHException: if the packet is mangled
         @raise NeedRekeyException: if the transport should rekey
         """
@@ -359,7 +362,7 @@ class Packetizer (object):
                 raise SSHException('Mismatched MAC')
         padding = ord(packet[0])
         payload = packet[1:packet_size - padding]
-        randpool.add_event()
+        
         if self.__dump_packets:
             self._log(DEBUG, 'Got payload (%d bytes, %d padding)' % (packet_size, padding))
 
@@ -369,21 +372,25 @@ class Packetizer (object):
         msg = Message(payload[1:])
         msg.seqno = self.__sequence_number_in
         self.__sequence_number_in = (self.__sequence_number_in + 1) & 0xffffffffL
-        
+
         # check for rekey
-        self.__received_bytes += packet_size + self.__mac_size_in + 4
+        raw_packet_size = packet_size + self.__mac_size_in + 4
+        self.__received_bytes += raw_packet_size
         self.__received_packets += 1
         if self.__need_rekey:
-            # we've asked to rekey -- give them 20 packets to comply before
+            # we've asked to rekey -- give them some packets to comply before
             # dropping the connection
+            self.__received_bytes_overflow += raw_packet_size
             self.__received_packets_overflow += 1
-            if self.__received_packets_overflow >= 20:
+            if (self.__received_packets_overflow >= self.REKEY_PACKETS_OVERFLOW_MAX) or \
+               (self.__received_bytes_overflow >= self.REKEY_BYTES_OVERFLOW_MAX):
                 raise SSHException('Remote transport is ignoring rekey requests')
         elif (self.__received_packets >= self.REKEY_PACKETS) or \
              (self.__received_bytes >= self.REKEY_BYTES):
             # only ask once for rekeying
             self._log(DEBUG, 'Rekeying (hit %d packets, %d bytes received)' %
                       (self.__received_packets, self.__received_bytes))
+            self.__received_bytes_overflow = 0
             self.__received_packets_overflow = 0
             self._trigger_rekey()
 
@@ -398,8 +405,8 @@ class Packetizer (object):
 
 
     ##########  protected
-    
-    
+
+
     def _log(self, level, msg):
         if self.__logger is None:
             return
@@ -418,7 +425,7 @@ class Packetizer (object):
         if now > self.__keepalive_last + self.__keepalive_interval:
             self.__keepalive_callback()
             self.__keepalive_last = now
-    
+
     def _py22_read_all(self, n, out):
         while n > 0:
             r, w, e = select.select([self.__socket], [], [], 0.1)
@@ -476,7 +483,7 @@ class Packetizer (object):
         packet = struct.pack('>IB', len(payload) + padding + 1, padding)
         packet += payload
         if self.__block_engine_out is not None:
-            packet += randpool.get_bytes(padding)
+            packet += rng.read(padding)
         else:
             # cute trick i caught openssh doing: if we're not encrypting,
             # don't waste random bytes for the padding
