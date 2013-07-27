@@ -49,6 +49,11 @@ def pingable(server):
 def exec_cmd_i(server, sshcmd):
   """Executes command interactively"""
   client = connect(server)
+  if 'sudo' in server['account']:
+    sudopass = aux.shell_escape(server['account']['sudo'])
+    sshcmd = ( "echo \"%s\" | sudo -p '' -S " % sudopass ) + sshcmd
+  if 'sudo-no-password' in server['account']:
+    sshcmd = "sudo " + sshcmd
   channel = client.get_transport().open_session()
   channel.get_pty()
   channel.settimeout(5)
@@ -63,6 +68,11 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=10):
   """Executes command and returns tuple of stdout, stderr and status"""
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
+  if 'sudo' in server['account']:
+    sudopass = aux.shell_escape(server['account']['sudo'])
+    sshcmd = ( "echo \"%s\" | sudo -p '' -S " % sudopass ) + sshcmd
+  if 'sudo-no-password' in server['account']:
+    sshcmd = "sudo " + sshcmd
   stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout)
   if input_data:
     stdin.write(input_data)
