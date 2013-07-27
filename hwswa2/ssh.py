@@ -64,15 +64,16 @@ def exec_cmd_i(server, sshcmd):
   client.close()
   return status
 
-def exec_cmd(server, sshcmd, input_data=None, timeout=10):
+def exec_cmd(server, sshcmd, input_data=None, timeout=10, privileged=True):
   """Executes command and returns tuple of stdout, stderr and status"""
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
-  if 'sudo' in server['account']:
-    sudopass = aux.shell_escape(server['account']['sudo'])
-    sshcmd = ( "echo \"%s\" | sudo -p '' -S " % sudopass ) + sshcmd
-  if 'sudo-no-password' in server['account']:
-    sshcmd = "sudo " + sshcmd
+  if privileged:
+    if 'sudo' in server['account']:
+      sudopass = aux.shell_escape(server['account']['sudo'])
+      sshcmd = ( "echo \"%s\" | sudo -p '' -S " % sudopass ) + sshcmd
+    if 'sudo-no-password' in server['account']:
+      sshcmd = "sudo " + sshcmd
   stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout)
   if input_data:
     stdin.write(input_data)
@@ -83,8 +84,8 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=10):
   client.close()
   return stdout_data, stderr_data, status
 
-def get_cmd_out(server, sshcmd, input_data=None):
-  stdout_data, stderr_data, status = exec_cmd(server, sshcmd, input_data)
+def get_cmd_out(server, sshcmd, input_data=None, privileged=True):
+  stdout_data, stderr_data, status = exec_cmd(server, sshcmd, input_data, privileged=privileged)
   return '\n'.join(stdout_data)
 
 def remove(server, path):
@@ -122,7 +123,7 @@ def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
   if ftype == 'd':
     sshcmd = sshcmd + '-d '
   sshcmd = sshcmd + '-p %s %s' % (path, template)
-  return get_cmd_out(server, sshcmd)
+  return get_cmd_out(server, sshcmd, privileged=False)
 
 def mkdir(server, path):
   client = connect(server)
