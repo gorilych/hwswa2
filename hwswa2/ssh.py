@@ -17,11 +17,14 @@ def connect(server):
   else:
     port = 22
   username = server['account']['login']
-  password = server['account']['password']
+  password = None
+  key      = None
+  if 'password' in server['account']: password     = server['account']['password']
+  if 'key'      in server['account']: key_filename = server['account']['key']
   client = paramiko.SSHClient()
   client.load_system_host_keys()
   client.set_missing_host_key_policy(paramiko.WarningPolicy())
-  client.connect(hostname, port, username, password)
+  client.connect(hostname, port, username, password=password, key_filename=key_filename)
   return client
 
 def shell(server):
