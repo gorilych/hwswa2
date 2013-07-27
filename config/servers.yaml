@@ -1,7 +1,19 @@
 accounts:
  - &testaccount
    login: test
+   #or ssh-key: path/to/key
+   # 'password' specifies either account password or ssh-key passphrase (if needed)
+   # if ssh-key is not protected with password, or you have configured passwordless access via ~/.ssh,
+   #   do not specify 'password'
    password: testpassword
+   sudo: testpassword
+   #or sudo-no-password: nopassword
+   #or su: password
+ - &testaccountwithsu
+   login: test
+   password: testpassword
+   # parameter su: specify root password here
+   su: rootpassword
 servers:
  - {name: localhost, address: 127.0.0.1, role: PVCLIN, account: *testaccount}
  - {name: localhost2, address: 127.0.0.1, port: 21, role: PVCLIN, account: *testaccount}  
