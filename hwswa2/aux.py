@@ -38,3 +38,19 @@ def passbyval(func):
       ckargs[key] = copy.deepcopy(kargs[key])
     return func(*cargs, **ckargs)
   return _new_function_with_args_passed_by_value
+
+def shell_escape(string):
+    """
+    Escape double quotes, backticks and dollar signs in given ``string``.
+
+    For example::
+
+        >>> _shell_escape('abc$')
+        'abc\\\\$'
+        >>> _shell_escape('"')
+        '\\\\"'
+    """
+    for char in ('"', '$', '`'):
+        string = string.replace(char, '\%s' % char)
+    return string
+
