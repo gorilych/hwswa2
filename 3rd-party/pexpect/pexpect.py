@@ -1522,7 +1522,10 @@ class spawn (object):
         while self.isalive():
             r,w,e = self.__select([self.child_fd, self.STDIN_FILENO], [], [])
             if self.child_fd in r:
-                data = self.__interact_read(self.child_fd)
+                try:
+                  data = self.__interact_read(self.child_fd)
+                except OSError:
+                  exit(0)
                 if output_filter: data = output_filter(data)
                 if self.logfile is not None:
                     self.logfile.write (data)
