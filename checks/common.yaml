@@ -1,14 +1,14 @@
 description: Common checks for all roles
 parameters:
   hostname:           hostname -f
-  time_utc:           date --utc
-  time:               date
+  time_utc:           LANG=C date --utc
+  time:               LANG=C date
   ntp_service_status: service ntpd status 2>&1
   OS:                 lsb_release --short --id --release | xargs
   architecture:       uname --machine
   ram:       awk '$1=="MemTotal:" {printf("%.3f GB",$2/1024/1024)}' /proc/meminfo
   swap:      awk '$1=="SwapTotal:"{printf("%.3f GB",$2/1024/1024)}' /proc/meminfo
-  selinux:   which setenforce && setenforce || echo no selinux
+  selinux:   which getenforce && getenforce || echo no selinux
   yum_repos: which yum && echo $(yum repolist | sed '/repo id/,$ !d') || echo no yum
   processors:
     _type: dictionary
@@ -28,13 +28,13 @@ parameters:
     dns_check: host -t soa google.com | grep -q 'has SOA record' && echo OK || echo NOT OK
     network_interfaces:
       _type: list
-      # generator will be evaluated first, each line add element to list
+      # generator will be evaluated first, each line adds element to list
       # then, for each new element, other fields will be evalueted with generator as dependency
       # form:
       # _generator: {field_name: placeholder_name}
       _generator: {name: name}
       name:   ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
-              | awk '{print $2}' | tr -d ':'
+              | awk '{print $2}' | sed 's/:$//'
       state:  ip --oneline link show dev %(name)s 
               | grep --only-matching --extended-regexp ' state (UP|DOWN|UNKNOWN) ' 
               | awk '{print $2}'
