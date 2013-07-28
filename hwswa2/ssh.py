@@ -83,7 +83,7 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=10, privileged=True):
       if not 'supath' in server: prepare_su(server)
       rootpw = server['account']['su']
       sshcmd = prepare_su_cmd(server['supath'], rootpw, sshcmd)
-  stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout)
+  stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout, get_pty=True)
   if input_data:
     stdin.write(input_data)
     stdin.flush()
