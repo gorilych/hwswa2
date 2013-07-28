@@ -35,3 +35,5 @@
 * warn about non-existing ssh key
 
 * DONE use su/sudo in shell subcommand
+
+* Run ssh commands in one session
