@@ -37,3 +37,5 @@
 * DONE use su/sudo in shell subcommand
 
 * Run ssh commands in one session
+
+* checks/common.yaml: workaround problem with missing `host` command for DNS check
