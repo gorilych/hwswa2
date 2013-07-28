@@ -31,3 +31,7 @@
 * add pipe support for subcommand exec
 
 * add check for NIC configuration type (dhcp/static)
+
+* warn about non-existing ssh key
+
+* DONE use su/sudo in shell subcommand

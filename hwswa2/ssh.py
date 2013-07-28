@@ -2,6 +2,7 @@ import stat
 import time
 import os
 import os.path
+import sys
 import subprocess
 import signal
 import paramiko
@@ -27,9 +28,28 @@ def connect(server):
   client.connect(hostname, port, username, password=password, key_filename=key_filename)
   return client
 
-def shell(server):
+def shell(server, privileged=True):
   client = connect(server)
   chan = client.invoke_shell()
+  if privileged:
+    if   'sudo'             in server['account']:
+      sudopass = aux.shell_escape(server['account']['sudo'])
+      if not 'supath' in server: prepare_su(server)
+      sshcmd = prepare_su_cmd(server['supath'], sudopass, 'sudoshell')
+    elif 'sudo-no-password' in server['account']:
+      sshcmd = "sudo su -"
+    elif 'su'               in server['account']:
+      if not 'supath' in server: prepare_su(server)
+      rootpw = server['account']['su']
+      sshcmd = prepare_su_cmd(server['supath'], rootpw, 'shell')
+    chan.sendall(sshcmd + '; exit \n')
+    # cleanup previous output, leaving only prompt
+    data = ''
+    while chan.recv_ready(): data += chan.recv(1000)
+    time.sleep(0.3)
+    while chan.recv_ready(): data += chan.recv(1000)
+    print data.split('\n')[-1],
+    sys.stdout.flush()
   interactive.interactive_shell(chan)
   chan.close()
   client.close()
@@ -222,25 +242,38 @@ def read_from_to(fifo_name, fout):
 for char in ('"', '$', '`'):
   command = command.replace(char, '\%s' % char)
 
-sucmd = 'su - -c "{ %s; } 1>%s 2>%s"' % (command, stdout_fifo, stderr_fifo)
+if command == 'shell':
+  sucmd = 'su -'
+  child = pexpect.spawn(sucmd)
+  child.expect_exact('assword: ')
+  child.sendline(password)
+  child.interact()
+elif command == 'sudoshell':
+  sucmd = 'sudo su -'
+  child = pexpect.spawn(sucmd)
+  child.expect('password for .*: ')
+  child.sendline(password)
+  child.interact()
+else:
+  sucmd = 'su - -c "{ %s; } 1>%s 2>%s"' % (command, stdout_fifo, stderr_fifo)
 
-stdout_th = threading.Thread(name='stdout', target=read_from_to, args=(stdout_fifo, sys.stdout))
-stderr_th = threading.Thread(name='stderr', target=read_from_to, args=(stderr_fifo, sys.stderr))
+  stdout_th = threading.Thread(name='stdout', target=read_from_to, args=(stdout_fifo, sys.stdout))
+  stderr_th = threading.Thread(name='stderr', target=read_from_to, args=(stderr_fifo, sys.stderr))
 
-stdout_th.start()
-stderr_th.start()
+  stdout_th.start()
+  stderr_th.start()
 
-child = pexpect.spawn(sucmd)
-child.expect_exact('assword: ')
-child.sendline(password)
-child.expect_exact(pexpect.EOF)
-child.close()
-exitcode = child.exitstatus
+  child = pexpect.spawn(sucmd)
+  child.expect_exact('assword: ')
+  child.sendline(password)
+  child.expect_exact(pexpect.EOF)
+  child.close()
+  exitcode = child.exitstatus
 
-stdout_th.join()
-stderr_th.join()
+  stdout_th.join()
+  stderr_th.join()
 
-sys.exit(child.exitstatus)
+  sys.exit(child.exitstatus)
 """
   # create directory
   supath = mktemp(server, template='su.XXXX', path='/tmp')
