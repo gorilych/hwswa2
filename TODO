@@ -8,7 +8,7 @@
 
 * add ssh-jumper support
 
-* add sudo/su support
+* DONE add sudo/su support
 
 * add inter-connection checker
 
@@ -29,3 +29,5 @@
 * rewrite disk checks (now shows only mounted)
 
 * add pipe support for subcommand exec
+
+* add check for NIC configuration type (dhcp/static)

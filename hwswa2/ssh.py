@@ -16,9 +16,9 @@ def connect(server):
     port = server['port']
   else:
     port = 22
-  username = server['account']['login']
-  password = None
-  key      = None
+  username          = server['account']['login']
+  password          = None
+  key_filename      = None
   if 'password' in server['account']: password     = server['account']['password']
   if 'key'      in server['account']: key_filename = server['account']['key']
   client = paramiko.SSHClient()
@@ -46,14 +46,19 @@ def pingable(server):
   command = "ping -w 1 -q -c 1 %s" % server['address']
   return subprocess.call(command) == 0
 
-def exec_cmd_i(server, sshcmd):
+def exec_cmd_i(server, sshcmd, privileged=True):
   """Executes command interactively"""
   client = connect(server)
-  if 'sudo' in server['account']:
-    sudopass = aux.shell_escape(server['account']['sudo'])
-    sshcmd = ( "echo \"%s\" | sudo -p '' -S " % sudopass ) + sshcmd
-  if 'sudo-no-password' in server['account']:
-    sshcmd = "sudo " + sshcmd
+  if privileged:
+    if   'sudo'             in server['account']:
+      sudopass = aux.shell_escape(server['account']['sudo'])
+      sshcmd = ( "echo \"%s\" | sudo -p '' -S " % sudopass ) + sshcmd
+    elif 'sudo-no-password' in server['account']:
+      sshcmd = "sudo " + sshcmd
+    elif 'su'               in server['account']:
+      if not 'supath' in server: prepare_su(server)
+      rootpw = server['account']['su']
+      sshcmd = prepare_su_cmd(server['supath'], rootpw, sshcmd)
   channel = client.get_transport().open_session()
   channel.get_pty()
   channel.settimeout(5)
@@ -69,11 +74,15 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=10, privileged=True):
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
   if privileged:
-    if 'sudo' in server['account']:
+    if   'sudo'             in server['account']:
       sudopass = aux.shell_escape(server['account']['sudo'])
       sshcmd = ( "echo \"%s\" | sudo -p '' -S " % sudopass ) + sshcmd
-    if 'sudo-no-password' in server['account']:
+    elif 'sudo-no-password' in server['account']:
       sshcmd = "sudo " + sshcmd
+    elif 'su'               in server['account']:
+      if not 'supath' in server: prepare_su(server)
+      rootpw = server['account']['su']
+      sshcmd = prepare_su_cmd(server['supath'], rootpw, sshcmd)
   stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout)
   if input_data:
     stdin.write(input_data)
@@ -188,3 +197,79 @@ def check_reboot(server, timeout=300):
       return "server is not accessible after %s seconds" % timeout
   else:
     return "server does not go to reboot: still accessible after %s seconds" % timeout
+
+def prepare_su(server):
+  """Copies su.py to remote server and returns path to containing directory"""
+  su_py = """#!/usr/bin/env python
+import pexpect
+import sys
+import os
+import threading
+
+password    = sys.argv[1]
+stderr_fifo = sys.argv[2]
+stdout_fifo = sys.argv[3]
+command     = sys.argv[4]
+
+def read_from_to(fifo_name, fout):
+  fifo = os.fdopen(os.open(fifo_name, os.O_RDONLY), 'r')
+  while True:
+    line = fifo.readline()
+    if not line: break
+    fout.write(line)
+  fifo.close()
+
+for char in ('"', '$', '`'):
+  command = command.replace(char, '\%s' % char)
+
+sucmd = 'su - -c "{ %s; } 1>%s 2>%s"' % (command, stdout_fifo, stderr_fifo)
+
+stdout_th = threading.Thread(name='stdout', target=read_from_to, args=(stdout_fifo, sys.stdout))
+stderr_th = threading.Thread(name='stderr', target=read_from_to, args=(stderr_fifo, sys.stderr))
+
+stdout_th.start()
+stderr_th.start()
+
+child = pexpect.spawn(sucmd)
+child.expect_exact('assword: ')
+child.sendline(password)
+child.expect_exact(pexpect.EOF)
+child.close()
+exitcode = child.exitstatus
+
+stdout_th.join()
+stderr_th.join()
+
+sys.exit(child.exitstatus)
+"""
+  # create directory
+  supath = mktemp(server, template='su.XXXX', path='/tmp')
+  # copy pexpect.py
+  import pexpect
+  pexpect_file = pexpect.__file__
+  if pexpect_file.endswith('.pyc'):
+    pexpect_file = pexpect_file[:-1]
+  put(server, pexpect_file, supath)
+  # copy su.py
+  su_py_path = os.path.join(supath, 'su.py')
+  write(server, su_py_path, su_py)
+  # prepare stdout and stderr fifos:
+  exec_cmd(server, "mkfifo %s" % os.path.join(supath, 'stdout'), privileged=False)
+  exec_cmd(server, "mkfifo %s" % os.path.join(supath, 'stderr'), privileged=False)
+  server['supath'] = supath
+  return supath
+
+def prepare_su_cmd(supath, rootpw, cmd):
+  su_py       = os.path.join(supath, 'su.py')
+  stdout_fifo = os.path.join(supath, 'stdout')
+  stderr_fifo = os.path.join(supath, 'stderr')
+  return 'python %s "%s" %s %s "%s"' % (su_py,
+    aux.shell_escape(rootpw),
+    stdout_fifo,
+    stderr_fifo,
+    aux.shell_escape(cmd))
+
+def cleanup(server):
+  if 'supath' in server:
+    remove(server, server['supath'])
+    del server['supath']
