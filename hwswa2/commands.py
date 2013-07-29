@@ -36,7 +36,7 @@ def _check(server, resultsqueue):
   name = server['name']
   role = server['role']
   result = {'name': name, 'role': role, 
-            'check_time': time.asctime(time.localtime(time.time())),
+            'check_time': time.asctime(),
             'parameters': {}, 'requirements': {}}
   checksdir = config['checksdir']
 
@@ -150,7 +150,9 @@ def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
 
 def _save_report(name, result):
   path = os.path.join(config['reportsdir'], name)
-  yaml.dump(result, open(path, 'w'))
+  reportfile = os.path.join(path, time.strftime('%F.%Hh%Mm%Ss'))
+  if not os.path.exists(path): os.makedirs(path)
+  yaml.dump(result, open(reportfile, 'w'))
 
 def checkall():
   """Check all servers"""
