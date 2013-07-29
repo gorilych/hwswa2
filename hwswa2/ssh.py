@@ -56,13 +56,18 @@ def shell(server, privileged=True):
   chan.close()
   client.close()
 
-def accessible(server):
-  try:
-    client = connect(server)
-    client.close()
-    return True
-  except:
-    return False
+def accessible(server, retry=False):
+  if 'accessible' in server and not retry:
+    return server['accessible']
+  else:
+    try:
+      client = connect(server)
+      client.close()
+      server['accessible'] = True
+      return True
+    except:
+      server['accessible'] = False
+      return False
 
 def pingable(server):
   command = "ping -w 1 -q -c 1 %s" % server['address']
@@ -211,11 +216,11 @@ def check_reboot(server, timeout=300):
     pass
   debug("reboot command is sent, now wait till server is down")
   # wait till shutdown:
-  if aux.wait_for_not(accessible, [server], timeout):
+  if aux.wait_for_not(accessible, [server, True], timeout):
     debug("Server %s is down" % server['name'])
     delta = time.time() - starttime
     # wait till boot
-    if aux.wait_for(accessible, [server], timeout - delta):
+    if aux.wait_for(accessible, [server, True], timeout - delta):
       return time.time() - starttime
     else:
       return "server is not accessible after %s seconds" % timeout
