@@ -41,3 +41,11 @@
 * checks/common.yaml: workaround problem with missing `host` command for DNS check
 
 * check privileges for accounts with su/sudo
+
+* create generator ipmap.csv -> config files
+
+* check empty "sudo: "
+
+* Bug:     myhostid = subprocess.check_output('hostid').strip()
+AttributeError: 'module' object has no attribute 'check_output'
+
