@@ -16,7 +16,8 @@ config   = { 'configdir'    : apppath + '/' + 'config',
              'logdir'       : apppath + '/' + 'logs',
              'checksdir'    : apppath + '/' + 'checks',
              'debug'        : False,
-             'check_reboot' : False }
+             'check_reboot' : False,
+             'ssh_timeout'  : 20 }
 config['configfile']   = config['configdir'] + '/' + 'main.cfg'
 config['serversfile']  = config['configdir'] + '/' + 'servers.yaml'
 config['networksfile'] = config['configdir'] + '/' + 'networks.yaml'

@@ -10,6 +10,8 @@ import hwswa2.interactive as interactive
 import hwswa2.aux as aux
 from hwswa2.log import debug
 
+ssh_timeout = 30
+
 def connect(server):
   """Connects to server and returns SSHClient object"""
   hostname = server['address']
@@ -82,7 +84,7 @@ def exec_cmd_i(server, sshcmd, privileged=True):
       sshcmd = prepare_su_cmd(server['supath'], rootpw, sshcmd)
   channel = client.get_transport().open_session()
   channel.get_pty()
-  channel.settimeout(5)
+  channel.settimeout(ssh_timeout)
   channel.exec_command(sshcmd)
   interactive.interactive_shell(channel)
   status = channel.recv_exit_status()
@@ -90,7 +92,7 @@ def exec_cmd_i(server, sshcmd, privileged=True):
   client.close()
   return status
 
-def exec_cmd(server, sshcmd, input_data=None, timeout=20, privileged=True):
+def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
   """Executes command and returns tuple of stdout, stderr and status"""
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
@@ -115,8 +117,8 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=20, privileged=True):
   client.close()
   return stdout_data, stderr_data, status
 
-def get_cmd_out(server, sshcmd, input_data=None, privileged=True):
-  stdout_data, stderr_data, status = exec_cmd(server, sshcmd, input_data, privileged=privileged)
+def get_cmd_out(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
+  stdout_data, stderr_data, status = exec_cmd(server, sshcmd, input_data, timeout=timeout, privileged=privileged)
   return '\n'.join(stdout_data)
 
 def remove(server, path):
@@ -241,9 +243,6 @@ def read_from_to(fifo_name, fout):
     fout.write(line)
   fifo.close()
 
-for char in ('"', '$', '`'):
-  command = command.replace(char, '\%s' % char)
-
 if command == 'shell':
   sucmd = 'su -'
   child = pexpect.spawn(sucmd)
@@ -257,7 +256,8 @@ elif command == 'sudoshell':
   child.sendline(password)
   child.interact()
 else:
-  sucmd = 'su - -c "{ %s; } 1>%s 2>%s"' % (command, stdout_fifo, stderr_fifo)
+  sucmd  = 'su'
+  suargs = ['-', '-c', '{ %s; } 1>%s 2>%s' % (command, stdout_fifo, stderr_fifo)]
 
   stdout_th = threading.Thread(name='stdout', target=read_from_to, args=(stdout_fifo, sys.stdout))
   stderr_th = threading.Thread(name='stderr', target=read_from_to, args=(stderr_fifo, sys.stderr))
@@ -265,7 +265,7 @@ else:
   stdout_th.start()
   stderr_th.start()
 
-  child = pexpect.spawn(sucmd)
+  child = pexpect.spawn(sucmd, suargs)
   child.expect_exact('assword: ')
   child.sendline(password)
   child.expect_exact(pexpect.EOF)

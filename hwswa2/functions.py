@@ -119,4 +119,8 @@ def read_configuration():
   if not os.path.exists(config['reportsdir']):
     os.makedirs(config['reportsdir'])
 
+  # set global ssh timeout
+  import hwswa2.ssh as ssh
+  ssh.ssh_timeout = config['ssh_timeout']
+
 
