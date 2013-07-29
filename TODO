@@ -39,3 +39,5 @@
 * Run ssh commands in one session
 
 * checks/common.yaml: workaround problem with missing `host` command for DNS check
+
+* check privileges for accounts with su/sudo
