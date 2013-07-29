@@ -56,25 +56,7 @@ def _check(server, resultsqueue):
     ssh.put(server, rscriptdir, binpath)
     cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
 
-    # get parameters/requirements
-    role_checks = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
-    parameters = role_checks['parameters']
-    parameters['_type'] = 'dictionary'
-    if 'requirements' in role_checks:
-      requirements = role_checks['requirements']
-    else:
-      requirements = {}
-
-    # process includes
-    if 'includes' in role_checks:
-      for i in role_checks['includes']:
-        i_checks = yaml.load(open(os.path.join(checksdir, i.lower() + '.yaml')))
-        if 'parameters' in i_checks:
-          i_checks['parameters'].update(parameters)
-          parameters = i_checks['parameters']
-        if 'requirements' in i_checks:
-          i_checks['requirements'].update(requirements)
-          requirements = i_checks['requirements']
+    (parameters, requirements) = get_checks(role)
 
     result['check_status'] = 'in progress'
     result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath, tmppath=tmppath)
@@ -89,6 +71,39 @@ def _check(server, resultsqueue):
     result['check_status'] = 'finished'
   
   resultsqueue.put(result)
+
+def get_checks(roles):
+  """Gathers parameters and requirements from role.yaml
+  
+  roles - list of roles, from more specific to less specific
+          or one role
+  Returns tuple (parameters, requirements)
+  """
+  parameters   = {}
+  requirements = {}
+  checksdir    = config['checksdir']
+  if type(roles) == type([]): # list of roles
+    for role in roles:
+      (rp, rq) = get_checks(role)
+      rp.update(parameters)
+      rq.update(requirements)
+      parameters   = rp
+      requirements = rq
+  else: # one role
+    role = roles
+    role_yaml = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
+    if 'parameters'   in role_yaml: parameters   = role_yaml['parameters']
+    if 'requirements' in role_yaml: requirements = role_yaml['requirements']
+    parameters['_type'] = 'dictionary'
+
+    # process includes
+    if 'includes' in role_yaml:
+      (rp, rq) = get_checks(role_yaml['includes'])
+      rp.update(parameters)
+      rq.update(requirements)
+      parameters   = rp
+      requirements = rq
+  return (parameters, requirements)
 
 @passbyval
 def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
