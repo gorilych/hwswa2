@@ -1525,7 +1525,7 @@ class spawn (object):
                 try:
                   data = self.__interact_read(self.child_fd)
                 except OSError:
-                  exit(0)
+                  sys.exit(0)
                 if output_filter: data = output_filter(data)
                 if self.logfile is not None:
                     self.logfile.write (data)
