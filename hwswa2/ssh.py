@@ -205,7 +205,10 @@ def hostid(server):
   return get_cmd_out(server, 'hostid')
 
 def is_it_me(server):
-  myhostid = subprocess.check_output('hostid').strip()
+  if hasattr(subprocess, 'check_output'):
+    myhostid = subprocess.check_output('hostid').strip()
+  else:
+    myhostid = subprocess.Popen(["hostid"], stdout=subprocess.PIPE).communicate()[0].strip()
   server_hostid = hostid(server)
   debug("Is it me? Comparing %s and %s" % (myhostid, server_hostid))
   return myhostid == server_hostid
