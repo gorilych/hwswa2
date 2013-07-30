@@ -7,9 +7,8 @@ accounts:
    # if ssh-key is not protected with password, or you have configured passwordless access via ~/.ssh,
    #   do not specify 'password'
    # for su/sudo use
-   #   sudo: testpassword
-   #   or sudo-no-password: nopassword
-   #   or su: password
+   #   sudo: testpassword <- if sudo is passwordless, leave this field empty
+   #   su: password
  - &testaccountwithsu
    login: test
    password: testpassword

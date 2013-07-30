@@ -44,7 +44,7 @@
 
 * create generator ipmap.csv -> config files
 
-* check empty "sudo: "
+* DONE check empty "sudo: "
 
 * Bug:     myhostid = subprocess.check_output('hostid').strip()
 AttributeError: 'module' object has no attribute 'check_output'

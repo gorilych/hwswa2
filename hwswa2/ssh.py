@@ -34,13 +34,14 @@ def shell(server, privileged=True):
   client = connect(server)
   chan = client.invoke_shell()
   if privileged:
-    if   'sudo'             in server['account']:
-      sudopass = aux.shell_escape(server['account']['sudo'])
-      if not 'supath' in server: prepare_su(server)
-      sshcmd = prepare_su_cmd(server['supath'], sudopass, 'sudoshell')
-    elif 'sudo-no-password' in server['account']:
-      sshcmd = "sudo su -"
-    elif 'su'               in server['account']:
+    if 'sudo' in server['account']:
+      sudopass = server['account']['sudo']
+      if sudopass == None:
+        sshcmd = "sudo su -"
+      else:
+        if not 'supath' in server: prepare_su(server)
+        sshcmd = prepare_su_cmd(server['supath'], sudopass, 'sudoshell')
+    elif 'su' in server['account']:
       if not 'supath' in server: prepare_su(server)
       rootpw = server['account']['su']
       sshcmd = prepare_su_cmd(server['supath'], rootpw, 'shell')
@@ -77,12 +78,14 @@ def exec_cmd_i(server, sshcmd, privileged=True):
   """Executes command interactively"""
   client = connect(server)
   if privileged:
-    if   'sudo'             in server['account']:
-      sudopass = aux.shell_escape(server['account']['sudo'])
-      sshcmd = aux.shell_escape(sshcmd)
-      sshcmd = 'echo "%s" | sudo -p "" -S -- su - -c "%s"' % (sudopass, sshcmd)
-    elif 'sudo-no-password' in server['account']:
-      sshcmd = 'sudo -- su - -c "%s"' % aux.shell_escape(sshcmd)
+    if 'sudo' in server['account']:
+      sudopass = server['account']['sudo']
+      if sudopass == None:
+        sshcmd = 'sudo -- su - -c "%s"' % aux.shell_escape(sshcmd)
+      else:
+        sudopass = aux.shell_escape(sudopass)
+        sshcmd = aux.shell_escape(sshcmd)
+        sshcmd = 'echo "%s" | sudo -p "" -S -- su - -c "%s"' % (sudopass, sshcmd)
     elif 'su'               in server['account']:
       if not 'supath' in server: prepare_su(server)
       rootpw = server['account']['su']
@@ -102,12 +105,14 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
   if privileged:
-    if   'sudo'             in server['account']:
-      sudopass = aux.shell_escape(server['account']['sudo'])
-      sshcmd = aux.shell_escape(sshcmd)
-      sshcmd = 'echo "%s" | sudo -p "" -S -- su - -c "%s"' % (sudopass, sshcmd)
-    elif 'sudo-no-password' in server['account']:
-      sshcmd = 'sudo -- su - -c "%s"' % aux.shell_escape(sshcmd)
+    if 'sudo' in server['account']:
+      sudopass = server['account']['sudo']
+      if sudopass == None:
+        sshcmd = 'sudo -- su - -c "%s"' % aux.shell_escape(sshcmd)
+      else:
+        sudopass = aux.shell_escape(sudopass)
+        sshcmd = aux.shell_escape(sshcmd)
+        sshcmd = 'echo "%s" | sudo -p "" -S -- su - -c "%s"' % (sudopass, sshcmd)
     elif 'su'               in server['account']:
       if not 'supath' in server: prepare_su(server)
       rootpw = server['account']['su']
