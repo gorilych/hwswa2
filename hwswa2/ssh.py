@@ -236,6 +236,11 @@ if command == 'shell':
     elif sutype == 'sudo':
       sucmd = 'sudo'
       suargs = ['-p', 'password: ', '--', 'su', '-']
+  try:
+    pexpect.WINHEIGHT = int(stdout_fifo)
+    pexpect.WINWIDTH  = int(stderr_fifo)
+  except:
+    pass
   child = pexpect.spawn(sucmd, suargs)
   if not password == '':
     child.expect_exact('assword: ')
@@ -310,11 +315,13 @@ def prepare_su_cmd(server, cmd):
   elif 'su' in server['account']:
     sutype   = 'su'
     password = server['account']['su']
+  if cmd == 'shell': # pass window size instead of fifos
+    (stdout_fifo, stderr_fifo) = aux.getTerminalSize()
   return 'python %s %s "%s" %s %s "%s"' % (su_py,
     sutype,
     aux.shell_escape(password),
-    stdout_fifo,
     stderr_fifo,
+    stdout_fifo,
     aux.shell_escape(cmd))
 
 def cleanup(server):

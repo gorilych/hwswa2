@@ -90,6 +90,9 @@ __revision__ = '$Revision: 516 $'
 __all__ = ['ExceptionPexpect', 'EOF', 'TIMEOUT', 'spawn', 'run', 'which',
     'split_command_line', '__version__', '__revision__']
 
+WINHEIGHT = 24
+WINWIDTH  = 80
+
 # Exception classes used by this module.
 class ExceptionPexpect(Exception):
 
@@ -534,7 +537,7 @@ class spawn (object):
         if self.pid == 0: # Child
             try:
                 self.child_fd = sys.stdout.fileno() # used by setwinsize()
-                self.setwinsize(24, 80)
+                self.setwinsize(WINHEIGHT, WINWIDTH)
             except:
                 # Some platforms do not like setwinsize (Cygwin).
                 # This will cause problem when running applications that
