@@ -229,7 +229,7 @@ def check_reboot(server, timeout=300):
     delta = time.time() - starttime
     # wait till boot
     if aux.wait_for(accessible, [server, True], timeout - delta):
-      return time.time() - starttime
+      return round(time.time() - starttime)
     else:
       return "server is not accessible after %s seconds" % timeout
   else:
