@@ -49,4 +49,8 @@
 * DONE Bug:     myhostid = subprocess.check_output('hostid').strip()
 AttributeError: 'module' object has no attribute 'check_output'
 
-* Bug: stderr is copied to stdout with _exec (because get_pty=True)
+* DONE Bug: stderr is copied to stdout with _exec (because get_pty=True)
+
+* rework interactive executuion: ssh.exec_cmd_i()
+
+* replace fifos with socketpairs

@@ -33,18 +33,8 @@ def connect(server):
 def shell(server, privileged=True):
   client = connect(server)
   chan = client.invoke_shell()
-  if privileged:
-    if 'sudo' in server['account']:
-      sudopass = server['account']['sudo']
-      if sudopass == None:
-        sshcmd = "sudo su -"
-      else:
-        if not 'supath' in server: prepare_su(server)
-        sshcmd = prepare_su_cmd(server['supath'], sudopass, 'sudoshell')
-    elif 'su' in server['account']:
-      if not 'supath' in server: prepare_su(server)
-      rootpw = server['account']['su']
-      sshcmd = prepare_su_cmd(server['supath'], rootpw, 'shell')
+  if privileged and ('su' in server['account'] or 'sudo' in server['account']):
+    sshcmd = prepare_su_cmd(server, 'shell')
     chan.sendall(sshcmd + '; exit \n')
     # cleanup previous output, leaving only prompt
     data = ''
@@ -77,19 +67,8 @@ def pingable(server):
 def exec_cmd_i(server, sshcmd, privileged=True):
   """Executes command interactively"""
   client = connect(server)
-  if privileged:
-    if 'sudo' in server['account']:
-      sudopass = server['account']['sudo']
-      if sudopass == None:
-        sshcmd = 'sudo -- su - -c "%s"' % aux.shell_escape(sshcmd)
-      else:
-        sudopass = aux.shell_escape(sudopass)
-        sshcmd = aux.shell_escape(sshcmd)
-        sshcmd = 'echo "%s" | sudo -p "" -S -- su - -c "%s"' % (sudopass, sshcmd)
-    elif 'su'               in server['account']:
-      if not 'supath' in server: prepare_su(server)
-      rootpw = server['account']['su']
-      sshcmd = prepare_su_cmd(server['supath'], rootpw, sshcmd)
+  if privileged and ('su' in server['account'] or 'sudo' in server['account']):
+    sshcmd = prepare_su_cmd(server, sshcmd)
   channel = client.get_transport().open_session()
   channel.get_pty()
   channel.settimeout(ssh_timeout)
@@ -104,20 +83,9 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
   """Executes command and returns tuple of stdout, stderr and status"""
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
-  if privileged:
-    if 'sudo' in server['account']:
-      sudopass = server['account']['sudo']
-      if sudopass == None:
-        sshcmd = 'sudo -- su - -c "%s"' % aux.shell_escape(sshcmd)
-      else:
-        sudopass = aux.shell_escape(sudopass)
-        sshcmd = aux.shell_escape(sshcmd)
-        sshcmd = 'echo "%s" | sudo -p "" -S -- su - -c "%s"' % (sudopass, sshcmd)
-    elif 'su'               in server['account']:
-      if not 'supath' in server: prepare_su(server)
-      rootpw = server['account']['su']
-      sshcmd = prepare_su_cmd(server['supath'], rootpw, sshcmd)
-  stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout, get_pty=True)
+  if privileged and ('su' in server['account'] or 'sudo' in server['account']):
+    sshcmd = prepare_su_cmd(server, sshcmd)
+  stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout, get_pty=False)
   if input_data:
     stdin.write(input_data)
     stdin.flush()
@@ -243,10 +211,11 @@ import sys
 import os
 import threading
 
-password    = sys.argv[1]
-stderr_fifo = sys.argv[2]
-stdout_fifo = sys.argv[3]
-command     = sys.argv[4]
+sutype      = sys.argv[1]
+password    = sys.argv[2]
+stderr_fifo = sys.argv[3]
+stdout_fifo = sys.argv[4]
+command     = sys.argv[5]
 
 def read_from_to(fifo_name, fout):
   fifo = os.fdopen(os.open(fifo_name, os.O_RDONLY), 'r')
@@ -257,20 +226,33 @@ def read_from_to(fifo_name, fout):
   fifo.close()
 
 if command == 'shell':
-  sucmd = 'su -'
-  child = pexpect.spawn(sucmd)
-  child.expect_exact('assword: ')
-  child.sendline(password)
-  child.interact()
-elif command == 'sudoshell':
-  sucmd = 'sudo su -'
-  child = pexpect.spawn(sucmd)
-  child.expect('password for .*: ')
-  child.sendline(password)
+  if password == '' and sutype == 'sudo':
+    sucmd = 'sudo'
+    suargs = ['su', '-']
+  if not password == '':
+    if sutype == 'su'  : 
+      sucmd = 'su'
+      suargs = ['-']
+    elif sutype == 'sudo':
+      sucmd = 'sudo'
+      suargs = ['-p', 'password: ', '--', 'su', '-']
+  child = pexpect.spawn(sucmd, suargs)
+  if not password == '':
+    child.expect_exact('assword: ')
+    child.sendline(password)
   child.interact()
 else:
-  sucmd  = 'su'
-  suargs = ['-', '-c', '{ %s; } 1>%s 2>%s' % (command, stdout_fifo, stderr_fifo)]
+  if password == '' and sutype == 'sudo':
+    sucmd = 'sudo'
+    suargs = ['su']
+  if not password == '':
+    if sutype == 'sudo':
+      sucmd = 'sudo'
+      suargs = ['-p', 'password: ', 'su']
+    if sutype == 'su':
+      sucmd = 'su'
+      suargs = []
+  suargs += ['-', '-c', '{ %s; } 1>%s 2>%s' % (command, stdout_fifo, stderr_fifo)]
 
   stdout_th = threading.Thread(name='stdout', target=read_from_to, args=(stdout_fifo, sys.stdout))
   stderr_th = threading.Thread(name='stderr', target=read_from_to, args=(stderr_fifo, sys.stderr))
@@ -278,9 +260,14 @@ else:
   stdout_th.start()
   stderr_th.start()
 
+  # cleanup cached credentials
+  if sutype == 'sudo':
+    child = pexpect.spawn('sudo -k')
+    child.close()
   child = pexpect.spawn(sucmd, suargs)
-  child.expect_exact('assword: ')
-  child.sendline(password)
+  if not password == '':
+    child.expect('assword: ')
+    child.sendline(password)
   child.expect_exact(pexpect.EOF)
   child.close()
   exitcode = child.exitstatus
@@ -307,12 +294,25 @@ else:
   server['supath'] = supath
   return supath
 
-def prepare_su_cmd(supath, rootpw, cmd):
+def prepare_su_cmd(server, cmd):
+  if not ('su' in server['account'] or 'sudo' in server['account']):
+    return cmd
+  if not 'supath' in server:
+    prepare_su(server)
+  supath      = server['supath'] 
   su_py       = os.path.join(supath, 'su.py')
   stdout_fifo = os.path.join(supath, 'stdout')
   stderr_fifo = os.path.join(supath, 'stderr')
-  return 'python %s "%s" %s %s "%s"' % (su_py,
-    aux.shell_escape(rootpw),
+  if 'sudo' in server['account']:
+    sutype   = 'sudo'
+    password = server['account']['sudo']
+    if password == None: password = ''
+  elif 'su' in server['account']:
+    sutype   = 'su'
+    password = server['account']['su']
+  return 'python %s %s "%s" %s %s "%s"' % (su_py,
+    sutype,
+    aux.shell_escape(password),
     stdout_fifo,
     stderr_fifo,
     aux.shell_escape(cmd))
