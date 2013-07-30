@@ -50,7 +50,7 @@ def read_configuration():
   parser.add_argument('-r', '--reports',  help='directory to store reports', dest='reportsdir')
   parser.add_argument('-d', '--debug',    help='enable debug', action='store_true')
   
-  subparsers = parser.add_subparsers(title='Commands')
+  subparsers = parser.add_subparsers(title='Subcommands', help= 'Run `hwswa2 <subcommand> -h` for usage')
 
   parser_check = subparsers.add_parser('check', help='check specific servers')
   parser_check.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
@@ -60,10 +60,10 @@ def read_configuration():
   parser_prepare.add_argument('servernames', nargs='+', help='server name to prepare', metavar='server')
   parser_prepare.set_defaults(command=commands.prepare)
 
-  parser_checkall = subparsers.add_parser('checkall', help='check all servers', add_help=False)
+  parser_checkall = subparsers.add_parser('checkall', help='check all servers')
   parser_checkall.set_defaults(command=commands.checkall)
 
-  parser_prepareall = subparsers.add_parser('prepareall', help='prepare all servers', add_help=False)
+  parser_prepareall = subparsers.add_parser('prepareall', help='prepare all servers')
   parser_prepareall.set_defaults(command=commands.prepareall)
 
   parser_shell = subparsers.add_parser('shell', help='open shell to server')
