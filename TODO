@@ -49,3 +49,4 @@
 * Bug:     myhostid = subprocess.check_output('hostid').strip()
 AttributeError: 'module' object has no attribute 'check_output'
 
+* Bug: stderr is copied to stdout with _exec (because get_pty=True)
