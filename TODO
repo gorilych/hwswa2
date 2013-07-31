@@ -55,6 +55,8 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * replace fifos with socketpairs
 
-* Bug: hwaddr: 0.0.0.0 for sit0 NIC
+* WONTFIX Bug: hwaddr: 0.0.0.0 for sit0 NIC
 
 * DONE set window size for shell subcommand
+
+* DONE move su.py to remote_scripts
