@@ -60,3 +60,9 @@ AttributeError: 'module' object has no attribute 'check_output'
 * DONE set window size for shell subcommand
 
 * DONE move su.py to remote_scripts
+
+* add '--network name:addr/prefix' option to specify network from cmd
+
+* check behaviour in case of wrong creds
+
+* readme: make reqs the first section
