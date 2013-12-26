@@ -66,3 +66,5 @@ AttributeError: 'module' object has no attribute 'check_output'
 * check behaviour in case of wrong creds
 
 * readme: make reqs the first section
+
+* add get subcommand (to download file from server)
