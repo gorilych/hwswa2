@@ -12,7 +12,7 @@ export BINPATH
 
 export PYTHONPATH=$BINPATH/../libs
 
-if [ -x "$(which python26)" ]; then
+if [ -x "$(which python26 2>/dev/null)" ]; then
   PYTHON=$(which python26)
 else
   PYTHON=$(which python)
