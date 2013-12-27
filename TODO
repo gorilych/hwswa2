@@ -68,3 +68,19 @@ AttributeError: 'module' object has no attribute 'check_output'
 * readme: make reqs the first section
 
 * add get subcommand (to download file from server)
+
+* add execall subcommand (to exec command on all servers)
+
+* work around 'host: command not found' in dns check
+
+* add check for virtualization
+
+* compare time with time on hwcheck server side
+
+* add check for uptime
+
+* collect network connfiguration from sysconfig
+
+* rework shell subcommand (to execute with normal terminal emulation)
+
+* make use of virtualenv and pyinstaller
