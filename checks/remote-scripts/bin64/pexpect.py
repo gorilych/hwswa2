@@ -1,1 +1,1 @@
-../../../3rd-party/pexpect/pexpect.py
+../bin32/pexpect.py
