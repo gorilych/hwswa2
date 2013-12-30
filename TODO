@@ -81,6 +81,6 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * collect network connfiguration from sysconfig
 
-* rework shell subcommand (to execute with normal terminal emulation)
+* DONE rework shell subcommand (to execute with normal terminal emulation)
 
 * make use of virtualenv and pyinstaller
