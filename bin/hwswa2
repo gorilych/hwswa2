@@ -8,7 +8,6 @@ if ! [ -L "$SCRIPTFILE" ]; then
 else
  BINPATH="$(cd $(dirname "$(readlink "$SCRIPTFILE")"); pwd)"
 fi
-export BINPATH
 
 export PYTHONPATH=$BINPATH/../libs
 

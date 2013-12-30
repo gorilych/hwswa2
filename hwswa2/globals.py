@@ -1,11 +1,13 @@
 #################################
 ##### Global parameters
 
-import os
+import os, sys
 from configobj import ConfigObj
 
-binpath      = os.getenv('BINPATH')
-apppath      = os.path.dirname(binpath)
+if getattr(sys, 'frozen', False):
+  apppath = os.path.dirname(sys.executable)
+elif __file__:
+  apppath = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), os.pardir))
 
 configspec = ConfigObj(["debug=boolean()",
                         "check_reboot=boolean()"],
