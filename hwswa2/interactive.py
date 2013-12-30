@@ -1,79 +1,38 @@
-# This file is was copied from paramiko and adjusted (basically removals)
+# This file was copied from paramiko and adjusted (basically removals)
 
-import socket
-import sys
-
-# windows does not have termios...
-try:
-    import termios
-    import tty
-    has_termios = True
-except ImportError:
-    has_termios = False
-
+import os, sys, socket, termios, tty, select
 
 def interactive_shell(chan):
-    if has_termios:
-        posix_shell(chan)
-    else:
-        windows_shell(chan)
+ 
+  oldtty = termios.tcgetattr(sys.stdin)
+  try:
+    tty.setraw(sys.stdin.fileno())
+    tty.setcbreak(sys.stdin.fileno())
+    chan.settimeout(0.0)
 
+    while True:
+      try:
+        r, w, e = select.select([chan, sys.stdin], [], [])
+      except select.error:
+        continue
+      except Exception, e:
+        raise e
 
-def posix_shell(chan):
-    import select
-    
-    oldtty = termios.tcgetattr(sys.stdin)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        tty.setcbreak(sys.stdin.fileno())
-        chan.settimeout(0.0)
+      if chan in r:
+        try:
+          x = chan.recv(1024)
+          if len(x) == 0:
+            break
+          sys.stdout.write(x)
+          sys.stdout.flush()
+        except socket.timeout:
+          pass
+      if sys.stdin in r:
+        x = os.read(sys.stdin.fileno(), 1)
+        if len(x) == 0:
+          break
+        chan.send(x)
 
-        while True:
-            r, w, e = select.select([chan, sys.stdin], [], [])
-            if chan in r:
-                try:
-                    x = chan.recv(1024)
-                    if len(x) == 0:
-                        break
-                    sys.stdout.write(x)
-                    sys.stdout.flush()
-                except socket.timeout:
-                    pass
-            if sys.stdin in r:
-                x = sys.stdin.read(1)
-                if len(x) == 0:
-                    break
-                chan.send(x)
+  finally:
+    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oldtty)
 
-    finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, oldtty)
-
-    
-# thanks to Mike Looijmans for this code
-def windows_shell(chan):
-    import threading
-
-    sys.stdout.write("Line-buffered terminal emulation. Press F6 or ^Z to send EOF.\r\n\r\n")
-        
-    def writeall(sock):
-        while True:
-            data = sock.recv(256)
-            if not data:
-                sys.stdout.write('\r\n*** EOF ***\r\n\r\n')
-                sys.stdout.flush()
-                break
-            sys.stdout.write(data)
-            sys.stdout.flush()
-        
-    writer = threading.Thread(target=writeall, args=(chan,))
-    writer.start()
-        
-    try:
-        while True:
-            d = sys.stdin.read(1)
-            if not d:
-                break
-            chan.send(d)
-    except EOFError:
-        # user hit ^Z or F6
-        pass

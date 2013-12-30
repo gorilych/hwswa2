@@ -5,6 +5,10 @@ import os.path
 import sys
 import subprocess
 import signal
+import struct
+import termios
+import tty
+from fcntl import ioctl
 import paramiko
 import hwswa2.interactive as interactive
 import hwswa2.aux as aux
@@ -32,21 +36,52 @@ def connect(server):
   return client
 
 def shell(server, privileged=True):
+  
+  def term_winsz():
+    """Return terminal window size (height, width)"""
+    winsz_fmt = "HHHH"
+    winsz_arg = " "*struct.calcsize(winsz_fmt)
+    if not sys.stdin.isatty():
+      raise type("NotConnectToTTYDevice", (Exception,), {})()
+    return struct.unpack(winsz_fmt, ioctl(sys.stdin, termios.TIOCGWINSZ, winsz_arg))[:2]
+
+  def term_type():
+    """Return terminal type"""
+    return os.environ.get("TERM", "linux")
+
+
   client = connect(server)
-  chan = client.invoke_shell()
-  if privileged and ('su' in server['account'] or 'sudo' in server['account']):
-    sshcmd = prepare_su_cmd(server, 'shell')
-    chan.sendall(sshcmd + '; exit \n')
-    # cleanup previous output, leaving only prompt
-    data = ''
-    while chan.recv_ready(): data += chan.recv(1000)
-    time.sleep(0.3)
-    while chan.recv_ready(): data += chan.recv(1000)
-    print data.split('\n')[-1],
-    sys.stdout.flush()
-  interactive.interactive_shell(chan)
-  chan.close()
-  client.close()
+
+  # get current terminal's settings
+  height, width = term_winsz()
+  tt = term_type()
+
+  # remember current signal handler
+  chan = None
+  old_handler = signal.getsignal(signal.SIGWINCH)
+  def on_win_resize(signum, frame):
+    if chan is not None:
+      height, width = term_winsz()
+      chan.resize_pty(width=width, height=height)
+  signal.signal(signal.SIGWINCH, on_win_resize)
+
+  try:
+    chan = client.invoke_shell(tt, width=width, height=height)
+    if privileged and ('su' in server['account'] or 'sudo' in server['account']):
+      sshcmd = prepare_su_cmd(server, 'shell')
+      chan.sendall(sshcmd + '; exit \n')
+      # cleanup previous output, leaving only prompt
+      data = ''
+      while chan.recv_ready(): data += chan.recv(1000)
+      time.sleep(0.3)
+      while chan.recv_ready(): data += chan.recv(1000)
+      print data.split('\n')[-1],
+      sys.stdout.flush()
+    interactive.interactive_shell(chan)
+  finally:
+    chan.close()
+    signal.signal(signal.SIGWINCH, old_handler)
+    client.close()
 
 def accessible(server, retry=False):
   if 'accessible' in server and not retry:
