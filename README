@@ -2,13 +2,43 @@ HWSWA2: automatization of hardware/software check
 
 Contents
 
-1. Usage
-2. Files
-3. Requirements
+1. Creating distribution
+2. Installation
+3. Usage
+4. Configuration
+5. Advanced
+6. Source files
 
-1. =================== Usage
+1. =================== Creating distribution
 
-hwswa2$ bin/hwswa2 -h
+Obtain the latest source from https://git.gorilych.dnsd.me/hwswa2.git/snapshot/HEAD.tar.gz
+
+Unpack it and go to the source directory.
+
+To prepare distribution, run in source directory:
+
+pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/
+            --clean pyinstaller/hwswa2.spec && \
+\cp -af README docs/ config/ checks/ pyinstaller/hwswa2/ && \
+pushd pyinstaller/ && \
+tar zcf hwswa2.tgz hwswa2 && \
+popd
+
+Distribution archive will be pyinstaller/hwswa2.tgz
+
+Requirements: pyinstaller, python >=2.6, python-crypto >= 2.1, GnuMP
+
+2. =================== Installation
+
+Upload distribution (hwswa2.tgz) to the server which has access to all checked servers.
+
+Unpack.
+
+3. =================== Usage
+
+All possible options are shown by '-h' switch:
+
+hwswa2$ hwswa2 -h
 usage: hwswa2 [-h] [--version] [-c CONFIGFILE] [-s SERVERSFILE]
               [-n NETWORKSFILE] [-l LOGFILE] [-r REPORTSDIR] [-d]
               {check,prepare,checkall,prepareall,shell,exec,_exec,put} ...
@@ -41,10 +71,20 @@ Commands:
     _exec               execute command non-interactively
     put                 copy file to server
 
-2. =================== Files
+4. =================== Configuration
+
+Main configuration file is hwswa2/config/main.cfg, variables are self-explanatory.
+
+hwswa2/config/servers.yaml and hwswa2/config/networks.yaml are examples of servers access info and networks info, it should be modified with actual information prior to running.
+
+5. =================== Advanced
+
+You can modify checks/*.yaml or checks/remote-scripts/ files for your own needs.
+
+6. =================== Source files
 
 hwswa2$ ls -F
-3rd-party/  bin/  checks/  config/  docs/  hwswa2/  INSTALL  libs/  logs/  README  tests/  TODO
+3rd-party/  bin/  checks/  config/  docs/  hwswa2/  libs/  logs/  README  tests/  TODO
 hwswa2$ ls -F checks/
 common.yaml  pvclin.yaml  remote-scripts/
 hwswa2$ ls -F checks/remote-scripts/
@@ -58,8 +98,7 @@ localhost
 
 3rd-party/       - 3rd party python libraries and scripts for internal usage
 
-bin/             - location of the main script
-bin/hwswa2       - script itself
+bin/hwswa2       - script to run directly from source, without building binary distribution
 
 checks/          - location of role check description files:
                    <role name (lowercase)>.yaml
@@ -78,13 +117,4 @@ config/servers.yaml
 
 logs/hwswa2.log  - application log
 logs/reports/    - directory to store reports to
-
-3. =================== Requirements
-
-Python 26, python-crypto lib, GnuMP, ping executable
-
-To install Python 26 on CentOS 5 (this will not remove system python 2.4):
-
-# yum install gmp
-# rpm -ivh http://dl.fedoraproject.org/pub/epel/5/x86_64/libffi-3.0.5-1.el5.x86_64.rpm http://dl.fedoraproject.org/pub/epel/5/x86_64/python26-libs-2.6.8-2.el5.x86_64.rpm http://dl.fedoraproject.org/pub/epel/5/x86_64/python26-crypto-2.3-5.el5.x86_64.rpm http://dl.fedoraproject.org/pub/epel/5/x86_64/python26-2.6.8-2.el5.x86_64.rpm
 

@@ -79,8 +79,8 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * add check for uptime
 
-* collect network connfiguration from sysconfig
+* collect network configuration from sysconfig
 
 * DONE rework shell subcommand (to execute with normal terminal emulation)
 
-* make use of virtualenv and pyinstaller
+* DONE make use of virtualenv and pyinstaller
