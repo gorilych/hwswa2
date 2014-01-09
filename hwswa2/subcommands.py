@@ -236,7 +236,7 @@ def exec_cmd():
     error("Failed to connect to server %s" % servername)
     exit(1)
 
-def _exec_cmd():
+def ni_exec_cmd():
   """Exec command on specified server non-interactively"""
   servername = config['servername']
   sshcmd = " ".join(config['sshcmd'])

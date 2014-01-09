@@ -79,10 +79,10 @@ def read_configuration():
   parser_shell.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
   parser_shell.set_defaults(subcommand=subcommands.exec_cmd)
 
-  parser_shell = subparsers.add_parser('_exec', help='execute command non-interactively')
+  parser_shell = subparsers.add_parser('ni_exec', help='execute command non-interactively')
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
-  parser_shell.set_defaults(subcommand=subcommands._exec_cmd)
+  parser_shell.set_defaults(subcommand=subcommands.ni_exec_cmd)
 
   parser_shell = subparsers.add_parser('put', help='copy file to server')
   parser_shell.add_argument('servername', metavar='server')
