@@ -21,10 +21,10 @@ parameters:
                | awk '{printf("%.1fGHz",$NF/1000)}'
   disks:
     _type: table
-    _fields: [mountpoint, size, fs_type]
+    _fields: [mountpoint, size, fs_type, device]
     _separator: ' '
     _command: df --human-readable --print-type --exclude tmpfs --exclude devtmpfs
-                --portability | tac | head --lines=-1 | awk '{print $NF,$3,$2}'
+                --portability | tac | head --lines=-1 | awk '{print $NF,$3,$2,$1}'
   network:
     _type: dictionary 
     name_servers: awk '$1=="nameserver"{print $2}' /etc/resolv.conf | xargs
