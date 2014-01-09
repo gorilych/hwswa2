@@ -71,3 +71,26 @@ parameters:
               echo $ip $prefix $netname
           done
           exit 0
+# firewal - set of rules
+firewall:
+    - name: SSH Access
+      description: Allow SSH access over backnet from linmn
+      # policy: allow/deny
+      policy: allow
+      # direction: incoming/outgoing
+      direction: incoming
+      networks: [backnet]
+      # proto: TCP/UDP/ICMP
+      protos: [TCP]
+      ports: [22]
+      # type: infra/internet
+      type: infra
+      connect_with:
+        # roles are for type = infra
+        roles: [linmn]
+        # hosts are for type = internet, host can be IP/FQDN, like 8.8.8.8 or ya.ru
+        hosts: []
+        # smtprelay, dnsresolver, hwswa_host: yes/no, no by default
+        #smtprelay: no
+        #dnsresolver: no
+        #hwswa_host: no
