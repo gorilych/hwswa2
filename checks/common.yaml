@@ -33,12 +33,12 @@ parameters:
       # form:
       # _generator: {field_name: placeholder_name}
       _generator: {name: name}
-      name:   ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
+      name:   /sbin/ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
               | awk '{print $2}' | sed 's/:$//'
-      state:  ip --oneline link show dev %(name)s 
+      state:  /sbin/ip --oneline link show dev %(name)s 
               | grep --only-matching --extended-regexp ' state (UP|DOWN|UNKNOWN) ' 
               | awk '{print $2}'
-      hwaddr: ip --oneline link show dev %(name)s
+      hwaddr: /sbin/ip --oneline link show dev %(name)s
               | grep --only-matching --extended-regexp ' link/.*'
               | awk '{print $2}'
       gateway: /sbin/ip route list dev %(name)s | grep ^default | awk '{print $3}'
