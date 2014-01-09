@@ -9,7 +9,10 @@ parameters:
   ram:       awk '$1=="MemTotal:" {printf("%.3f GB",$2/1024/1024)}' /proc/meminfo
   swap:      awk '$1=="SwapTotal:"{printf("%.3f GB",$2/1024/1024)}' /proc/meminfo
   selinux:   which getenforce >/dev/null && getenforce || echo no selinux
-  yum_repos: which yum >/dev/null && echo $(yum repolist | sed '/repo id/,$ !d') || echo no yum
+  yum_repos: which yum >/dev/null
+             && echo $(yum repolist | sed '/repo id/,$ !d' 
+                    | sed -e '1 d' -e '$ d' | awk '{ print $1}' | xargs)
+             || echo no yum
   processors:
     _type: dictionary
     count:     grep --fixed-strings processor -c /proc/cpuinfo
