@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-from hwswa2.functions import read_configuration, read_servers, read_networks, run_command
+from hwswa2.functions import read_configuration, read_servers, read_networks, run_subcommand
 from hwswa2.log import info, debug, error, init_logger
 
 def main():
@@ -9,7 +9,7 @@ def main():
   info("Application started")
   read_servers()
   read_networks()
-  run_command()
+  run_subcommand()
   info("Application finished")
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ import yaml
 
 from hwswa2.globals import apppath, configspec, config
 from hwswa2.log import info, debug, error
-import hwswa2.commands as commands
+import hwswa2.subcommands as subcommands
 
 __version__ = '0.01'
 
@@ -31,8 +31,8 @@ def read_networks():
     error("Found duplicates in networks file! Exiting ...")
     exit(1)
 
-def run_command():
-  config['command']()
+def run_subcommand():
+  config['subcommand']()
 
 ##################################
 ### Reads configuration from command line args and main.cfg
@@ -54,41 +54,41 @@ def read_configuration():
 
   parser_check = subparsers.add_parser('check', help='check specific servers')
   parser_check.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
-  parser_check.set_defaults(command=commands.check)
+  parser_check.set_defaults(subcommand=subcommands.check)
 
   parser_prepare = subparsers.add_parser('prepare', help='prepare specific servers')
   parser_prepare.add_argument('servernames', nargs='+', help='server name to prepare', metavar='server')
-  parser_prepare.set_defaults(command=commands.prepare)
+  parser_prepare.set_defaults(subcommand=subcommands.prepare)
 
   parser_checkall = subparsers.add_parser('checkall', help='check all servers')
-  parser_checkall.set_defaults(command=commands.checkall)
+  parser_checkall.set_defaults(subcommand=subcommands.checkall)
 
   parser_prepareall = subparsers.add_parser('prepareall', help='prepare all servers')
-  parser_prepareall.set_defaults(command=commands.prepareall)
+  parser_prepareall.set_defaults(subcommand=subcommands.prepareall)
 
   parser_shell = subparsers.add_parser('shell', help='open shell to server')
   parser_shell.add_argument('servername', metavar='server')
-  parser_shell.set_defaults(command=commands.shell)
+  parser_shell.set_defaults(subcommand=subcommands.shell)
 
   parser_shell = subparsers.add_parser('reboot', help='reboot server and check time')
   parser_shell.add_argument('servername', metavar='server')
-  parser_shell.set_defaults(command=commands.reboot)
+  parser_shell.set_defaults(subcommand=subcommands.reboot)
 
   parser_shell = subparsers.add_parser('exec', help='execute command interactively')
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
-  parser_shell.set_defaults(command=commands.exec_cmd)
+  parser_shell.set_defaults(subcommand=subcommands.exec_cmd)
 
   parser_shell = subparsers.add_parser('_exec', help='execute command non-interactively')
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
-  parser_shell.set_defaults(command=commands._exec_cmd)
+  parser_shell.set_defaults(subcommand=subcommands._exec_cmd)
 
   parser_shell = subparsers.add_parser('put', help='copy file to server')
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.add_argument('localpath')
   parser_shell.add_argument('remotepath')
-  parser_shell.set_defaults(command=commands.put)
+  parser_shell.set_defaults(subcommand=subcommands.put)
 
   args = parser.parse_args()
     
