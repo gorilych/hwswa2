@@ -10,6 +10,7 @@ import yaml
 from hwswa2.globals import apppath, configspec, config
 from hwswa2.log import info, debug, error
 import hwswa2.subcommands as subcommands
+from hwswa2.ssh import cleanup
 
 __version__ = '0.01'
 
@@ -32,7 +33,11 @@ def read_networks():
     exit(1)
 
 def run_subcommand():
-  config['subcommand']()
+  try:
+    config['subcommand']()
+  finally:
+    for server in config['servers']:
+      cleanup(server)
 
 ##################################
 ### Reads configuration from command line args and main.cfg
