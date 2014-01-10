@@ -10,6 +10,7 @@ from hwswa2.aux import get_server, passbyval
 import threading
 import Queue
 import time
+from copy import deepcopy
 
 def check():
   """Check only specified servers"""
@@ -44,7 +45,7 @@ def _check(server, resultsqueue):
     result['check_status'] = 'server is not accessible'
   else:
     # prepare remote end (copy remote scripts, etc)
-    arch = ssh.get_cmd_out(server, 'uname --machine')
+    arch = ssh.get_cmd_out(server, 'uname --machine', privileged=False)
     if arch.endswith('64'):
       rscriptdir = config['rscriptdir'] + '/bin64'
     else:
@@ -62,7 +63,7 @@ def _check(server, resultsqueue):
     result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath, tmppath=tmppath)
 
     # clean up
-    ssh.remove(server, remote_hwswa2_dir)
+    ssh.cleanup(server)
   
     # check reboot
     if config['check_reboot']:
@@ -105,23 +106,24 @@ def get_checks(roles):
       requirements = rq
   return (parameters, requirements)
 
-@passbyval
+#@passbyval
 def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
+  mydeps = deepcopy(deps)
   val = None
   if isinstance(param, (str, unicode)):
-    val = ssh.get_cmd_out(server, _prepare_cmd(param, cmd_prefix, deps))
+    val = ssh.get_cmd_out(server, _prepare_cmd(param, cmd_prefix, mydeps))
   else: # non-scalar type
     # process _uses
     if '_uses' in param:
       for key in param['_uses']:
         keyfile = ssh.mktemp(server, ftype='f', path=tmppath)
         ssh.write(server, keyfile, yaml.dump(config[key]))
-        deps.update({param['_uses'][key]: keyfile})
+        mydeps.update({param['_uses'][key]: keyfile})
       del param['_uses']
     # convert _script to _command
     if '_script' in param:
       scriptpath = ssh.mktemp(server, ftype='f', path=binpath)
-      ssh.write(server, scriptpath, _prepare_cmd(param['_script'], deps=deps))
+      ssh.write(server, scriptpath, _prepare_cmd(param['_script'], deps=mydeps))
       ssh.exec_cmd(server, 'chmod +x %s' % scriptpath)
       param['_command'] = scriptpath
     # different type processing
@@ -129,11 +131,11 @@ def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmpp
       val = {}
       for p in param:
         if not p.startswith('_'):
-          val[p] = _get_param_value(server, param[p], cmd_prefix, deps, binpath, tmppath)
+          val[p] = _get_param_value(server, param[p], cmd_prefix, mydeps, binpath, tmppath)
     elif param['_type'] == 'table':
       val = []
       if '_command' in param:
-        rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, deps))
+        rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, mydeps))
         if not '_separator' in param:
           param['_separator'] = ' '
         if not rows == '':
@@ -144,15 +146,15 @@ def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmpp
       # evaluate generator first
       for generator in param['_generator']: # there should be only one
         placeholder = param['_generator'][generator]
-        gen_values = ssh.get_cmd_out(server, _prepare_cmd(param[generator], cmd_prefix, deps)).split('\n')
+        gen_values = ssh.get_cmd_out(server, _prepare_cmd(param[generator], cmd_prefix, mydeps)).split('\n')
         del param[generator]
         for gen_value in gen_values:
-          deps.update({placeholder: gen_value})
+          mydeps.update({placeholder: gen_value})
           elem = {generator: gen_value}
           # evaluate other parameters based on generator
           for p in param:
             if not p.startswith('_'):
-              elem[p] = _get_param_value(server, param[p], cmd_prefix, deps, binpath, tmppath)
+              elem[p] = _get_param_value(server, param[p], cmd_prefix, mydeps, binpath, tmppath)
           val.append(elem)
   return val
 
