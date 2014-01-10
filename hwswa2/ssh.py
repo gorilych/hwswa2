@@ -17,8 +17,16 @@ from hwswa2.log import debug
 
 ssh_timeout = 30
 
-def connect(server):
+def connect(server, reconnect=False):
   """Connects to server and returns SSHClient object"""
+  if 'sshclient' in server:
+    if reconnect:
+      server['sshclient'].close()
+      del server['sshclient']
+      debug("Will reconnect to server %s" % server['name'])
+    else:
+      return server['sshclient']
+  debug("Trying to connect to server %s" % server['name'])
   hostname = server['address']
   if 'port' in server:
     port = server['port']
@@ -33,6 +41,7 @@ def connect(server):
   client.load_system_host_keys()
   client.set_missing_host_key_policy(paramiko.WarningPolicy())
   client.connect(hostname, port, username, password=password, key_filename=key_filename)
+  server['sshclient'] = client
   return client
 
 def shell(server, privileged=True):
@@ -81,7 +90,6 @@ def shell(server, privileged=True):
   finally:
     chan.close()
     signal.signal(signal.SIGWINCH, old_handler)
-    client.close()
 
 def accessible(server, retry=False):
   if 'accessible' in server and not retry:
@@ -89,7 +97,6 @@ def accessible(server, retry=False):
   else:
     try:
       client = connect(server)
-      client.close()
       server['accessible'] = True
       return True
     except:
@@ -112,7 +119,6 @@ def exec_cmd_i(server, sshcmd, privileged=True):
   interactive.interactive_shell(channel)
   status = channel.recv_exit_status()
   channel.close()
-  client.close()
   return status
 
 def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
@@ -121,6 +127,7 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
   client = connect(server)
   if privileged and ('su' in server['account'] or 'sudo' in server['account']):
     sshcmd = prepare_su_cmd(server, sshcmd)
+    debug("Privileged command %s on server %s" % (sshcmd, server['name']))
   stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout, get_pty=False)
   if input_data:
     stdin.write(input_data)
@@ -128,15 +135,14 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
   stdout_data = stdout.read().splitlines()
   stderr_data = stderr.read().splitlines()
   status = stdout.channel.recv_exit_status()
-  client.close()
   return stdout_data, stderr_data, status
 
 def get_cmd_out(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
   stdout_data, stderr_data, status = exec_cmd(server, sshcmd, input_data, timeout=timeout, privileged=privileged)
   return '\n'.join(stdout_data)
 
-def remove(server, path):
-  exec_cmd(server, "rm -rf %s" % path)
+def remove(server, path, privileged=True):
+  exec_cmd(server, "rm -rf %s" % path, privileged=privileged)
 
 def put(server, localpath, remotepath):
   debug("Copying %s to %s:%s" %(localpath, server['name'], remotepath))
@@ -162,7 +168,6 @@ def put(server, localpath, remotepath):
     else:
       mkdir(server, remotepath)
       put_dir_content(server, localpath, remotepath)
-  client.close()
 
 def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
   """Creates directory using mktemp and returns its name"""
@@ -170,13 +175,17 @@ def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
   if ftype == 'd':
     sshcmd = sshcmd + '-d '
   sshcmd = sshcmd + '-p %s %s' % (path, template)
-  return get_cmd_out(server, sshcmd, privileged=False)
+  tmpdir = get_cmd_out(server, sshcmd, privileged=False)
+  if 'tmpdirs' in server:
+    server['tmpdirs'].append(tmpdir)
+  else:
+    server['tmpdirs'] = [tmpdir]
+  return tmpdir
 
 def mkdir(server, path):
   client = connect(server)
   sftp = client.open_sftp()
   sftp.mkdir(path)
-  client.close()
 
 def exists(server, path):
   client = connect(server)
@@ -203,7 +212,6 @@ def write(server, path, data):
   file = sftp.open(path, 'w')
   file.write(data)
   file.close()
-  client.close()
 
 def hostid(server):
   return get_cmd_out(server, 'hostid')
@@ -278,6 +286,13 @@ def prepare_su_cmd(server, cmd):
     aux.shell_escape(cmd))
 
 def cleanup(server):
-  if 'supath' in server:
-    remove(server, server['supath'])
-    del server['supath']
+  if 'sshclient' in server:
+    if 'tmpdirs' in server:
+      for tmpdir in server['tmpdirs']:
+        remove(server, tmpdir, privileged=False)
+      del server['tmpdirs']
+    if 'supath' in server:
+      del server['supath']
+    server['sshclient'].close()
+    debug("Closed connection to server %s" % server['name'])
+    del server['sshclient']
