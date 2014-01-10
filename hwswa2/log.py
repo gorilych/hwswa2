@@ -24,5 +24,5 @@ def init_logger():
   config['logger'] = logging.getLogger()
   if config['debug']:
     config['logger'].setLevel(logging.DEBUG)
-
+  logging.getLogger("paramiko").setLevel(logging.WARNING)
 
