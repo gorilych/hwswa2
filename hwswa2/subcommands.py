@@ -44,27 +44,20 @@ def _check(server, resultsqueue):
   if not ssh.accessible(server):
     result['check_status'] = 'server is not accessible'
   else:
-    # prepare remote end (copy remote scripts, etc)
-    arch = ssh.get_cmd_out(server, 'uname --machine', privileged=False)
-    if arch.endswith('64'):
-      rscriptdir = config['rscriptdir'] + '/bin64'
-    else:
-      rscriptdir = config['rscriptdir'] + '/bin32'
-    remote_hwswa2_dir = ssh.mktemp(server)
-    binpath = os.path.join(remote_hwswa2_dir, 'bin')
-    tmppath = os.path.join(remote_hwswa2_dir, 'tmp')
-    ssh.mkdir(server, tmppath)
-    ssh.put(server, rscriptdir, binpath)
-    cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
-
+    _prepare_remote_scripts(server)
     (parameters, requirements) = get_checks(role)
-
     result['check_status'] = 'in progress'
-    result['parameters'] = _get_param_value(server, parameters, cmd_prefix, binpath=binpath, tmppath=tmppath)
+    result['parameters'] = _get_param_value(server, parameters, 
+                            cmd_prefix=server['cmd_prefix'],
+                            binpath=server['binpath'], 
+                            tmppath=server['tmppath'])
 
     # clean up
     ssh.cleanup(server)
-  
+    del server['cmd_prefix']
+    del server['binpath']
+    del server['tmppath']
+
     # check reboot
     if config['check_reboot']:
       result['reboot_check'] = ssh.check_reboot(server)
@@ -72,6 +65,23 @@ def _check(server, resultsqueue):
     result['check_status'] = 'finished'
   
   resultsqueue.put(result)
+
+def _prepare_remote_scripts(server):
+  """Copy remote scripts to server, prepare tmp, configure cmd prefix"""
+  if 'cmd_prefix' in server: # called twice?
+    return
+  arch = ssh.get_cmd_out(server, 'uname --machine', privileged=False)
+  if arch.endswith('64'):
+    rscriptdir = config['rscriptdir'] + '/bin64'
+  else:
+    rscriptdir = config['rscriptdir'] + '/bin32'
+  server['arch'] = arch
+  remote_hwswa2_dir = ssh.mktemp(server)
+  server['binpath'] = os.path.join(remote_hwswa2_dir, 'bin')
+  server['tmppath'] = os.path.join(remote_hwswa2_dir, 'tmp')
+  ssh.mkdir(server, server['tmppath'])
+  ssh.put(server, rscriptdir, server['binpath'])
+  server['cmd_prefix'] = 'export PATH=$PATH:%s; ' % server['binpath']
 
 def get_checks(roles):
   """Gathers parameters and requirements from role.yaml
