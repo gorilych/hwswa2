@@ -9,6 +9,7 @@ password    = sys.argv[2]
 stderr_fifo = sys.argv[3]
 stdout_fifo = sys.argv[4]
 command     = sys.argv[5]
+timeout     = int(sys.argv[6])
 
 def read_from_to(fifo_name, fout):
   fifo = os.fdopen(os.open(fifo_name, os.O_RDONLY), 'r')
@@ -36,7 +37,7 @@ if command == 'shell':
     pexpect.WINWIDTH  = int(stderr_fifo)
   except:
     pass
-  child = pexpect.spawn(sucmd, suargs)
+  child = pexpect.spawn(sucmd, suargs, timeout=timeout)
   if not password == '':
     child.expect_exact('assword: ')
     child.sendline(password)

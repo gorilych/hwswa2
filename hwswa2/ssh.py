@@ -107,14 +107,14 @@ def pingable(server):
   command = "ping -w 1 -q -c 1 %s" % server['address']
   return subprocess.call(command) == 0
 
-def exec_cmd_i(server, sshcmd, privileged=True):
+def exec_cmd_i(server, sshcmd, privileged=True, timeout=ssh_timeout):
   """Executes command interactively"""
   client = connect(server)
   if privileged and ('su' in server['account'] or 'sudo' in server['account']):
-    sshcmd = prepare_su_cmd(server, sshcmd)
+    sshcmd = prepare_su_cmd(server, sshcmd, timeout)
   channel = client.get_transport().open_session()
   channel.get_pty()
-  channel.settimeout(ssh_timeout)
+  channel.settimeout(timeout)
   channel.exec_command(sshcmd)
   interactive.interactive_shell(channel)
   status = channel.recv_exit_status()
@@ -126,7 +126,7 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
   debug("Executing %s on server %s" % (sshcmd, server['name']))
   client = connect(server)
   if privileged and ('su' in server['account'] or 'sudo' in server['account']):
-    sshcmd = prepare_su_cmd(server, sshcmd)
+    sshcmd = prepare_su_cmd(server, sshcmd, timeout)
     debug("Privileged command %s on server %s" % (sshcmd, server['name']))
   stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout, get_pty=False)
   if input_data:
@@ -262,7 +262,7 @@ def prepare_su(server):
   exec_cmd(server, "mkfifo %s" % os.path.join(supath, 'stderr'), privileged=False)
   server['supath'] = supath
 
-def prepare_su_cmd(server, cmd):
+def prepare_su_cmd(server, cmd, timeout=ssh_timeout):
   if not ('su' in server['account'] or 'sudo' in server['account']):
     return cmd
   if not 'supath' in server:
@@ -280,12 +280,13 @@ def prepare_su_cmd(server, cmd):
     password = server['account']['su']
   if cmd == 'shell': # pass window size instead of fifos
     (stdout_fifo, stderr_fifo) = aux.getTerminalSize()
-  return 'python %s %s "%s" %s %s "%s"' % (su_py,
+  return 'python %s %s "%s" %s %s "%s" %s' % (su_py,
     sutype,
     aux.shell_escape(password),
     stderr_fifo,
     stdout_fifo,
-    aux.shell_escape(cmd))
+    aux.shell_escape(cmd),
+    timeout)
 
 def cleanup(server):
   if 'sshclient' in server:
