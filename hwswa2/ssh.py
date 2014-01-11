@@ -135,6 +135,8 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
   stdout_data = stdout.read().splitlines()
   stderr_data = stderr.read().splitlines()
   status = stdout.channel.recv_exit_status()
+  debug("Executed %s on server %s: stdout %s, stderr %s, exit status %s" %
+        (sshcmd, server['name'], stdout_data, stderr_data, status))
   return stdout_data, stderr_data, status
 
 def get_cmd_out(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
