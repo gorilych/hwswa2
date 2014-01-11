@@ -95,6 +95,12 @@ def read_configuration():
   parser_shell.add_argument('remotepath')
   parser_shell.set_defaults(subcommand=subcommands.put)
 
+  parser_shell = subparsers.add_parser('firewall', help='check connection from server1 to server2 on port')
+  parser_shell.add_argument('server1')
+  parser_shell.add_argument('server2')
+  parser_shell.add_argument('port')
+  parser_shell.set_defaults(subcommand=subcommands.check_conn)
+
   args = parser.parse_args()
     
   ### Parse configuration file

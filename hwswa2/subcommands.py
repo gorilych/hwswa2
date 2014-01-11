@@ -6,7 +6,7 @@ import time
 from hwswa2.globals import config
 from hwswa2.log import info, debug, error
 import hwswa2.ssh as ssh
-from hwswa2.aux import get_server, passbyval
+from hwswa2.aux import get_server, passbyval, threaded
 import threading
 import Queue
 import time
@@ -281,3 +281,64 @@ def put():
   else:
     error("Failed to connect to server %s" % servername)
     exit(1)
+
+def check_conn():
+  """Checks connection between two servers"""
+  from_server_name = config['server1']
+  to_server_name = config['server2']
+  port = config['port']
+
+  from_server = get_server(from_server_name)
+  to_server = get_server(to_server_name)
+  if not from_server:
+    error("Cannot find server %s in servers list" % from_server_name)
+    exit(1)
+  if not to_server:
+    error("Cannot find server %s in servers list" % to_server_name)
+    exit(1)
+  if not ssh.accessible(from_server):
+    error("Failed to connect to server %s" % from_server_name)
+    exit(1)
+  if not ssh.accessible(to_server):
+    error("Failed to connect to server %s" % to_server_name)
+    exit(1)
+  _prepare_remote_scripts(from_server)
+  _prepare_remote_scripts(to_server)
+  message = ssh.hostid(to_server)
+  to_thread = _start_server(to_server, to_server['address'], port, message=message)
+  # give some time for server to start listening
+  time.sleep(1)
+  from_thread = _start_client(from_server, to_server['address'], port, message=message)
+  (to_stdout, to_stderr, to_status) = to_thread.result_queue.get()
+  (from_stdout, from_stderr, from_status) = from_thread.result_queue.get()
+  if to_status == 0 and from_status == 0 and '\n'.join(to_stdout) == 'OK' and \
+      '\n'.join(from_stdout) == 'OK':
+    print 'OK'
+  else:
+    print 'NOK'
+    exit(1)
+
+
+@threaded
+def _start_server(server, address, port, message='message', proto='tcp', timeout=20):
+  '''Start server.py to listen on address:port and wait for message
+     timeout should be less than ssh timeout'''
+  server_cmd = _prepare_cmd("server.py %s %s %s %s %s" % 
+                            (address, proto, port, message, timeout),
+                            cmd_prefix=server['cmd_prefix'])
+  ret = ssh.exec_cmd(server, server_cmd)
+  ssh.cleanup(server)
+  return ret
+
+
+@threaded
+def _start_client(server, address, port, message='message', proto='tcp', timeout=10):
+  '''Start client.py to send message to address:port'''
+  client_cmd = _prepare_cmd("client.py %s %s %s %s %s" % 
+                            (address, proto, port, message, timeout),
+                            cmd_prefix=server['cmd_prefix'])
+  ret = ssh.exec_cmd(server, client_cmd, privileged=False)
+  ssh.cleanup(server)
+  return ret
+
+
