@@ -80,6 +80,7 @@ def read_configuration():
   parser_shell.set_defaults(subcommand=subcommands.reboot)
 
   parser_shell = subparsers.add_parser('exec', help='execute command interactively')
+  parser_shell.add_argument('-t', '--tty', help='enable pseudo-tty allocation', action='store_true')
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
   parser_shell.set_defaults(subcommand=subcommands.exec_cmd)

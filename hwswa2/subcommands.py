@@ -236,13 +236,15 @@ def exec_cmd():
   """Exec command on specified server interactively"""
   servername = config['servername']
   sshcmd = " ".join(config['sshcmd'])
+  if 'tty' in config:
+    get_pty=config['tty']
   debug("Executing `%s` on server %s" % (sshcmd, servername))
   server = get_server(servername)
   if not server:
     error("Cannot find server %s in servers list" % servername)
     exit(1)
   if ssh.accessible(server):
-    exitstatus = ssh.exec_cmd_i(server, sshcmd)
+    exitstatus = ssh.exec_cmd_i(server, sshcmd, get_pty=get_pty)
     debug("exitstatus = %s" % exitstatus)
   else:
     error("Failed to connect to server %s" % servername)
