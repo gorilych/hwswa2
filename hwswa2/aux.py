@@ -1,6 +1,11 @@
 import signal
 import time
 import copy
+import struct
+import sys
+import os
+import fcntl
+import termios
 from hwswa2.globals import config
 
 def get_server(servername):
@@ -107,3 +112,18 @@ def getTerminalSize():
     #except:
     #  cr = (25, 80)
   return (int(cr[0]), int(cr[1]))
+
+def term_winsz():
+  '''Return terminal window size (height, width)'''
+  winsz_fmt = "HHHH"
+  winsz_arg = " "*struct.calcsize(winsz_fmt)
+  if not sys.stdin.isatty():
+    #raise type("NotConnectToTTYDevice", (Exception,), {})()
+    return (25,80)
+  return struct.unpack(winsz_fmt, fcntl.ioctl(sys.stdin, termios.TIOCGWINSZ, winsz_arg))[:2]
+
+def term_type():
+  '''Return terminal type'''
+  return os.environ.get('TERM', 'linux')
+
+
