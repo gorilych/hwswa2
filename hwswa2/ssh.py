@@ -9,8 +9,8 @@ import struct
 import termios
 import tty
 from fcntl import ioctl
+import select
 import paramiko
-import hwswa2.interactive as interactive
 import hwswa2.aux as aux
 from hwswa2.globals import config
 from hwswa2.log import debug
@@ -45,51 +45,21 @@ def connect(server, reconnect=False):
   return client
 
 def shell(server, privileged=True):
-  
-  def term_winsz():
-    """Return terminal window size (height, width)"""
-    winsz_fmt = "HHHH"
-    winsz_arg = " "*struct.calcsize(winsz_fmt)
-    if not sys.stdin.isatty():
-      raise type("NotConnectToTTYDevice", (Exception,), {})()
-    return struct.unpack(winsz_fmt, ioctl(sys.stdin, termios.TIOCGWINSZ, winsz_arg))[:2]
-
-  def term_type():
-    """Return terminal type"""
-    return os.environ.get("TERM", "linux")
-
-
+  '''Opens remote SSH session'''
   client = connect(server)
-
-  # get current terminal's settings
-  height, width = term_winsz()
-  tt = term_type()
-
-  # remember current signal handler
-  chan = None
-  old_handler = signal.getsignal(signal.SIGWINCH)
-  def on_win_resize(signum, frame):
-    if chan is not None:
-      height, width = term_winsz()
-      chan.resize_pty(width=width, height=height)
-  signal.signal(signal.SIGWINCH, on_win_resize)
-
-  try:
-    chan = client.invoke_shell(tt, width=width, height=height)
-    if privileged and ('su' in server['account'] or 'sudo' in server['account']):
-      sshcmd = prepare_su_cmd(server, 'shell')
-      chan.sendall(sshcmd + '; exit \n')
-      # cleanup previous output, leaving only prompt
-      data = ''
-      while chan.recv_ready(): data += chan.recv(1000)
-      time.sleep(0.3)
-      while chan.recv_ready(): data += chan.recv(1000)
-      print data.split('\n')[-1],
-      sys.stdout.flush()
-    interactive.interactive_shell(chan)
-  finally:
-    chan.close()
-    signal.signal(signal.SIGWINCH, old_handler)
+  channel = client.invoke_shell(aux.term_type())
+  if privileged and ('su' in server['account'] or 'sudo' in server['account']):
+    sshcmd = prepare_su_cmd(server, 'shell')
+    channel.sendall(sshcmd + '; exit \n')
+    # cleanup previous output, leaving only prompt
+    data = ''
+    while channel.recv_ready(): data += channel.recv(1000)
+    time.sleep(0.3)
+    while channel.recv_ready(): data += channel.recv(1000)
+    print data.split('\n')[-1],
+    sys.stdout.flush()
+  interactive_shell(channel)
+  channel.close()
 
 def accessible(server, retry=False):
   if 'accessible' in server and not retry:
@@ -107,18 +77,25 @@ def pingable(server):
   command = "ping -w 1 -q -c 1 %s" % server['address']
   return subprocess.call(command) == 0
 
-def exec_cmd_i(server, sshcmd, privileged=True, timeout=ssh_timeout):
+def exec_cmd_i(server, sshcmd, privileged=True, timeout=ssh_timeout, get_pty=False):
   """Executes command interactively"""
   client = connect(server)
   if privileged and ('su' in server['account'] or 'sudo' in server['account']):
     sshcmd = prepare_su_cmd(server, sshcmd, timeout)
-  channel = client.get_transport().open_session()
-  channel.get_pty()
-  channel.settimeout(timeout)
-  channel.exec_command(sshcmd)
-  interactive.interactive_shell(channel)
-  status = channel.recv_exit_status()
-  channel.close()
+
+  if get_pty and sys.stdin.isatty():
+    channel = client.get_transport().open_session()
+    height, width = aux.term_winsz()
+    channel.get_pty(term=aux.term_type(), width=width, height=height)
+    channel.exec_command(sshcmd)
+    interactive_shell(channel)
+    status = channel.recv_exit_status()
+    channel.close()
+  else:
+    stdin, stdout, stderr = client.exec_command(sshcmd, timeout=0.0, get_pty=False)
+    pipe_to_channel(stdout.channel)
+    status = stdout.channel.recv_exit_status()
+
   return status
 
 def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
@@ -299,3 +276,62 @@ def cleanup(server):
     server['sshclient'].close()
     debug("Closed connection to server %s" % server['name'])
     del server['sshclient']
+
+def pipe_to_channel(channel):
+  '''redirects sys.stdin,out,err to/from channel'''
+  while True:
+    try:
+      r,w,e = select.select([sys.stdin, channel],[],[])
+    except select.error:
+      continue
+    except Exception, e:
+      raise e
+    if sys.stdin in r:
+      x = os.read(sys.stdin.fileno(), 1)
+      if len(x) == 0:
+        channel.shutdown_write()
+      channel.send(x)
+    if channel in r:
+      if channel.recv_ready():
+        x = channel.recv(1024)
+        sys.stdout.write(x)
+        sys.stdout.flush()
+      if channel.recv_stderr_ready():
+        x = channel.recv_stderr(1024)
+        sys.stderr.write(x)
+        sys.stderr.flush()
+    if channel.exit_status_ready():
+      break
+  if channel.recv_ready():
+    x = channel.recv(1024)
+    sys.stdout.write(x)
+    sys.stdout.flush()
+  if channel.recv_stderr_ready():
+    x = channel.recv_stderr(1024)
+    sys.stderr.write(x)
+    sys.stderr.flush()
+
+def interactive_shell(channel):
+  # get current terminal's settings
+  height, width = aux.term_winsz()
+  channel.resize_pty(width=width, height=height)
+  # remember current signal handler
+  old_handler = signal.getsignal(signal.SIGWINCH)
+  # remember old tty settings
+  old_tty = termios.tcgetattr(sys.stdin)
+  # set our handler for winchange signal
+  def on_win_resize(signum, frame):
+    if channel is not None:
+      height, width = aux.term_winsz()
+      channel.resize_pty(width=width, height=height)
+  signal.signal(signal.SIGWINCH, on_win_resize)
+
+  try:
+    # change tty settings
+    tty.setraw(sys.stdin.fileno())
+    tty.setcbreak(sys.stdin.fileno())
+    # interact
+    pipe_to_channel(channel)
+  finally:
+    signal.signal(signal.SIGWINCH, old_handler)
+    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
