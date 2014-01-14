@@ -119,52 +119,54 @@ def get_checks(roles):
 #@passbyval
 def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
   mydeps = deepcopy(deps)
+  myparam = deepcopy(param)
   val = None
-  if isinstance(param, (str, unicode)):
-    val = ssh.get_cmd_out(server, _prepare_cmd(param, cmd_prefix, mydeps))
+  if isinstance(myparam, (str, unicode)):
+    val = ssh.get_cmd_out(server, _prepare_cmd(myparam, cmd_prefix, mydeps))
   else: # non-scalar type
     # process _uses
-    if '_uses' in param:
-      for key in param['_uses']:
+    if '_uses' in myparam:
+      for key in myparam['_uses']:
         keyfile = ssh.mktemp(server, ftype='f', path=tmppath)
         ssh.write(server, keyfile, yaml.dump(config[key]))
-        mydeps.update({param['_uses'][key]: keyfile})
-      del param['_uses']
+        mydeps.update({myparam['_uses'][key]: keyfile})
+      del myparam['_uses']
     # convert _script to _command
-    if '_script' in param:
+    if '_script' in myparam:
       scriptpath = ssh.mktemp(server, ftype='f', path=binpath)
-      ssh.write(server, scriptpath, _prepare_cmd(param['_script'], deps=mydeps))
+      ssh.write(server, scriptpath, _prepare_cmd(myparam['_script'], deps=mydeps))
       ssh.exec_cmd(server, 'chmod +x %s' % scriptpath)
-      param['_command'] = scriptpath
+      myparam['_command'] = scriptpath
+      del myparam['_script']
     # different type processing
-    if param['_type'] == 'dictionary':
+    if myparam['_type'] == 'dictionary':
       val = {}
-      for p in param:
+      for p in myparam:
         if not p.startswith('_'):
-          val[p] = _get_param_value(server, param[p], cmd_prefix, mydeps, binpath, tmppath)
-    elif param['_type'] == 'table':
+          val[p] = _get_param_value(server, myparam[p], cmd_prefix, mydeps, binpath, tmppath)
+    elif myparam['_type'] == 'table':
       val = []
-      if '_command' in param:
-        rows = ssh.get_cmd_out(server, _prepare_cmd(param['_command'], cmd_prefix, mydeps))
-        if not '_separator' in param:
-          param['_separator'] = ' '
+      if '_command' in myparam:
+        rows = ssh.get_cmd_out(server, _prepare_cmd(myparam['_command'], cmd_prefix, mydeps))
+        if not '_separator' in myparam:
+          myparam['_separator'] = ' '
         if not rows == '':
           for row in rows.split('\n'):
-            val.append(dict(zip(param['_fields'], row.split(param['_separator']))))
-    elif param['_type'] == 'list':
+            val.append(dict(zip(myparam['_fields'], row.split(myparam['_separator']))))
+    elif myparam['_type'] == 'list':
       val = []
       # evaluate generator first
-      for generator in param['_generator']: # there should be only one
-        placeholder = param['_generator'][generator]
-        gen_values = ssh.get_cmd_out(server, _prepare_cmd(param[generator], cmd_prefix, mydeps)).split('\n')
-        del param[generator]
+      for generator in myparam['_generator']: # there should be only one
+        placeholder = myparam['_generator'][generator]
+        gen_values = ssh.get_cmd_out(server, _prepare_cmd(myparam[generator], cmd_prefix, mydeps)).split('\n')
+        del myparam[generator]
         for gen_value in gen_values:
           mydeps.update({placeholder: gen_value})
           elem = {generator: gen_value}
           # evaluate other parameters based on generator
-          for p in param:
+          for p in myparam:
             if not p.startswith('_'):
-              elem[p] = _get_param_value(server, param[p], cmd_prefix, mydeps, binpath, tmppath)
+              elem[p] = _get_param_value(server, myparam[p], cmd_prefix, mydeps, binpath, tmppath)
           val.append(elem)
   return val
 
