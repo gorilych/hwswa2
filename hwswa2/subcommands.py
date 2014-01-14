@@ -11,6 +11,7 @@ import threading
 import Queue
 import time
 from copy import deepcopy
+from sys import exit
 
 def check():
   """Check only specified servers"""
