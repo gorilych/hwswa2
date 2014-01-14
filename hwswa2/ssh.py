@@ -205,9 +205,9 @@ def bootid(server):
 
 def is_it_me(server):
   if hasattr(subprocess, 'check_output'):
-    mybootid = subprocess.check_output('/proc/sys/kernel/random/boot_id').strip()
+    mybootid = subprocess.check_output(['cat', '/proc/sys/kernel/random/boot_id']).strip()
   else:
-    mybootid = subprocess.Popen(["cat /proc/sys/kernel/random/boot_id"], stdout=subprocess.PIPE).communicate()[0].strip()
+    mybootid = subprocess.Popen(['cat', '/proc/sys/kernel/random/boot_id'], stdout=subprocess.PIPE).communicate()[0].strip()
   server_bootid = bootid(server)
   debug("Is it me? Comparing %s and %s" % (mybootid, server_bootid))
   return mybootid == server_bootid
