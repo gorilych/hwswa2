@@ -40,9 +40,17 @@ def connect(server, reconnect=False):
   client = paramiko.SSHClient()
   client.load_system_host_keys()
   client.set_missing_host_key_policy(paramiko.WarningPolicy())
-  client.connect(hostname, port, username, password=password, key_filename=key_filename)
-  server['sshclient'] = client
-  return client
+  try:
+    client.connect(hostname, port, username, password=password, key_filename=key_filename)
+    server['sshclient'] = client
+    return client
+  except paramiko.BadHostKeyException:
+    debug('BadHostKeyException raised while connecting to %s@%s:%s' % (username,hostname,port))
+  except paramiko.AuthenticationException:
+    debug('Authentication failure while connecting to %s@%s:%s' % (username,hostname,port))
+  except paramiko.SSHException:
+    debug('SSHException raised while connecting to %s@%s:%s' % (username,hostname,port))
+  return None
 
 def shell(server, privileged=True):
   '''Opens remote SSH session'''
@@ -65,11 +73,11 @@ def accessible(server, retry=False):
   if 'accessible' in server and not retry:
     return server['accessible']
   else:
-    try:
-      client = connect(server)
+    client = connect(server, reconnect=True)
+    if not (client is None):
       server['accessible'] = True
       return True
-    except:
+    else:
       server['accessible'] = False
       return False
 
