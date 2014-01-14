@@ -15,6 +15,16 @@ accounts:
    # parameter su: specify root password here
    su: rootpassword
 servers:
- - {name: localhost, address: 127.0.0.1, role: PVCLIN, account: *testaccount}
+ - {name: localhost, address: 127.0.0.1, role: PVCLIN, account: *testaccount, expect: [{ip: 4.4.4.4, network: frontnet}, {ip: 10.10.10.10, network: heartbeat}]}
  - {name: localhost2, address: 127.0.0.1, port: 21, role: PVCLIN, account: *testaccount}
  - {name: localhost3, address: 127.0.0.1, role: [PVCLIN, LINMN], account: *testaccount}
+ # valid fields:
+ # name: required
+ # address: IP/hostname, required
+ # port: optional, 22 by default
+ # role: required, can be list of roles
+ # account: required
+ # expect: array of expected server attributes, not supported yet.
+ #  can include elements like:
+ #  - ip: expected IP address
+ #    network: backnet/frontnet/etc
