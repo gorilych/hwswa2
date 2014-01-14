@@ -17,7 +17,7 @@ Unpack it and go to the source directory.
 
 To prepare distribution, run in source directory:
 
-pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/
+pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/ \
             --clean pyinstaller/hwswa2.spec && \
 \cp -af README docs/ config/ checks/ pyinstaller/hwswa2/ && \
 pushd pyinstaller/ && \
