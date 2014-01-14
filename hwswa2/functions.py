@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import os
+import os, sys
 import argparse
 import logging
 from configobj import ConfigObj
@@ -8,7 +8,7 @@ from validate import Validator
 import yaml
 
 from hwswa2.globals import apppath, configspec, config
-from hwswa2.log import info, debug, error
+from logging import info, debug, error
 import hwswa2.subcommands as subcommands
 from hwswa2.ssh import cleanup
 
@@ -38,6 +38,27 @@ def run_subcommand():
   finally:
     for server in config['servers']:
       cleanup(server)
+
+def init_logger():
+  if not os.path.exists(os.path.dirname(config['logfile'])):
+    os.makedirs(os.path.dirname(config['logfile']))
+  logging.basicConfig(filename=config['logfile'], filemode = 'a', level=logging.INFO,
+      format="%(asctime)s %(levelname)s %(module)s.%(funcName)s: %(message)s")
+  if sys.hexversion >= 0x2070000: logging.captureWarnings(True)
+  config['logger'] = logging.getLogger()
+  if config['debug']:
+    config['logger'].setLevel(logging.DEBUG)
+  logging.getLogger("paramiko").setLevel(logging.WARNING)
+  # define a Handler which writes INFO messages or higher to the sys.stderr
+  console = logging.StreamHandler()
+  console.setLevel(logging.INFO)
+  # set a format which is simpler for console use
+  formatter = logging.Formatter('%(message)s')
+  # tell the handler to use this format
+  console.setFormatter(formatter)
+  # add the handler to the root logger
+  config['logger'].addHandler(console)
+
 
 ##################################
 ### Reads configuration from command line args and main.cfg

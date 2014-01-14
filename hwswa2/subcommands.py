@@ -4,7 +4,7 @@ import os.path
 import yaml
 import time
 from hwswa2.globals import config
-from hwswa2.log import info, debug, error
+from logging import info, debug, error
 import hwswa2.ssh as ssh
 from hwswa2.aux import get_server, passbyval, threaded
 import threading

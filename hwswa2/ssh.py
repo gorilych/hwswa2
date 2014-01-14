@@ -13,7 +13,7 @@ import select
 import paramiko
 import hwswa2.aux as aux
 from hwswa2.globals import config
-from hwswa2.log import debug
+from logging import debug
 
 ssh_timeout = 30
 
