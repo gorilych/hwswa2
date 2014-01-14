@@ -306,7 +306,7 @@ def check_conn():
     exit(1)
   _prepare_remote_scripts(from_server)
   _prepare_remote_scripts(to_server)
-  message = ssh.hostid(to_server)
+  message = ssh.bootid(to_server)
   to_thread = _start_server(to_server, to_server['address'], port, message=message)
   # give some time for server to start listening
   time.sleep(1)

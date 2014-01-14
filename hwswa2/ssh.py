@@ -192,17 +192,17 @@ def write(server, path, data):
   file.write(data)
   file.close()
 
-def hostid(server):
-  return get_cmd_out(server, 'hostid')
+def bootid(server):
+  return get_cmd_out(server, 'cat /proc/sys/kernel/random/boot_id')
 
 def is_it_me(server):
   if hasattr(subprocess, 'check_output'):
-    myhostid = subprocess.check_output('hostid').strip()
+    mybootid = subprocess.check_output('/proc/sys/kernel/random/boot_id').strip()
   else:
-    myhostid = subprocess.Popen(["hostid"], stdout=subprocess.PIPE).communicate()[0].strip()
-  server_hostid = hostid(server)
-  debug("Is it me? Comparing %s and %s" % (myhostid, server_hostid))
-  return myhostid == server_hostid
+    mybootid = subprocess.Popen(["cat /proc/sys/kernel/random/boot_id"], stdout=subprocess.PIPE).communicate()[0].strip()
+  server_bootid = bootid(server)
+  debug("Is it me? Comparing %s and %s" % (mybootid, server_bootid))
+  return mybootid == server_bootid
 
 def check_reboot(server, timeout=300):
   """Reboot the server and check the time it takes to come up"""
