@@ -43,6 +43,7 @@ def _check(server, resultsqueue):
 
   if not ssh.accessible(server):
     result['check_status'] = 'server is not accessible'
+    info("Server %s is not accessible" % name)
   else:
     _prepare_remote_scripts(server)
     (parameters, requirements) = get_checks(role)
