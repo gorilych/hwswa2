@@ -12,7 +12,8 @@ def listen(proto, address, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   s.bind((address, port))
-  s.listen(1)
+  if proto == 'tcp':
+    s.listen(1)
   sockets.append({'socket': s, 'proto': proto, 'address': address, 'port': port})
 
 def close_all():
@@ -75,11 +76,15 @@ def cmd_receive(proto, address, ports):
   read, write, error = select.select(socks,[],[], 2)
   result = ''
   for s in read:
-    conn, address = s.accept()
-    f = conn.makefile()
-    message = f.readline()
-    conn.close()
-    result = result + '%s:%s:%s:%s ' % (s.getsockname()[1], message, address[0], address[1])
+    if proto == 'tcp':
+      conn, address = s.accept()
+      f = conn.makefile()
+      message = f.readline()
+      conn.close()
+      result = result + '%s:%s:%s:%s ' % (s.getsockname()[1], message, address[0], address[1])
+    elif proto == 'udp':
+      message, address = s.recvfrom(1024)
+      result = result + '%s:%s:%s:%s ' % (s.getsockname()[1], message, address[0], address[1])
   if result == '':
     result = 'no messages'
   return result
