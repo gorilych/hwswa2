@@ -126,4 +126,34 @@ def term_type():
   '''Return terminal type'''
   return os.environ.get('TERM', 'linux')
 
+def range2list(rstr):
+  '''Converts range to list, f.e. 1-3,5,7-9 -> [1,2,3,5,7,8,9]'''
+  ls = []
+  for subrange in rstr.split(','):
+    start, minus, end = subrange.partition('-')
+    if minus == '': # single port
+      ls.append(int(start))
+    else: # port range start-end
+      ls.extend(range(int(start),int(end)+1))
+  return ls
+
+def list2range(ls):
+  '''Converts list ls to range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9'''
+  if len(ls) == 0:
+    return ''
+  sls = sorted(ls)
+  previous = start = sls[0]
+  result = '%s' % start
+  for p in sls[1:]:
+    if p == previous + 1:
+      previous = p
+    else:
+      if start == previous:
+        result = result + ',%s' % p
+      else:
+        result = result + '-%s,%s' % (previous, p)
+      start = previous = p
+  if previous > start:
+    result = result + '-%s' % previous
+  return result
 
