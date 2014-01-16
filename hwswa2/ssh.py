@@ -43,6 +43,7 @@ def connect(server, reconnect=False):
   client.set_missing_host_key_policy(paramiko.WarningPolicy())
   try:
     client.connect(hostname, port, username, password=password, key_filename=key_filename)
+    debug('Established connection with %s@%s:%s' % (username,hostname,port))
     server['sshclient'] = client
     return client
   except paramiko.BadHostKeyException:
@@ -235,7 +236,13 @@ def check_reboot(server, timeout=300):
     else:
       return "server is not accessible after %s seconds" % timeout
   else:
-    return "server does not go to reboot: still accessible after %s seconds" % timeout
+    # check uptime, it can be the case server reboots too fast
+    uptime, space, idle = get_cmd_out(server, 'cat /proc/uptime', privileged=False).partition(' ')
+    uptime = float(uptime)
+    if uptime < timeout+10:
+      return 0
+    else:
+      return "server does not go to reboot: still accessible after %s seconds" % timeout
 
 def prepare_su(server):
   """Copies su.py to remote server and returns path to containing directory"""
@@ -287,6 +294,12 @@ def cleanup(server):
     server['sshclient'].close()
     debug("Closed connection to server %s" % server['name'])
     del server['sshclient']
+    try:
+      del server['cmd_prefix']
+      del server['binpath']
+      del server['tmppath']
+    except:
+      pass
 
 def pipe_to_channel(channel):
   '''redirects sys.stdin,out,err to/from channel'''

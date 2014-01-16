@@ -12,6 +12,7 @@ import Queue
 import time
 from copy import deepcopy
 from sys import exit
+import sys
 
 def check():
   """Check only specified servers"""
@@ -54,15 +55,12 @@ def _check(server, resultsqueue):
                             binpath=server['binpath'], 
                             tmppath=server['tmppath'])
 
-    # clean up
-    ssh.cleanup(server)
-    del server['cmd_prefix']
-    del server['binpath']
-    del server['tmppath']
-
     # check reboot
     if config['check_reboot']:
       result['reboot_check'] = ssh.check_reboot(server)
+
+    # clean up
+    ssh.cleanup(server)
 
     result['check_status'] = 'finished'
   
