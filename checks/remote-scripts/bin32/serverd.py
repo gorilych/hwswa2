@@ -1,6 +1,17 @@
 #!/usr/bin/env python
 import os, sys, socket, select, traceback
 
+class Unbuffered:
+   def __init__(self, stream):
+       self.stream = stream
+   def write(self, data):
+       self.stream.write(data)
+       self.stream.flush()
+   def __getattr__(self, attr):
+       return getattr(self.stream, attr)
+
+sys.stdout=Unbuffered(sys.stdout)
+
 # array of dicts {socket: socketobject, proto:tcp/udp, address: IP/hostname, port: port number}
 sockets = []
 
