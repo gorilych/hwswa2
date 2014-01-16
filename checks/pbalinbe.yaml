@@ -1,4 +1,4 @@
-description: Checks for PBALINBE role: linux PBA database server
+description: Checks for PBALINBE role, linux PBA database server
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common ]

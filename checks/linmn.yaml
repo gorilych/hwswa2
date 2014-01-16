@@ -1,4 +1,4 @@
-description: Checks for LINMN role: linux management node
+description: Checks for LINMN role, linux management node
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common ]
