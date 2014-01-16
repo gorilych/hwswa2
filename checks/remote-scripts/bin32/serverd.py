@@ -4,6 +4,50 @@ import os, sys, socket, select, traceback
 # array of dicts {socket: socketobject, proto:tcp/udp, address: IP/hostname, port: port number}
 sockets = []
 
+def check(address, ports):
+  '''Checks if address:port is listened'''
+  PROC_TCP = "/proc/net/tcp"
+  STATE = {'01':'ESTABLISHED', '02':'SYN_SENT', '03':'SYN_RECV',
+           '04':'FIN_WAIT1', '05':'FIN_WAIT2', '06':'TIME_WAIT',
+           '07':'CLOSE', '08':'CLOSE_WAIT', '09':'LAST_ACK',
+           '0A':'LISTEN', '0B':'CLOSING' }
+  def _load():
+    ''' Read the table of tcp connections & remove header  '''
+    f = open(PROC_TCP,'r')
+    content = f.readlines()
+    f.close()
+    content.pop(0)
+    return content
+
+  def _hex2dec(s):
+    return str(int(s,16))
+
+  def _ip(s):
+    ip = [(_hex2dec(s[6:8])),(_hex2dec(s[4:6])),(_hex2dec(s[2:4])),(_hex2dec(s[0:2]))]
+    return '.'.join(ip)
+
+  def _convert_ip_port(array):
+    host,port = array.split(':')
+    return _ip(host),int(_hex2dec(port))
+
+  def _get_list_listening():
+    l = []
+    content = _load()
+    for line in content:
+      line_array = line.split()
+      state = STATE[line_array[3]]
+      if state == 'LISTEN':
+        l.append(_convert_ip_port(line_array[1]))
+    return l
+
+  # ports which are listen on address
+  lp = (p for a,p in _get_list_listening() if (a == address) or (a == '0.0.0.0'))
+  result = []
+  for p in lp:
+    if p in ports:
+      result.append(p)
+  return result
+
 def listen(proto, address, port):
   if proto == 'tcp':
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -43,9 +87,32 @@ def portrange(ports):
       ps.extend(range(int(start),int(end)+1))
   return ps
 
+def packports(ports):
+  '''Converts list ports to port range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9'''
+  if len(ports) == 0:
+    return ''
+  ps = sorted(ports)
+  previous = start = ps[0]
+  result = '%s' % start
+  for p in ps[1:]:
+    if p == previous + 1:
+      previous = p
+    else:
+      if start == previous:
+        result = result + ',%s' % p
+      else:
+        result = result + '-%s,%s' % (previous, p)
+      start = previous = p
+  if previous > start:
+    result = result + '-%s' % previous
+  return result
 
 ############### Commands
 ## each command name should start with 'cmd_' prefix
+
+def cmd_check(address, ports):
+  '''checks if there are services listening on ports. usage: check address ports'''
+  return 'ports:' + packports(check(address, portrange(ports)))
 
 def cmd_close(proto, address, ports):
   '''closes listening sockets. usage: close proto address ports'''
