@@ -96,10 +96,10 @@ def portrange(ports):
   '''Converts ports range 'port1,port2-port3,port4-port5,...' to list of ports'''
   ps = []
   for prange in ports.split(','):
-    start, minus, end = prange.partition('-')
-    if minus == '': # single port
-      ps.append(int(start))
+    if prange.find('-') == -1: # single port
+      ps.append(int(prange))
     else: # port range start-end
+      start, end = prange.split('-')
       ps.extend(range(int(start),int(end)+1))
   return ps
 
@@ -144,7 +144,6 @@ def cmd_closeall():
 def cmd_exit():
   '''exit: command to close all listening sockets and quit server'''
   close_all()
-  print 'finished_ok'
   sys.exit()
 
 def cmd_listen(proto, address, ports):
@@ -154,6 +153,7 @@ def cmd_listen(proto, address, ports):
   return "sockets are ready"
 
 def cmd_receive(proto, address, ports):
+  '''usage: receive proto address ports'''
   socks = []
   for p in portrange(ports):
     i, s = find_socket(proto, address, p)
