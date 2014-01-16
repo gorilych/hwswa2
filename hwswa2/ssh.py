@@ -11,6 +11,7 @@ import tty
 from fcntl import ioctl
 import select
 import paramiko
+import socket
 import hwswa2.aux as aux
 from hwswa2.globals import config
 from logging import debug
@@ -50,6 +51,8 @@ def connect(server, reconnect=False):
     debug('Authentication failure while connecting to %s@%s:%s' % (username,hostname,port))
   except paramiko.SSHException:
     debug('SSHException raised while connecting to %s@%s:%s' % (username,hostname,port))
+  except socket.error as serr:
+    debug('socket.error raised while connecting to %s@%s:%s: %s' % (username,hostname,port,serr))
   return None
 
 def shell(server, privileged=True):
