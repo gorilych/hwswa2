@@ -20,7 +20,7 @@ def check():
   for name in config['servernames']:
     if not name in allnames:
       error("Cannot find server %s in servers list" % name)
-      exit(1)
+      sys.exit(1)
   results = Queue.Queue()
   for name in config['servernames']:
     cth = threading.Thread(name=name, target=_check, args=(get_server(name), results))
@@ -200,7 +200,7 @@ def prepare():
   for name in config['servernames']:
     if not name in allnames:
       error("Cannot find server %s in servers list" % name)
-      exit(1)
+      sys.exit(1)
 
 def prepareall():
   """Prepare all servers"""
@@ -216,12 +216,12 @@ def shell():
   server = get_server(servername)
   if not server:
     error("Cannot find server %s in servers list" % servername)
-    exit(1)
+    sys.exit(1)
   if ssh.accessible(server):
     ssh.shell(server)
   else:
     error("Failed to connect to server %s" % servername)
-    exit(1)
+    sys.exit(1)
 
 def reboot():
   """Reboots server and prints results"""
@@ -230,12 +230,12 @@ def reboot():
   server = get_server(servername)
   if not server:
     error("Cannot find server %s in servers list" % servername)
-    exit(1)
+    sys.exit(1)
   if ssh.accessible(server):
     print ssh.check_reboot(server)
   else:
     error("Failed to connect to server %s" % servername)
-    exit(1)
+    sys.exit(1)
 
 def exec_cmd():
   """Exec command on specified server interactively"""
@@ -247,13 +247,13 @@ def exec_cmd():
   server = get_server(servername)
   if not server:
     error("Cannot find server %s in servers list" % servername)
-    exit(1)
+    sys.exit(1)
   if ssh.accessible(server):
     exitstatus = ssh.exec_cmd_i(server, sshcmd, get_pty=get_pty)
     debug("exitstatus = %s" % exitstatus)
   else:
     error("Failed to connect to server %s" % servername)
-    exit(1)
+    sys.exit(1)
 
 def ni_exec_cmd():
   """Exec command on specified server non-interactively"""
@@ -263,7 +263,7 @@ def ni_exec_cmd():
   server = get_server(servername)
   if not server:
     error("Cannot find server %s in servers list" % servername)
-    exit(1)
+    sys.exit(1)
   if ssh.accessible(server):
     stdout, stderr, exitstatus = ssh.exec_cmd(server, sshcmd)
     print("stdout = %s" % stdout)
@@ -271,7 +271,7 @@ def ni_exec_cmd():
     print("exitstatus = %s" % exitstatus)
   else:
     error("Failed to connect to server %s" % servername)
-    exit(1)
+    sys.exit(1)
 
 def put():
   """Copy file to server"""
@@ -282,12 +282,12 @@ def put():
   server = get_server(servername)
   if not server:
     error("Cannot find server %s in servers list" % servername)
-    exit(1)
+    sys.exit(1)
   if ssh.accessible(server):
     ssh.put(server, localpath, remotepath)
   else:
     error("Failed to connect to server %s" % servername)
-    exit(1)
+    sys.exit(1)
 
 def check_conn():
   """Checks connection between two servers"""
@@ -299,16 +299,16 @@ def check_conn():
   to_server = get_server(to_server_name)
   if not from_server:
     error("Cannot find server %s in servers list" % from_server_name)
-    exit(1)
+    sys.exit(1)
   if not to_server:
     error("Cannot find server %s in servers list" % to_server_name)
-    exit(1)
+    sys.exit(1)
   if not ssh.accessible(from_server):
     error("Failed to connect to server %s" % from_server_name)
-    exit(1)
+    sys.exit(1)
   if not ssh.accessible(to_server):
     error("Failed to connect to server %s" % to_server_name)
-    exit(1)
+    sys.exit(1)
   _prepare_remote_scripts(from_server)
   _prepare_remote_scripts(to_server)
   message = ssh.bootid(to_server)
@@ -323,7 +323,7 @@ def check_conn():
     print 'OK'
   else:
     print 'NOK'
-    exit(1)
+    sys.exit(1)
 
 
 @threaded
