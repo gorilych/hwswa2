@@ -1,1 +1,0 @@
-../bin32/clientd.py

@@ -59,6 +59,22 @@ def listen(proto, address, port):
     s.listen(1)
   sockets.append({'socket': s, 'proto': proto, 'address': address, 'port': port})
 
+def send(proto, address, port, message=None, timeout=1):
+  if proto == 'tcp':
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  elif proto == 'udp':
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  s.settimeout(timeout)
+  try:
+    s.connect((address, port))
+    if message is None:
+      message = 'from' + s.getsockname()[0]
+    s.sendall(message)
+    s.close()
+    return True
+  except:
+    return False
+
 def close(proto, address, port):
   i, s = find_socket(proto, address, port)
   if not (s is None):
@@ -166,6 +182,16 @@ def cmd_help(command=None):
   else:
     return 'use: help command. possible commands: %s' % ', '.join(commands.keys())
 
+def cmd_send(proto, address, ports):
+  '''usage: send proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056'''
+  portsOK = []
+  portsNOK = []
+  for p in portrange(ports):
+    if send(proto, address, p):
+      portsOK.append(p)
+    else:
+      portsNOK.append(p)
+  return "OK:%s NOK:%s" % (packports(portsOK), packports(portsNOK))
 
 ############### MAIN
 if __name__ == '__main__':
