@@ -196,12 +196,17 @@ def cmd_send(proto, address, ports):
 ############### MAIN
 if __name__ == '__main__':
   commands = dict((k[4:],globals()[k]) for k in globals() if k.startswith('cmd_'))
-  print 'started_ok possible commands: %s' % ', '.join(commands.keys())
- 
+  print 'started_ok possible commands: %s' % ', '.join(commands.keys()) 
+
   line = ' '
   while(line):
     line = sys.stdin.readline()
-    command, space, rest = line.strip().partition(' ')
+    commandline = line.strip()
+    if commandline.find(' ') == -1: # no args
+      command = commandline
+      rest = ''
+    else:
+      command, rest = line.strip().split(None,1)
     if (command == ''):
       continue
     args = rest.split()
@@ -213,7 +218,7 @@ if __name__ == '__main__':
       except SystemExit:
         close_all()
         break 
-      except Exception as e:
+      except Exception, e:
         exc_type, exc_obj, exc_tb = sys.exc_info()
         print "result_notok Exception %s: %s" % \
             (traceback.format_exception_only(exc_type, exc_obj)[0],
