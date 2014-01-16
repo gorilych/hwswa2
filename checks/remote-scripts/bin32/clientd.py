@@ -7,10 +7,10 @@ def send(proto, address, port, message=None, timeout=1):
   elif proto == 'udp':
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   s.settimeout(timeout)
-  if message is None:
-    message = 'from' + s.getsockname()[0]
   try:
     s.connect((address, port))
+    if message is None:
+      message = 'from' + s.getsockname()[0]
     s.sendall(message)
     s.close()
     return True
