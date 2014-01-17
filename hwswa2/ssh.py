@@ -359,3 +359,71 @@ def interactive_shell(channel):
   finally:
     signal.signal(signal.SIGWINCH, old_handler)
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
+
+def serverd_start(server):
+  '''Starts serverd.py on server'''
+  try:
+    client = connect(server)
+    serverd_py = os.path.join(config['rscriptdir'], 'bin32', 'serverd.py')
+    # remote path
+    r_serverd_py = mktemp(server, template='serverd.XXXX', ftype='f', path='/tmp')
+    put(server, serverd_py, r_serverd_py)
+    if 'su' in server['account'] or 'sudo' in server['account']:
+      r_serverd_py_cmd = prepare_su_cmd(server, 'stty -echo; ' + r_serverd_py)
+      r_serverd_py_privileged = True
+      get_pty = True
+    else:
+      r_serverd_py_cmd = r_serverd_py
+      r_serverd_py_privileged = False
+      get_pty = False
+    stdin, stdout, stderr = client.exec_command(r_serverd_py_cmd, get_pty=get_pty)
+    banner = stdout.readline()
+    if not banner.startswith('started_ok'):
+      banner = stdout.readline()
+    debug('serverd started on %s: %s' % (server['name'], banner))
+    server['serverd'] = {'r_serverd_py': r_serverd_py,
+                         'privileged': r_serverd_py_privileged,
+                         'pty': get_pty,
+                         'stdin': stdin,
+                         'stdout': stdout,
+                         'stderr': stderr}
+    return True
+  except Exception as e:
+    debug('serverd not started: %s' % e.message)
+    return False
+
+def serverd_stop(server):
+  '''Stops serverd.py on server'''
+  if 'serverd' in server:
+    serverd_cmd(server,'exit')
+    server['serverd']['stdin'].close()
+    del server['serverd']
+
+def serverd_cmd(server, cmd):
+  '''Sends command to serverd.py and returns tuple (status_ok_or_not, result)'''
+  if 'serverd' in server:
+    stdin = server['serverd']['stdin']
+    stdout = server['serverd']['stdout']
+    debug('command: ' + cmd)
+    stdin.write(cmd + '\n')
+    reply = stdout.readline().strip()
+    debug('accept reply: ' + reply)
+    accepted, space, reason = reply.partition(' ')
+    if accepted == 'accepted_ok':
+      debug('command accepted on server %s: %s' % (server['name'], reason))
+      reply = stdout.readline().strip()
+      debug('result reply: ' + reply)
+      result_status, space, result = reply.partition(' ')
+      if result_status == 'result_ok':
+        return True, result
+      elif result_status == 'result_notok':
+        return False, 'command failed: ' + result
+      else:
+        return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
+    elif accepted == 'accepted_notok':
+      return False, 'command not accepted: ' + reason
+    else:
+      return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
+  else:
+    return False, 'serverd not started'
+
