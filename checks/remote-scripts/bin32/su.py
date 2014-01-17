@@ -21,6 +21,7 @@ def read_from_to(fifo_name, fout):
     line = fifo.readline()
     if not line: break
     fout.write(line)
+    fout.flush()
   fifo.close()
 
 def term_winsz():
