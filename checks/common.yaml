@@ -3,6 +3,7 @@ parameters:
   hostname:           hostname -f 2>/dev/null || hostname
   time_utc:           LANG=C date --utc
   time:               LANG=C date
+  umask:              umask
   ntp_service_status: service ntpd status 2>&1
   OS:                 lsb_release --short --id --release | xargs
   architecture:       uname --machine
