@@ -307,43 +307,19 @@ def check_conn():
   if not ssh.accessible(to_server):
     error("Failed to connect to server %s" % to_server_name)
     sys.exit(1)
-  _prepare_remote_scripts(from_server)
-  _prepare_remote_scripts(to_server)
-  message = ssh.bootid(to_server)
-  to_thread = _start_server(to_server, to_server['address'], port, message=message)
-  # give some time for server to start listening
-  time.sleep(1)
-  from_thread = _start_client(from_server, to_server['address'], port, message=message)
-  (to_stdout, to_stderr, to_status) = to_thread.result_queue.get()
-  (from_stdout, from_stderr, from_status) = from_thread.result_queue.get()
-  if to_status == 0 and from_status == 0 and '\n'.join(to_stdout) == 'OK' and \
-      '\n'.join(from_stdout) == 'OK':
-    print 'OK'
-  else:
-    print 'NOK'
-    sys.exit(1)
+  ssh.serverd_start(from_server)
+  ssh.serverd_start(to_server)
 
+  status, result = ssh.serverd_cmd(to_server, 'listen tcp %s %s' % (to_server['address'], port))
+  if status: # listen ok
+    status, result = ssh.serverd_cmd(from_server, 'send tcp %s %s' % (to_server['address'], port))
+    if status: # send ok
+      print result
+    else: # send failed
+      print 'send failure: ' + result
+  else: # listen failed
+    print 'listen failure: ' + result
 
-@threaded
-def _start_server(server, address, port, message='message', proto='tcp', timeout=20):
-  '''Start server.py to listen on address:port and wait for message
-     timeout should be less than ssh timeout'''
-  server_cmd = _prepare_cmd("server.py %s %s %s %s %s" % 
-                            (address, proto, port, message, timeout),
-                            cmd_prefix=server['cmd_prefix'])
-  ret = ssh.exec_cmd(server, server_cmd)
-  ssh.cleanup(server)
-  return ret
-
-
-@threaded
-def _start_client(server, address, port, message='message', proto='tcp', timeout=10):
-  '''Start client.py to send message to address:port'''
-  client_cmd = _prepare_cmd("client.py %s %s %s %s %s" % 
-                            (address, proto, port, message, timeout),
-                            cmd_prefix=server['cmd_prefix'])
-  ret = ssh.exec_cmd(server, client_cmd, privileged=False)
-  ssh.cleanup(server)
-  return ret
-
+  ssh.serverd_stop(from_server)
+  ssh.serverd_stop(to_server)
 
