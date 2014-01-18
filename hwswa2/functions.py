@@ -26,11 +26,6 @@ def read_servers():
 def read_networks():
   config['networks'] = yaml.load(open(config['networksfile']))['networks']
   debug("Read info from networks file: %s" % config['networks'])
-  # check for dups
-  names = [ elem['name'] for elem in config['networks'] ]
-  if len(names) != len(set(names)):
-    error("Found duplicates in networks file! Exiting ...")
-    sys.exit(1)
 
 def run_subcommand():
   try:

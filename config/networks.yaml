@@ -6,5 +6,6 @@ examples:
 networks:
  - {name: frontnet,  address: 10.200.200.0, prefix: 24}
  - {name: backnet,   address: 192.168.1.0,  prefix: 24}  
+ - {name: backnet,   address: 192.168.3.0,  prefix: 24}  
  - {name: heartbeat, address: 192.168.2.0,  prefix: 24}  
 
