@@ -4,6 +4,7 @@ parameters:
   time_utc:           LANG=C date --utc
   time:               LANG=C date
   umask:              umask
+  iptables:           iptables-save | grep -q REJECT && echo reject found || echo no rejects
   ntp_service_status: service ntpd status 2>&1
   OS:                 lsb_release --short --id --release | xargs
   architecture:       uname --machine
