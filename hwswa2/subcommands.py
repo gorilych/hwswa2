@@ -54,6 +54,34 @@ def _check(server, resultsqueue):
                             cmd_prefix=server['cmd_prefix'],
                             binpath=server['binpath'], 
                             tmppath=server['tmppath'])
+    # check expected parameters
+    if 'expect' in server:
+      result['expect'] = {}
+      for expectation in server['expect']:
+        # checking expected IP addresses
+        if 'ip' in expectation:
+          if 'network' in result['parameters'] and \
+              'network_interfaces' in result['parameters']['network']:
+            interfaces = result['parameters']['network']['network_interfaces']
+            ip_nw_nic = []
+            for nic in interfaces:
+              for ip in nic['ip']:
+                ip_nw_nic.append({'ip': ip['address'], 'nw': ip['network'], 'nic': nic['name']})
+          e_key = e_ip = expectation['ip']
+          if 'network' in expectation:
+            e_nw = expectation['network']
+            e_key += '/' + e_nw
+          e_found = next((ip for ip in ip_nw_nic if ip['ip'] == e_ip), None)
+          if e_found is None:
+            result['expect'][e_key] = 'NOT OK, IP address NOT found'
+          else:
+            if not ('network' in expectation):
+              result['expect'][e_key] = 'OK, IP address found on ' + e_found['nic']
+            else:
+              if e_nw == e_found['nw']:
+                result['expect'][e_key] = 'OK, IP address found on ' + e_found['nic']
+              else:
+                result['expect'][e_key] = 'NOT OK, IP address found on ' + e_found['nic'] + ' but network is NOT the same: ' + e_found['nw']
 
     # check reboot
     if config['check_reboot']:

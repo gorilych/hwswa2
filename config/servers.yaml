@@ -24,7 +24,7 @@ servers:
  # port: optional, 22 by default
  # role: required, can be list of roles
  # account: required
- # expect: array of expected server attributes, not supported yet.
+ # expect: array of expected server attributes, only ip/network is supported
  #  can include elements like:
  #  - ip: expected IP address
  #    network: backnet/frontnet/etc
