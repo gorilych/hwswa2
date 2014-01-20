@@ -118,6 +118,11 @@ def read_configuration():
   parser_shell.add_argument('port')
   parser_shell.set_defaults(subcommand=subcommands.check_conn)
 
+  parser_shell = subparsers.add_parser('lastreport')
+  parser_shell.add_argument('servername', metavar='server')
+  parser_shell.set_defaults(subcommand=subcommands.lastreport)
+
+
   args = parser.parse_args()
     
   ### Parse configuration file

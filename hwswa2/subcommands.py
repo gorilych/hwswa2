@@ -351,3 +351,77 @@ def check_conn():
   ssh.serverd_stop(from_server)
   ssh.serverd_stop(to_server)
 
+def _last_report_filename(server):
+  '''Finds last report for the server and returns its filename'''
+  name = server['name']
+  path = os.path.join(config['reportsdir'], name)
+  if not os.path.isdir(path):
+    return None
+  time_file = []
+  for filename in os.listdir(path):
+    if os.path.isfile(os.path.join(path, filename)):
+      try: # time.strptime raises exception if filename does not match format
+        filetime = time.mktime(time.strptime(filename,'%Y-%m-%d.%Hh%Mm%Ss'))
+        time_file.append({'time': filetime, 'file': os.path.join(path, filename)})
+      except: # we will just ignore other files
+        pass
+  if len(time_file) == 0:
+    return None
+  else:
+    return max(time_file, key=lambda elem: elem['time'])['file']
+
+def _last_report(server):
+  report_fname = _last_report_filename(server)
+  if report_fname is None:
+    return None
+  return yaml.load(open(report_fname))
+
+def lastreport():
+  servername = config['servername']
+  server = get_server(servername)
+  _print_report(_last_report(server))
+
+def _print_report(report):
+  if report is None:
+    print 'NO REPORT'
+  else:
+    # print all scalars
+    for key in report:
+      val = report[key]
+      if isinstance(val,(type(None),str,int,float,bool)):
+        print key + ', ' + str(val)
+    if 'expect' in report:
+      print '  Expectations'
+      for e in report['expect']:
+        print e + ', ' + report['expect'][e]
+    if 'parameters' in report:
+      print '  Parameters'
+      parameters = report['parameters']
+      # print all scalars
+      for key in parameters:
+        val = parameters[key]
+        if isinstance(val,(type(None),str,int,float,bool)):
+          print key + ', ' + str(val)
+      if 'disks' in parameters:
+        disks = parameters['disks']
+        print 'disks, ' + ' | '.join(d['device'] + ' ' + \
+                                     d['fs_type'] + ' ' + \
+                                     d['mountpoint'] + ' ' + \
+                                     d['size'] for d in disks)
+      if 'network' in parameters:
+        print '  Network parameters'
+        network = parameters['network']
+        # print scalars
+        for key in network:
+          val = network[key]
+          if isinstance(val,(type(None),str,int,float,bool)):
+            print key + ', ' + str(val)
+        if 'network_interfaces' in network:
+          nic_ips = []
+          network_interfaces = network['network_interfaces']
+          for nic in network_interfaces:
+            res_str = nic['name']
+            for ip in nic['ip']:
+              res_str += ' ' + ip['address'] + '/' + ip['network']
+            nic_ips.append(res_str)
+          print 'nics, ' + ' | '.join(nic_ips)
