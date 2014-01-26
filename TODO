@@ -77,7 +77,7 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * compare time with time on hwcheck server side
 
-* add check for uptime
+* DONE add check for uptime
 
 * collect network configuration from sysconfig
 
