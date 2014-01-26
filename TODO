@@ -1,6 +1,6 @@
-* iptables check
+* DONE iptables check
 
-* checks diff
+* DONE checks diff
 
 * DONE parallel checks
 
@@ -71,7 +71,7 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * add execall subcommand (to exec command on all servers)
 
-* work around 'host: command not found' in dns check
+* DONE work around 'host: command not found' in dns check
 
 * add check for virtualization
 
@@ -85,4 +85,4 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * DONE make use of virtualenv and pyinstaller
 
-* add support for expect section in servers.yaml
+* DONE add support for expect section in servers.yaml
