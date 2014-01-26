@@ -126,6 +126,12 @@ def read_configuration():
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.set_defaults(subcommand=subcommands.reports)
 
+  parser_shell = subparsers.add_parser('reportdiff', help='show difference between reports')
+  parser_shell.add_argument('servername', metavar='server')
+  parser_shell.add_argument('report1')
+  parser_shell.add_argument('report2')
+  parser_shell.set_defaults(subcommand=subcommands.reportdiff)
+
   args = parser.parse_args()
     
   ### Parse configuration file

@@ -370,19 +370,20 @@ def _reports(server):
         pass
   return sorted(file_path_time, key=lambda elem: elem['time'], reverse = True)
 
-def _last_report_path(server):
-  '''Finds last report for the server and returns its filename'''
+def _last_report(server):
   reports = _reports(server)
   if len(reports) == 0:
     return None
   else:
-    return reports[0]['path']
+    return yaml.load(open(reports[0]['path']))
 
-def _last_report(server):
-  report_path = _last_report_path(server)
-  if report_path is None:
+def _get_report(server, reportname):
+  reports = _reports(server)
+  report = next((r for r in reports if r['file'] == reportname), None)
+  if report is None:
     return None
-  return yaml.load(open(report_path))
+  else:
+    return yaml.load(open(report['path']))
 
 def lastreport():
   servername = config['servername']
@@ -393,6 +394,74 @@ def reports():
   servername = config['servername']
   server = get_server(servername)
   print '\n'.join(r['file'] for r in _reports(server))
+
+def _is_equal(val1, val2):
+  diff = _deepdiff(val1, val2)
+  return (diff['old'] is None) and (diff['new'] is None)
+
+def _deepdiff(val1, val2):
+  diff = {'new': None, 'old': None}
+
+  if isinstance(val1,(type(None),str,int,float,bool)):
+    if not (val1 == val2):
+      diff = {'new': val2, 'old': val1}
+
+  # we are considering list as a set of different elements
+  # algo is wrong if we have duplicates
+  if isinstance(val1, list):
+    diff['new'] = []
+    diff['old'] = []
+    for elem in val1:
+      # try to find equal
+      equal_elem = next((el for el in val2 if _is_equal(el, elem)), None)
+      if equal_elem is None:
+        diff['old'].append(elem)
+    for elem in val2:
+      # try to find equal
+      equal_elem = next((el for el in val1 if _is_equal(el, elem)), None)
+      if equal_elem is None:
+        diff['new'].append(elem)
+
+    if diff['new'] == []:
+      diff['new'] = None
+    if diff['old'] == []:
+      diff['old'] = None
+
+  if isinstance(val1, dict):
+    diff['new'] = {}
+    diff['old'] = {}
+    for key in val1:
+      if not (key in val2):
+        diff['old'][key] = val1[key]
+      else:
+        oldval = val1[key]
+        newval = val2[key]
+        diffval = _deepdiff(oldval, newval)
+        if not (diffval['old'] is None):
+          diff['old'][key] = diffval['old']
+        if not (diffval['new'] is None):
+          diff['new'][key] = diffval['new']
+
+    for key in val2:
+      if not (key in val1):
+        diff['new'][key] = val2[key]
+
+    if diff['new'] == {}:
+      diff['new'] = None
+    if diff['old'] == {}:
+      diff['old'] = None
+
+  return diff
+
+def reportdiff():
+  server = get_server(config['servername'])
+  report1 = _get_report(server, config['report1'])
+  report2 = _get_report(server, config['report2'])
+  diff = _deepdiff(report1, report2)
+  print "       ###DIFF NEW###"
+  _print_report(diff['new'])
+  print "       ###DIFF OLD###"
+  _print_report(diff['old'])
 
 def _print_report(report):
   if report is None:
