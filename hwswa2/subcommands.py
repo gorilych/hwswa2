@@ -351,35 +351,48 @@ def check_conn():
   ssh.serverd_stop(from_server)
   ssh.serverd_stop(to_server)
 
-def _last_report_filename(server):
-  '''Finds last report for the server and returns its filename'''
+def _reports(server):
+  '''Returns list of reports for server, ordered by time (first element is the last report): 
+     [ {'file': ..., 'path': ..., 'time': ...}, ... ]'''
   name = server['name']
   path = os.path.join(config['reportsdir'], name)
   if not os.path.isdir(path):
-    return None
-  time_file = []
+    return []
+  file_path_time = []
   for filename in os.listdir(path):
     if os.path.isfile(os.path.join(path, filename)):
       try: # time.strptime raises exception if filename does not match format
         filetime = time.mktime(time.strptime(filename,'%Y-%m-%d.%Hh%Mm%Ss'))
-        time_file.append({'time': filetime, 'file': os.path.join(path, filename)})
+        file_path_time.append({'file': filename,
+                               'path': os.path.join(path, filename),
+                               'time': filetime})
       except: # we will just ignore other files
         pass
-  if len(time_file) == 0:
+  return sorted(file_path_time, key=lambda elem: elem['time'], reverse = True)
+
+def _last_report_path(server):
+  '''Finds last report for the server and returns its filename'''
+  reports = _reports(server)
+  if len(reports) == 0:
     return None
   else:
-    return max(time_file, key=lambda elem: elem['time'])['file']
+    return reports[0]['path']
 
 def _last_report(server):
-  report_fname = _last_report_filename(server)
-  if report_fname is None:
+  report_path = _last_report_path(server)
+  if report_path is None:
     return None
-  return yaml.load(open(report_fname))
+  return yaml.load(open(report_path))
 
 def lastreport():
   servername = config['servername']
   server = get_server(servername)
   _print_report(_last_report(server))
+
+def reports():
+  servername = config['servername']
+  server = get_server(servername)
+  print '\n'.join(r['file'] for r in _reports(server))
 
 def _print_report(report):
   if report is None:

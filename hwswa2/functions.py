@@ -122,6 +122,9 @@ def read_configuration():
   parser_shell.add_argument('servername', metavar='server')
   parser_shell.set_defaults(subcommand=subcommands.lastreport)
 
+  parser_shell = subparsers.add_parser('reports')
+  parser_shell.add_argument('servername', metavar='server')
+  parser_shell.set_defaults(subcommand=subcommands.reports)
 
   args = parser.parse_args()
     
