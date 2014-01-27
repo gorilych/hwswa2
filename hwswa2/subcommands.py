@@ -179,8 +179,9 @@ def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmpp
         if not '_separator' in myparam:
           myparam['_separator'] = ' '
         if not rows == '':
+          maxsplit = len(myparam['_fields']) - 1 
           for row in rows.split('\n'):
-            val.append(dict(zip(myparam['_fields'], row.split(myparam['_separator']))))
+            val.append(dict(zip(myparam['_fields'], row.split(myparam['_separator'], maxsplit))))
     elif myparam['_type'] == 'list':
       val = []
       # evaluate generator first
@@ -490,6 +491,11 @@ def _print_report(report):
                                      d['fs_type'] + ' ' + \
                                      d['mountpoint'] + ' ' + \
                                      d['size'] for d in disks)
+      if 'blockdevs' in parameters:
+        blockdevs = parameters['blockdevs']
+        print 'blockdevs, ' + ' | '.join(d['type'] + ' ' + \
+                                         d['name'] + ' ' + \
+                                         d['size'] for d in blockdevs)
       if 'network' in parameters:
         print '  Network parameters'
         network = parameters['network']
