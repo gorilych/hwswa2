@@ -44,7 +44,7 @@ human () {
 }
 
 
-for dev in $(find /sys/block/ \( -name 'sd*' -o -name 'sr*' -o -name 'hd*' \
+for dev in $(find /sys/block/ -maxdepth 1 \( -name 'sd*' -o -name 'sr*' -o -name 'hd*' \
                                  -o -name 'vd*' \) | sed 's%^/sys/block/%%'); do
   size=$(cat /sys/block/$dev/size)
   if [ "$size" = "0" ]; then
@@ -60,11 +60,11 @@ for dev in $(find /sys/block/ \( -name 'sd*' -o -name 'sr*' -o -name 'hd*' \
   else
     continue # ignoring other devices
   fi
-  readonly=$(cat /sys/block/$dev/ro)
+  readonly=$(cat /sys/block/$dev/ro 2>/dev/null || echo '-')
   removable=$(cat /sys/block/$dev/removable)
-  rotational=$(cat /sys/block/$dev/queue/rotational)
-  model=$(cat /sys/block/$dev/device/model)
-  vendor=$(cat /sys/block/$dev/device/vendor)
+  rotational=$(cat /sys/block/$dev/queue/rotational 2>/dev/null || echo '-')
+  model=$(cat /sys/block/$dev/device/model 2>/dev/null || echo '-')
+  vendor=$(cat /sys/block/$dev/device/vendor 2>/dev/null || echo '-')
   echo "$dev|$type|$readonly|$removable|$rotational|$size|$vendor|$model"
   
 done
