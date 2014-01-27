@@ -135,7 +135,7 @@ def range2list(rstr):
       ls.append(int(start))
     else: # port range start-end
       ls.extend(range(int(start),int(end)+1))
-  return ls
+  return sorted(list(set(ls)))
 
 def list2range(ls):
   '''Converts list ls to range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9'''
@@ -156,4 +156,19 @@ def list2range(ls):
   if previous > start:
     result = result + '-%s' % previous
   return result
+
+def splitlist(ls, chunksize):
+  '''Split list into chunks of maximum chunksize'''
+  return [ls[i:i+chunksize] for i in range(0,len(ls),chunksize)]
+
+def splitrange(rg, chunksize):
+  '''Split range into chunks of maximum chunksize'''
+  ls = range2list(rg)
+  return [list2range(e) for e in splitlist(ls, chunksize)]
+
+def joinlists(ls1,ls2):
+  return sorted(list(set(ls1 + ls2)))
+
+def joinranges(rg1, rg2):
+  return list2range(joinlists(range2list(rg1), range2list(rg2)))
 
