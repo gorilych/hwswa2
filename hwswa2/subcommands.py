@@ -485,12 +485,12 @@ def _print_report(report):
         val = parameters[key]
         if isinstance(val,(type(None),str,int,float,bool)):
           print key + ', ' + str(val)
-      if 'disks' in parameters:
-        disks = parameters['disks']
-        print 'disks, ' + ' | '.join(d['device'] + ' ' + \
-                                     d['fs_type'] + ' ' + \
-                                     d['mountpoint'] + ' ' + \
-                                     d['size'] for d in disks)
+      if 'partitions' in parameters:
+        partitions = parameters['partitions']
+        print 'partitions, ' + ' | '.join(p['device'] + ' ' + \
+                                     p['fs_type'] + ' ' + \
+                                     p['mountpoint'] + ' ' + \
+                                     p['size'] for p in partitions)
       if 'blockdevs' in parameters:
         blockdevs = parameters['blockdevs']
         print 'blockdevs, ' + ' | '.join(d['type'] + ' ' + \

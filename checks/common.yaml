@@ -22,12 +22,11 @@ parameters:
     model:     grep --fixed-strings --max-count=1 'model name' /proc/cpuinfo | awk -F':' '{print $2}' | sed 's/^ //g'
     frequency: grep --fixed-strings --max-count=1 'cpu MHz' /proc/cpuinfo 
                | awk '{printf("%.1fGHz",$NF/1000)}'
-  disks:
+  partitions:
     _type: table
-    _fields: [mountpoint, size, fs_type, device]
-    _separator: ' '
-    _command: df --human-readable --print-type --exclude tmpfs --exclude devtmpfs
-                --portability | tac | head --lines=-1 | awk '{print $NF,$3,$2,$1}'
+    _fields: [device, size, mountpoint, fs_type]
+    _separator: '|'
+    _command: lspartitions.sh
   blockdevs:
     _type: table
     _fields: [name, type, readonly, removable, rotational, size, vendor, model]
