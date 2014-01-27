@@ -48,7 +48,7 @@ def _check(server, resultsqueue):
     info("Server %s is not accessible" % name)
   else:
     _prepare_remote_scripts(server)
-    (parameters, requirements) = get_checks(role)
+    (parameters, requirements, firewall) = get_checks(role)
     result['check_status'] = 'in progress'
     result['parameters'] = _get_param_value(server, parameters, 
                             cmd_prefix=server['cmd_prefix'],
@@ -111,38 +111,49 @@ def _prepare_remote_scripts(server):
   ssh.put(server, rscriptdir, server['binpath'])
   server['cmd_prefix'] = 'export PATH=$PATH:%s; ' % server['binpath']
 
-def get_checks(roles):
+def get_checks(roles, included_roles=None):
   """Gathers parameters and requirements from role.yaml
   
   roles - list of roles, from more specific to less specific
           or one role
   Returns tuple (parameters, requirements)
   """
+  if included_roles is None:
+    included_roles = []
   parameters   = {}
   requirements = {}
+  firewall = []
   checksdir    = config['checksdir']
   if type(roles) == type([]): # list of roles
     for role in roles:
-      (rp, rq) = get_checks(role)
-      rp.update(parameters)
-      rq.update(requirements)
-      parameters   = rp
-      requirements = rq
+      if not (role in included_roles):
+        (rp, rq, fw) = get_checks(role, included_roles)
+        rp.update(parameters)
+        rq.update(requirements)
+        fw.extend(firewall)
+        parameters   = rp
+        requirements = rq
+        firewall     = fw
   else: # one role
     role = roles
-    role_yaml = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
-    if 'parameters'   in role_yaml: parameters   = role_yaml['parameters']
-    if 'requirements' in role_yaml: requirements = role_yaml['requirements']
-    parameters['_type'] = 'dictionary'
+    if not (role in included_roles):
+      role_yaml = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
+      if 'parameters'   in role_yaml: parameters   = role_yaml['parameters']
+      if 'requirements' in role_yaml: requirements = role_yaml['requirements']
+      if 'firewall'     in role_yaml: firewall     = role_yaml['firewall']
+      parameters['_type'] = 'dictionary'
+      included_roles.append(role)
 
-    # process includes
-    if 'includes' in role_yaml:
-      (rp, rq) = get_checks(role_yaml['includes'])
-      rp.update(parameters)
-      rq.update(requirements)
-      parameters   = rp
-      requirements = rq
-  return (parameters, requirements)
+      # process includes
+      if 'includes' in role_yaml:
+        (rp, rq, fw) = get_checks(role_yaml['includes'], included_roles)
+        rp.update(parameters)
+        rq.update(requirements)
+        fw.extend(firewall)
+        parameters   = rp
+        requirements = rq
+        firewall     = fw
+  return (parameters, requirements, firewall)
 
 #@passbyval
 def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
