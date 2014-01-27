@@ -35,7 +35,7 @@ parameters:
   network:
     _type: dictionary 
     name_servers: awk '$1=="nameserver"{print $2}' /etc/resolv.conf | xargs
-    dns_check: host -t soa google.com | grep -q 'has SOA record' && echo OK || echo NOT OK
+    dns_check: getent hosts ya.ru >/dev/null 2>&1 && echo OK || echo NOT OK
     network_interfaces:
       _type: list
       # generator will be evaluated first, each line adds element to list
