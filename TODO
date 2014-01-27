@@ -26,7 +26,7 @@
 
 * do clean-up on exception
 
-* rewrite disk checks (now shows only mounted)
+* DONE rewrite disk checks (now shows only mounted)
 
 * add pipe support for subcommand exec
 
@@ -75,7 +75,7 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * add check for virtualization
 
-* compare time with time on hwcheck server side
+* DONE compare time with time on hwcheck server side
 
 * DONE add check for uptime
 
