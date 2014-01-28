@@ -128,6 +128,8 @@ def term_type():
 
 def range2list(rstr):
   '''Converts range to list, f.e. 1-3,5,7-9 -> [1,2,3,5,7,8,9]'''
+  if rstr == '':
+    return []
   ls = []
   for subrange in rstr.split(','):
     start, minus, end = subrange.partition('-')
@@ -164,6 +166,8 @@ def splitlist(ls, chunksize):
 def splitrange(rg, chunksize):
   '''Split range into chunks of maximum chunksize'''
   ls = range2list(rg)
+  if len(ls) == 0:
+    return ['',]
   return [list2range(e) for e in splitlist(ls, chunksize)]
 
 def joinlists(ls1,ls2):
@@ -172,3 +176,7 @@ def joinlists(ls1,ls2):
 def joinranges(rg1, rg2):
   return list2range(joinlists(range2list(rg1), range2list(rg2)))
 
+def differenceranges(rg1, rg2):
+  s1 = set(range2list(rg1))
+  s2 = set(range2list(rg2))
+  return list2range(list(s1.difference(s2)))
