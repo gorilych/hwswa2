@@ -65,12 +65,15 @@ def listen(proto, address, port):
   elif proto == 'udp':
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  s.bind((address, port))
-  if proto == 'tcp':
-    s.listen(1)
+  try:
+    s.bind((address, port))
+    if proto == 'tcp':
+      s.listen(1)
+  except: # let's assume it is already listened
+    return
   sockets.append({'socket': s, 'proto': proto, 'address': address, 'port': port})
 
-def send(proto, address, port, message=None, timeout=1):
+def send(proto, address, port, message=None, timeout=0.01):
   if proto == 'tcp':
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   elif proto == 'udp':
@@ -87,10 +90,11 @@ def send(proto, address, port, message=None, timeout=1):
     return False
 
 def close(proto, address, port):
-  i, s = find_socket(proto, address, port)
-  if not (s is None):
-    s['socket'].close()
-    del sockets[i]
+  # pair = (index, socket)
+  pair = find_socket(proto, address, port)
+  if not (pair is None):
+    pair[1]['socket'].close()
+    del sockets[pair[0]]
 
 def close_all():
   for i in xrange(len(sockets) - 1, -1, -1):
@@ -98,10 +102,12 @@ def close_all():
     del sockets[i]
 
 def find_socket(proto, address, port):
-  return next(((i,s) for (i,s) in enumerate(sockets) \
-      if (s['proto'] == proto) and \
-         (s['address'] == address) and \
-         (s['port'] == port)), None)
+  for (i,s) in enumerate(sockets):
+    if (s['proto'] == proto) and \
+       (s['address'] == address) and \
+       (s['port'] == port):
+      return (i,s)
+  return None
 
 def portrange(ports):
   '''Converts ports range 'port1,port2-port3,port4-port5,...' to list of ports'''
@@ -167,8 +173,10 @@ def cmd_receive(proto, address, ports):
   '''usage: receive proto address ports'''
   socks = []
   for p in portrange(ports):
-    i, s = find_socket(proto, address, p)
-    if not (s is None):
+    # pair = (index, socket)
+    pair = find_socket(proto, address, p)
+    if not (pair is None):
+      s = pair[1]
       socks.append(s['socket'])
   read, write, error = select.select(socks,[],[], 2)
   result = ''
