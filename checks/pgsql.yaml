@@ -1,4 +1,4 @@
 description: Checks for PGSQL role, linux postgresql server
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common ]
+includes: [ common, poa.managed.fw ]
