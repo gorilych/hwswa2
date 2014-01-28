@@ -112,11 +112,9 @@ def read_configuration():
   subparser.add_argument('remotepath')
   subparser.set_defaults(subcommand=subcommands.put)
 
-  subparser = subparsers.add_parser('firewall', help='check connection from server1 to server2 on port')
-  subparser.add_argument('server1')
-  subparser.add_argument('server2')
-  subparser.add_argument('port')
-  subparser.set_defaults(subcommand=subcommands.check_conn)
+  subparser = subparsers.add_parser('firewall', help='check connections between servers')
+  subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
+  subparser.set_defaults(subcommand=subcommands.firewall)
 
   subparser = subparsers.add_parser('lastreport')
   subparser.add_argument('servername', metavar='server')

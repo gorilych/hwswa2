@@ -6,13 +6,183 @@ import time
 from hwswa2.globals import config
 from logging import info, debug, error
 import hwswa2.ssh as ssh
-from hwswa2.aux import get_server, passbyval, threaded
+from hwswa2.aux import get_server, passbyval, threaded, splitrange, joinranges
 import threading
 import Queue
 import time
 from copy import deepcopy
 from sys import exit
 import sys
+
+
+def firewall():
+  '''Check connections between servers'''
+  allnames = [ elem['name'] for elem in config['servers'] ]
+
+  servers = []
+  for name in config['servernames']:
+    if not name in allnames:
+      error("Cannot find server %s in servers list" % name)
+      sys.exit(1)
+    servers.append(get_server(name))
+
+  # collect IPs from last reports
+  for server in servers:
+    report = _last_report(server)
+    if not ('parameters' in report and \
+            'network' in report['parameters'] and \
+            'network_interfaces' in report['parameters']['network']):
+      error('Report (with nic info) for server %s is not generated, check the server first' % server['name'])
+      sys.exit(1)
+    else:
+      nics = report['parameters']['network']['network_interfaces']
+      nw_ips = {}
+      for nic in nics:
+        ips = nic['ip']
+        for ip in ips:
+          nw_ips[ip['network']] = ip['address']
+      if len(nw_ips) == 0:
+        error('Found no IPs in last report for server %s' % server['name'])
+        sys.exit(1)
+      server['nw_ips'] = nw_ips
+
+  roles = {} # dict {role1: [server1, server2], role2: [server3, server4]}
+  for server in servers:
+    role = server['role']
+    (parameters, requirements, firewall) = get_checks(role)
+    server['firewall'] = firewall
+    if not (type(role) == type([])): # single role
+      role = [role,] # convert to list of roles
+    for r in role:
+      rr = r.lower()
+      if not rr in roles:
+        roles[rr] = {server['name']}
+      else:
+        roles[rr] |= {server['name']}
+
+  rules = [] # list [ {'serverfrom': server1name, 'serverto': server2name, 'network': ..., 'proto': ..., 'ports': ...}, { ... } ]
+  for server in servers:
+    fw = server['firewall']
+    for rule in fw:
+      if rule['policy'] == 'deny':
+        continue # we need 'allow'
+      if rule['type'] == 'internet':
+        continue # we need 'infra'
+      for network in rule['networks']:
+        for proto in rule['protos']:
+          if rule['direction'] == 'incoming':
+            this_server_key = 'serverto'
+            other_server_key = 'serverfrom'
+          elif rule['direction'] == 'outgoing':
+            this_server_key = 'serverfrom'
+            other_server_key = 'serverto'
+          else:
+            info('Rule %s: wrong direction %s (should be either outgoing or incoming)'\
+                 % (rule['description'], rule['direction']))
+            continue
+          for r in rule['connect_with']['roles']:
+            role = r.lower()
+            for other_server_name in roles[role]:
+              if other_server_name == server['name']:
+                continue # skip the same server
+              rules.append({this_server_key: server['name'],
+                            other_server_key: other_server_name,
+                            'network': network, 'proto': proto.lower(),
+                            'ports': str(rule['ports'])})
+
+  joined_rules = [] # join ports for the same rules, so not to check twice
+  for rule in rules:
+    joined_rule = next((jr for jr in joined_rules \
+                                  if jr['serverto'] == rule['serverto'] and \
+                                     jr['serverfrom'] == rule['serverfrom'] and \
+                                     jr['network'] == rule['network'] and \
+                                     jr['proto'] == rule['proto']), None)
+    if joined_rule is None:
+      joined_rules.append(rule)
+    else:
+      joined_rule['ports'] = joinranges(joined_rule['ports'], rule['ports'])
+
+  # update joined_rules with IPs and replace server names with server objects
+  for rule in joined_rules:
+    rule['serverto'] = get_server(rule['serverto'])
+    rule['serverfrom'] = get_server(rule['serverfrom'])
+    try:
+      toIP = rule['serverto']['nw_ips'][rule['network']]
+    except:
+      error('Cannot find IP for server %s from network %s' % (rule['serverto'], rule['network']))
+      sys.exit(1)
+    rule['toIP'] = toIP
+    try:
+      fromIP = rule['serverfrom']['nw_ips'][rule['network']]
+    except:
+      error('Cannot find IP for server %s from network %s' % (rule['serverfrom'], rule['network']))
+      sys.exit(1)
+    rule['fromIP'] = fromIP
+  
+  # check connections and collect results.
+  results = []
+  for rule in joined_rules:
+    results.append(_check_rule(rule))
+  print "        Below connections are OK:"
+  for res in results:
+    if not (res['OK'] == ''):
+      print '%s -> %s %s:%s (%s)' % (res['serverfrom'], res['serverto'], res['proto'], res['OK'], res['network'])
+  print "        Below connections are NOT OK:"
+  for res in results:
+    if not (res['NOK'] == ''):
+      print '%s -> %s %s:%s (%s)' % (res['serverfrom'], res['serverto'], res['proto'], res['NOK'], res['network'])
+  print 'Finished.'
+
+
+def _check_rule(rule):
+  maxopensockets = 256
+  serverfrom = rule['serverfrom']
+  serverto = rule['serverto']
+  proto = rule['proto']
+  ports = rule['ports']
+  toIP = rule['toIP']
+  fromIP = rule['fromIP']
+
+  ssh.serverd_start(serverfrom)
+  ssh.serverd_start(serverto)
+
+  grand_result = {'serverfrom': serverfrom['name'],
+                  'serverto': serverto['name'],
+                  'network': rule['network'],
+                  'ports': ports, 'proto': proto,
+                  'OK': '', 'NOK': '', 'failures': []}
+  for ps in splitrange(ports, maxopensockets):
+    listencmd = 'listen %s %s %s' % (proto, toIP, ps)
+    sendcmd = 'send %s %s %s' % (proto, toIP, ps)
+    status, result = ssh.serverd_cmd(serverto, listencmd)
+    if status: # listen ok
+      status, result = ssh.serverd_cmd(serverfrom, sendcmd)
+      if status: # send ok
+        ok, space, nok = result.partition(' ')
+        OK, colon, ok_range = ok.partition(':')
+        NOK, colon, nok_range = nok.partition(':')
+        if len(ok_range) > 0:
+          if proto == 'tcp':
+            grand_result['OK'] = joinranges(grand_result['OK'], ok_range)
+          elif proto == 'udp': # need to receive to check
+            receivecmd = 'receive %s %s %s' % (proto, toIP, ok_range)
+            status, result = ssh.serverd_cmd(serverto, receivecmd)
+            if status: #receive ok
+              msgs = result.split() # each message is port:msg:fromaddr:fromport
+              new_ok_range = list2range([int(msg.split(':')[0]) for msg in msgs])
+              grand_result['OK'] = joinranges(grand_result['OK'], new_ok_range)
+              nok_range = joinranges(nok_range, differenceranges(ok_range, new_ok_range))
+            else: #receive failed
+              grand_result['failures'].append('receive failure: ' + result)
+              nok_range = joinranges(nok_range, ok_range)
+        if len(nok_range) > 0:
+          grand_result['NOK'] = joinranges(grand_result['NOK'], nok_range)
+      else: # send failed
+        grand_result['failures'].append('send failure: ' + result)
+    else: # listen failed
+      grand_result['failures'].append('listen failure: ' + result)
+    ssh.serverd_cmd(serverto, 'closeall')
+  return grand_result
 
 def check():
   """Check only specified servers"""
