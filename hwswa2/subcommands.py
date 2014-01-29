@@ -46,6 +46,7 @@ def firewall():
         sys.exit(1)
       server['nw_ips'] = nw_ips
 
+  # collect roles
   roles = {} # dict {role1: [server1, server2], role2: [server3, server4]}
   for server in servers:
     role = server['role']
@@ -60,6 +61,22 @@ def firewall():
       else:
         roles[rr] |= {server['name']}
 
+  # expand rule groups to rules in firewall
+  for server in servers:
+    rulegroups = [g for g in server['firewall'] if ('group' in g) and g['group']]
+    rules = [r for r in server['firewall'] if (not ('group' in r)) or (not r['group'])]
+    for rg in rulegroups:
+      common_props = [key for key in ['connect_with', 'type', 'ports',
+                                      'protos', 'networks', 'direction',
+                                      'policy'] if key in rg]
+      for r in rg['rules']:
+        for key in common_props:
+          if not (key in r):
+            r[key] = rg[key]
+        rules.append(r)
+    server['firewall'] = rules
+
+  # collect rules
   rules = [] # list [ {'serverfrom': server1name, 'serverto': server2name, 'network': ..., 'proto': ..., 'ports': ...}, { ... } ]
   for server in servers:
     fw = server['firewall']
