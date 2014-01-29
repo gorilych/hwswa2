@@ -10,7 +10,7 @@ firewall:
     type: infra
     networks: [backnet]
     direction: outgoing
-    proto: [tcp]
+    protos: [tcp]
     rules:
       - ports: 5224
         connect_with: {roles: [pbalinfe]}
