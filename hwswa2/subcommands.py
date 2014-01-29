@@ -99,13 +99,14 @@ def firewall():
             continue
           for r in rule['connect_with']['roles']:
             role = r.lower()
-            for other_server_name in roles[role]:
-              if other_server_name == server['name']:
-                continue # skip the same server
-              rules.append({this_server_key: server['name'],
-                            other_server_key: other_server_name,
-                            'network': network, 'proto': proto.lower(),
-                            'ports': str(rule['ports'])})
+            if role in roles:
+              for other_server_name in roles[role]:
+                if other_server_name == server['name']:
+                  continue # skip the same server
+                rules.append({this_server_key: server['name'],
+                              other_server_key: other_server_name,
+                              'network': network, 'proto': proto.lower(),
+                              'ports': str(rule['ports'])})
 
   joined_rules = [] # join ports for the same rules, so not to check twice
   for rule in rules:
