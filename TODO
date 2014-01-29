@@ -16,6 +16,8 @@
 
 * add aliases for roles
 
+* add support for windows
+
 * add prepare script functionality
   This script is for preparing servers for deployment. It can
   - run yum update / install required packages
