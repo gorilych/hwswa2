@@ -116,11 +116,11 @@ def read_configuration():
   subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
   subparser.set_defaults(subcommand=subcommands.firewall)
 
-  subparser = subparsers.add_parser('lastreport')
+  subparser = subparsers.add_parser('lastreport', help='show last report for the server')
   subparser.add_argument('servername', metavar='server')
   subparser.set_defaults(subcommand=subcommands.lastreport)
 
-  subparser = subparsers.add_parser('reports')
+  subparser = subparsers.add_parser('reports', help='show all generated reports for the server')
   subparser.add_argument('servername', metavar='server')
   subparser.set_defaults(subcommand=subcommands.reports)
 
