@@ -684,6 +684,10 @@ def _print_report(report):
         val = parameters[key]
         if isinstance(val,(type(None),str,int,float,bool)):
           print key + ', ' + str(val)
+      if 'processors' in parameters:
+        count = parameters['processors']['count']
+        frequency = parameters['processors']['frequency'] 
+        print 'processors, ' + count + 'x' + frequency
       if 'partitions' in parameters:
         partitions = parameters['partitions']
         print 'partitions, ' + ' | '.join(p['device'] + ' ' + \
