@@ -2,3 +2,29 @@ description: Checks for LINMN role, linux management node
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common ]
+firewall:
+  - name: gr_tcp_out_backnet
+    description: Group for outgoing TCP connections in backnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: outgoing
+    proto: [tcp]
+    rules:
+      - ports: 5224
+        connect_with: {roles: [pbalinfe]}
+      - ports: 3306
+        connect_with: {roles: [mysql]}
+      - ports: 5432
+        connect_with: {roles: [pgsql, poadb]}
+      - ports: 8008
+        connect_with: {roles: [linpps]}
+      - ports: 389
+        connect_with: {roles: [linmailldap]}
+      - ports: 4433-4435
+        connect_with: {roles: [pvclin, pvclinbu, pvcwin, pvcwinbu]}
+      - ports: 4432
+        connect_with: {roles: [paci_im]}
+      - ports: 48480
+        connect_with: {roles: [wpesrvdb, wpesrv]}
