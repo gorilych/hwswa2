@@ -53,9 +53,11 @@ for dev in $(find /sys/block/ -maxdepth 1 \( -name 'sd*' -o -name 'sr*' -o -name
   done
 done
 
-echo "$mounts" | while read p m fs; do
-  size=$(df $m --human-readable --portability --print-type | tail -1 | awk '{print $3}')
-  p=${p##*/}
-  echo "$p|$size|$m|$fs"
-done
+if [ ${#mounts} -gt 0 ]; then
+  echo "$mounts" | while read p m fs; do
+    size=$(df $m --human-readable --portability --print-type | tail -1 | awk '{print $3}')
+    p=${p##*/}
+    echo "$p|$size|$m|$fs"
+  done
+fi
 
