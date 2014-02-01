@@ -1,18 +1,6 @@
-* DONE iptables check
-
-* DONE checks diff
-
-* DONE parallel checks
-
-* DONE add ssh key support
-
 * add ssh-jumper support
 
-* DONE add sudo/su support
-
-* DONE add inter-connection checker
-
-* DONE add reboot-check
+* add internet connection checker (say, to download.pa)
 
 * add aliases for roles
 
@@ -30,40 +18,21 @@
 
 * do clean-up on exception
 
-* DONE rewrite disk checks (now shows only mounted)
-
 * add pipe support for subcommand exec
 
 * add check for NIC configuration type (dhcp/static)
 
 * warn about non-existing ssh key
 
-* DONE use su/sudo in shell subcommand
-
 * Run ssh commands in one session
-
-* DONE checks/common.yaml: workaround problem with missing `host` command for DNS check
 
 * check privileges for accounts with su/sudo
 
 * create generator ipmap.csv -> config files
 
-* DONE check empty "sudo: "
-
-* DONE Bug:     myhostid = subprocess.check_output('hostid').strip()
-AttributeError: 'module' object has no attribute 'check_output'
-
-* DONE Bug: stderr is copied to stdout with _exec (because get_pty=True)
-
 * rework interactive executuion: ssh.exec_cmd_i()
 
 * replace fifos with socketpairs
-
-* WONTFIX Bug: hwaddr: 0.0.0.0 for sit0 NIC
-
-* DONE set window size for shell subcommand
-
-* DONE move su.py to remote_scripts
 
 * add '--network name:addr/prefix' option to specify network from cmd
 
@@ -75,15 +44,52 @@ AttributeError: 'module' object has no attribute 'check_output'
 
 * add execall subcommand (to exec command on all servers)
 
-* DONE work around 'host: command not found' in dns check
-
 * add check for virtualization
+
+* collect network configuration from sysconfig
+
+* command execution in serverd.py
+
+* order report output
+
+* DONE iptables check
+
+* DONE checks diff
+
+* DONE parallel checks
+
+* DONE add ssh key support
+
+* DONE add sudo/su support
+
+* DONE add inter-connection checker
+
+* DONE add reboot-check
+
+* DONE rewrite disk checks (now shows only mounted)
+
+* DONE use su/sudo in shell subcommand
+
+* DONE checks/common.yaml: workaround problem with missing `host` command for DNS check
+
+* DONE check empty "sudo: "
+
+* DONE Bug:     myhostid = subprocess.check_output('hostid').strip()
+AttributeError: 'module' object has no attribute 'check_output'
+
+* DONE Bug: stderr is copied to stdout with _exec (because get_pty=True)
+
+* WONTFIX Bug: hwaddr: 0.0.0.0 for sit0 NIC
+
+* DONE set window size for shell subcommand
+
+* DONE move su.py to remote_scripts
+
+* DONE work around 'host: command not found' in dns check
 
 * DONE compare time with time on hwcheck server side
 
 * DONE add check for uptime
-
-* collect network configuration from sysconfig
 
 * DONE rework shell subcommand (to execute with normal terminal emulation)
 
