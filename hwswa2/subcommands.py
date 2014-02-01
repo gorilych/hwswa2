@@ -678,27 +678,37 @@ def _print_report(report):
         print e + ', ' + report['expect'][e]
     if 'parameters' in report:
       print '  Parameters'
-      parameters = report['parameters']
-      # print all scalars
+      parameters = deepcopy(report['parameters'])
+      # trying to print in pretty order
+      for key in ['hostname', 'OS', 'architecture', 'processors', 'ram', 'swap',
+                  'partitions', 'blockdevs', 'time', 'time_utc', 
+                  'ntp_service_status', 'uptime', 'iptables', 'selinux', 
+                  'yum_repos', 'umask']:
+        if key in parameters:
+          val = parameters[key]
+          if isinstance(val,(type(None),str,int,float,bool)):
+            print key + ', ' + str(val)
+          elif key == 'processors':
+            count = val['count']
+            frequency = val['frequency']
+            print 'processors, ' + count + 'x' + frequency
+          elif key == 'partitions':
+            print 'partitions, ' + ' | '.join(p['device'] + ' ' + \
+                                              p['fs_type'] + ' ' + \
+                                              p['mountpoint'] + ' ' + \
+                                              p['size'] for p in val)
+          elif key == 'blockdevs':
+            print 'blockdevs, ' + ' | '.join(d['type'] + ' ' + \
+                                             d['name'] + ' ' + \
+                                             d['size'] for d in val)
+          else:
+            info('wrong type for value: %s' % key)
+          del parameters[key]
+      # print all the rest (scalars only)
       for key in parameters:
         val = parameters[key]
         if isinstance(val,(type(None),str,int,float,bool)):
           print key + ', ' + str(val)
-      if 'processors' in parameters:
-        count = parameters['processors']['count']
-        frequency = parameters['processors']['frequency'] 
-        print 'processors, ' + count + 'x' + frequency
-      if 'partitions' in parameters:
-        partitions = parameters['partitions']
-        print 'partitions, ' + ' | '.join(p['device'] + ' ' + \
-                                     p['fs_type'] + ' ' + \
-                                     p['mountpoint'] + ' ' + \
-                                     p['size'] for p in partitions)
-      if 'blockdevs' in parameters:
-        blockdevs = parameters['blockdevs']
-        print 'blockdevs, ' + ' | '.join(d['type'] + ' ' + \
-                                         d['name'] + ' ' + \
-                                         d['size'] for d in blockdevs)
       if 'network' in parameters:
         print '  Network parameters'
         network = parameters['network']
