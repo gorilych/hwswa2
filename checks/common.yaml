@@ -9,8 +9,8 @@ parameters:
   ntp_service_status: service ntpd status 2>&1
   OS:                 lsb_release --short --id --release | xargs
   architecture:       uname --machine
-  ram:       awk '$1=="MemTotal:" {printf("%.3f GB",$2/1024/1024)}' /proc/meminfo
-  swap:      awk '$1=="SwapTotal:"{printf("%.3f GB",$2/1024/1024)}' /proc/meminfo
+  ram:       awk '$1=="MemTotal:" {printf("%.3fGB",$2/1024/1024)}' /proc/meminfo
+  swap:      awk '$1=="SwapTotal:"{printf("%.3fGB",$2/1024/1024)}' /proc/meminfo
   selinux:   which getenforce >/dev/null && getenforce || echo no selinux
   yum_repos: which yum >/dev/null
              && echo $(yum repolist | sed '/repo id/,$ !d' 
