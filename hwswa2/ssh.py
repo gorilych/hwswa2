@@ -40,7 +40,7 @@ def connect(server, reconnect=False):
   if 'key'      in server['account']: key_filename = server['account']['key']
   client = paramiko.SSHClient()
   client.load_system_host_keys()
-  client.set_missing_host_key_policy(paramiko.WarningPolicy())
+  client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
   try:
     client.connect(hostname, port, username, password=password, key_filename=key_filename)
     debug('Established connection with %s@%s:%s' % (username,hostname,port))
