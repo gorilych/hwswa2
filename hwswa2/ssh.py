@@ -18,7 +18,7 @@ from logging import debug
 
 ssh_timeout = 30
 
-def connect(server, reconnect=False):
+def connect(server, reconnect=False, timeout=30):
   """Connects to server and returns SSHClient object"""
   if 'sshclient' in server:
     if reconnect:
@@ -42,7 +42,7 @@ def connect(server, reconnect=False):
   client.load_system_host_keys()
   client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
   try:
-    client.connect(hostname, port, username, password=password, key_filename=key_filename)
+    client.connect(hostname, port, username, password=password, key_filename=key_filename, timeout=timeout)
     debug('Established connection with %s@%s:%s' % (username,hostname,port))
     server['sshclient'] = client
     return client
@@ -77,7 +77,7 @@ def accessible(server, retry=False):
   if 'accessible' in server and not retry:
     return server['accessible']
   else:
-    client = connect(server, reconnect=True)
+    client = connect(server, reconnect=True, timeout=10)
     if not (client is None):
       server['accessible'] = True
       return True
