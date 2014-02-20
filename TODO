@@ -82,7 +82,7 @@ Traceback (most recent call last):
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 265, in resize_pty
 paramiko.SSHException: Channel is not open
 
-* OS check should distinguish CloudLinux and PCS
+* DONE OS check should distinguish CloudLinux and PCS
 
 * DONE order report output
 
