@@ -50,6 +50,40 @@
 
 * command execution in serverd.py
 
+* rework _print_report to print prefix for unindentified networks
+
+* rework networks check in common.yaml not to load networks.yaml
+
+* lspartitions.sh: filter out extended partitions
+
+* handle ^C (KeyboardInterrupt) properly, f.e.:
+
+-sh-4.1$ hwswa2 exec labpbalinfe01 ping 8.8.8.8
+^CTraceback (most recent call last):
+  File "<string>", line 16, in <module>
+  File "<string>", line 12, in main
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.functions", line 32, in run_subcommand
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 478, in exec_cmd
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 108, in exec_cmd_i
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 308, in pipe_to_channel
+KeyboardInterrupt
+
+* fix bug in shell subcommand:
+
+-sh-4.1$ hwswa2 shell labpbalinfe01
+
+Traceback (most recent call last):
+  File "<string>", line 16, in <module>
+  File "<string>", line 12, in main
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.functions", line 32, in run_subcommand
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 447, in shell
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 73, in shell
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 341, in interactive_shell
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 265, in resize_pty
+paramiko.SSHException: Channel is not open
+
+* OS check should distinguish CloudLinux and PCS
+
 * DONE order report output
 
 * DONE iptables check
