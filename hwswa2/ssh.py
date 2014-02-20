@@ -338,14 +338,23 @@ def pipe_to_channel(channel):
 def interactive_shell(channel):
   # get current terminal's settings
   height, width = aux.term_winsz()
-  channel.resize_pty(width=width, height=height)
+  if not channel is None and \
+     not channel.closed and \
+     not channel.eof_received and \
+     not channel.eof_sent and \
+     channel.active:
+    channel.resize_pty(width=width, height=height)
   # remember current signal handler
   old_handler = signal.getsignal(signal.SIGWINCH)
   # remember old tty settings
   old_tty = termios.tcgetattr(sys.stdin)
   # set our handler for winchange signal
   def on_win_resize(signum, frame):
-    if channel is not None:
+    if not channel is None and \
+       not channel.closed and \
+       not channel.eof_received and \
+       not channel.eof_sent and \
+       channel.active:
       height, width = aux.term_winsz()
       channel.resize_pty(width=width, height=height)
   signal.signal(signal.SIGWINCH, on_win_resize)
