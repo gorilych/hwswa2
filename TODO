@@ -68,6 +68,10 @@
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 308, in pipe_to_channel
 KeyboardInterrupt
 
+* make more clear message why server is not accessible
+
+* do parallel checks in firewall (in send part)
+
 * DONE fix bug in shell subcommand:
 
 -sh-4.1$ hwswa2 shell labpbalinfe01
