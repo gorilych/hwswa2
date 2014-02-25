@@ -70,7 +70,7 @@ KeyboardInterrupt
 
 * make more clear message why server is not accessible
 
-* do parallel checks in firewall (in send part)
+* DONE do parallel checks in firewall (in send part)
 
 * DONE fix bug in shell subcommand:
 

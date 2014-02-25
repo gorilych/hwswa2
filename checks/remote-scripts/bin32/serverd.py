@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, sys, socket, select, traceback
+import os, sys, socket, select, traceback, Queue, threading, time
 
 class Unbuffered:
    def __init__(self, stream):
@@ -73,7 +73,7 @@ def listen(proto, address, port):
     return
   sockets.append({'socket': s, 'proto': proto, 'address': address, 'port': port})
 
-def send(proto, address, port, message=None, timeout=0.01):
+def send(proto, address, port, message=None, timeout=1):
   if proto == 'tcp':
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   elif proto == 'udp':
@@ -203,13 +203,28 @@ def cmd_help(command=None):
 
 def cmd_send(proto, address, ports):
   '''usage: send proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056'''
+  portsOKQ = Queue.Queue()
+  portsNOKQ = Queue.Queue()
+
+  def thread_send(proto, address, port, portsOKQ, portsNOKQ):
+    if send(proto, address, port):
+      portsOKQ.put(port)
+    else:
+      portsNOKQ.put(port)
+
+  for port in portrange(ports):
+    th = threading.Thread(target=thread_send, args=(proto, address, port, portsOKQ, portsNOKQ))
+    th.start()
+  while threading.activeCount() > 1:
+    time.sleep(0.3)
+  
   portsOK = []
   portsNOK = []
-  for p in portrange(ports):
-    if send(proto, address, p):
-      portsOK.append(p)
-    else:
-      portsNOK.append(p)
+  while not portsOKQ.empty():
+    portsOK.append(portsOKQ.get())
+  while not portsNOKQ.empty():
+    portsNOK.append(portsNOKQ.get())
+
   return "OK:%s NOK:%s" % (packports(portsOK), packports(portsNOK))
 
 ############### MAIN
