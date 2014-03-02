@@ -68,7 +68,7 @@
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 308, in pipe_to_channel
 KeyboardInterrupt
 
-* make more clear message why server is not accessible
+* DONE make more clear message why server is not accessible
 
 * DONE do parallel checks in firewall (in send part)
 

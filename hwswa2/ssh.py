@@ -48,12 +48,16 @@ def connect(server, reconnect=False, timeout=30):
     return client
   except paramiko.BadHostKeyException:
     debug('BadHostKeyException raised while connecting to %s@%s:%s' % (username,hostname,port))
+    server['lastConnectionError'] = 'BadHostKeyException raised while connecting to %s@%s:%s' % (username,hostname,port)
   except paramiko.AuthenticationException:
     debug('Authentication failure while connecting to %s@%s:%s' % (username,hostname,port))
+    server['lastConnectionError'] = 'Authentication failure while connecting to %s@%s:%s' % (username,hostname,port)
   except paramiko.SSHException:
     debug('SSHException raised while connecting to %s@%s:%s' % (username,hostname,port))
+    server['lastConnectionError'] = 'SSHException raised while connecting to %s@%s:%s' % (username,hostname,port)
   except socket.error as serr:
     debug('socket.error raised while connecting to %s@%s:%s: %s' % (username,hostname,port,serr))
+    server['lastConnectionError'] = 'socket.error raised while connecting to %s@%s:%s: %s' % (username,hostname,port,serr)
   return None
 
 def shell(server, privileged=True):
