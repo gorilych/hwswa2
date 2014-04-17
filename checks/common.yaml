@@ -56,7 +56,7 @@ parameters:
       gateway: /sbin/ip route list dev %(name)s | grep ^default | awk '{print $3}'
       ip:
         _type: table
-        _fields: [address, prefix, network]
+        _fields: [address, network]
         _separator: ' '
         # _uses: {key1: placeholder1, key2: placeholder2}
         # for each key data from config['key'] will be stored in temporary file
@@ -79,7 +79,7 @@ parameters:
                           | grep --only-matching --extended-regexp "name: [^ ,}]+" \
                           | awk '{print $2}')
               fi
-              [ -z "$netname" ] && netname=$netaddr
-              echo $ip $prefix $netname
+              [ -z "$netname" ] && netname="$netaddr/$prefix"
+              echo $ip $netname
           done
           exit 0
