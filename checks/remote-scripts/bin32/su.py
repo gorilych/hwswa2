@@ -49,8 +49,10 @@ if command == 'shell':
       suargs = ['-p', 'password: ', '--', 'su', '-']
   old_handler = signal.getsignal(signal.SIGWINCH)
   try:
+    child = None
     def on_win_resize(signum, frame):
-      child.setwinsize(*term_winsz())
+      if child is not None:
+        child.setwinsize(*term_winsz())
     signal.signal(signal.SIGWINCH, on_win_resize)
     child = pexpect.spawn(sucmd, suargs, timeout=timeout)
     child.setwinsize(*term_winsz())
