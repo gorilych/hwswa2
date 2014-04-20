@@ -56,17 +56,7 @@
 
 * lspartitions.sh: filter out extended partitions
 
-* handle ^C (KeyboardInterrupt) properly, f.e.:
-
--sh-4.1$ hwswa2 exec labpbalinfe01 ping 8.8.8.8
-^CTraceback (most recent call last):
-  File "<string>", line 16, in <module>
-  File "<string>", line 12, in main
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.functions", line 32, in run_subcommand
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 478, in exec_cmd
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 108, in exec_cmd_i
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 308, in pipe_to_channel
-KeyboardInterrupt
+* DONE do not ignore (KeyboardInterrupt)
 
 * DONE make more clear message why server is not accessible
 

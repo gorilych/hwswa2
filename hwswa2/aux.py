@@ -93,6 +93,8 @@ def getTerminalSize():
     try:
       import fcntl, termios, struct, os
       cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
+    except KeyboardInterrupt:
+      raise
     except:
       return
     return cr
@@ -102,6 +104,8 @@ def getTerminalSize():
       fd = os.open(os.ctermid(), os.O_RDONLY)
       cr = ioctl_GWINSZ(fd)
       os.close(fd)
+    except KeyboardInterrupt:
+      raise
     except:
       pass
   if not cr:

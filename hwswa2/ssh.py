@@ -188,6 +188,8 @@ def exists(server, path):
   try:
     sftp.stat(path)
     return True
+  except KeyboardInterrupt:
+    raise
   except:
     return False
 
@@ -227,6 +229,8 @@ def check_reboot(server, timeout=300):
   starttime = time.time()
   try: # reboot will most probably fail with socket.timeout exception
     exec_cmd(server, 'reboot', timeout=3)
+  except KeyboardInterrupt:
+    raise
   except: # we are going to ignore this
     pass
   debug("reboot command is sent, now wait till server is down")
@@ -300,9 +304,15 @@ def cleanup(server):
     del server['sshclient']
     try:
       del server['cmd_prefix']
+    except KeyError:
+      pass
+    try:
       del server['binpath']
+    except KeyError:
+      pass
+    try:
       del server['tmppath']
-    except:
+    except KeyError:
       pass
 
 def pipe_to_channel(channel):
@@ -401,6 +411,8 @@ def serverd_start(server):
                          'stdout': stdout,
                          'stderr': stderr}
     return True
+  except KeyboardInterrupt:
+    raise
   except Exception as e:
     debug('serverd not started: %s' % e.message)
     return False

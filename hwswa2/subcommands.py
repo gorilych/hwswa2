@@ -126,13 +126,13 @@ def firewall():
     rule['serverfrom'] = get_server(rule['serverfrom'])
     try:
       toIP = rule['serverto']['nw_ips'][rule['network']]
-    except:
+    except KeyError:
       error('Cannot find IP for server %s from network %s' % (rule['serverto'], rule['network']))
       sys.exit(1)
     rule['toIP'] = toIP
     try:
       fromIP = rule['serverfrom']['nw_ips'][rule['network']]
-    except:
+    except KeyError:
       error('Cannot find IP for server %s from network %s' % (rule['serverfrom'], rule['network']))
       sys.exit(1)
     rule['fromIP'] = fromIP
@@ -565,11 +565,12 @@ def _reports(server):
     if os.path.isfile(os.path.join(path, filename)):
       try: # time.strptime raises exception if filename does not match format
         filetime = time.mktime(time.strptime(filename,'%Y-%m-%d.%Hh%Mm%Ss'))
+      except ValueError: # we will just ignore other files
+        pass
+      else:
         file_path_time.append({'file': filename,
                                'path': os.path.join(path, filename),
                                'time': filetime})
-      except: # we will just ignore other files
-        pass
   return sorted(file_path_time, key=lambda elem: elem['time'], reverse = True)
 
 def _last_report(server):
