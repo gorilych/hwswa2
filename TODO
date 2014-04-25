@@ -1,3 +1,18 @@
+* cleanup source tree from 3rd-party libs, create setup.py
+
+* add possibility to show reports for few servers at once, f.e.:
+
+# hwswa reports server1 server2
+server1: report1
+server1: report2
+server2: report1
+
+* add reportsall subcommand
+
+* add --raw option to report subcommands
+
+* add --with-reboot/--wo-reboot option to check subcommand
+
 * add ssh-jumper support
 
 * add internet connection checker (say, to download.pa)
@@ -55,6 +70,22 @@
 * rework networks check in common.yaml not to load networks.yaml
 
 * lspartitions.sh: filter out extended partitions
+
+* use virtualenv
+
+* rewrite to use classes (Server, f.e.)
+
+* handle not found role problem:
+
+# hwswa2 check PCS01
+Exception in thread PCS01:
+Traceback (most recent call last):
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 552, in __bootstrap_inner
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 505, in run
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 241, in _check
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 330, in get_checks
+IOError: [Errno 2] No such file or directory: '/root/akartashov/hwswa2/checks/paci_pcs.yaml'
+
 
 * DONE do not ignore (KeyboardInterrupt)
 
