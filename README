@@ -13,7 +13,7 @@ Contents
 
 Obtain the latest source from https://git.gorilych.dnsd.me/hwswa2.git/snapshot/HEAD.tar.gz
 
-Unpack it and go to the source directory.
+Unpack it.
 
 To prepare distribution, run in source directory:
 
@@ -26,13 +26,35 @@ popd
 
 Distribution archive will be pyinstaller/hwswa2.tgz
 
-Requirements: pyinstaller, python >=2.6, python-crypto >= 2.1, GnuMP
+Requirements: pyinstaller, python >=2.7, python-crypto >= 2.1, GnuMP
 
 2. =================== Installation
 
 Upload distribution (hwswa2.tgz) to the server which has access to all checked servers.
 
 Unpack.
+
+Edit configuration according to your needs.
+
+Populate networks.yaml and servers.yaml with information about environment to check.
+
+Create missing role.yaml files in checks/, if needed.
+
+Prepare convenient alias. 
+
+# mkdir somedir && cd somedir
+# wget -Nc http://gorilych.dnsd.me/hwswa2.tgz
+# tar zxf hwswa2.tgz
+
+# cp -a hwswa2/config cfg
+# vim cfg/main.cfg
+# vim cfg/networks.yaml
+# vim cfg/servers.yaml
+
+# cp checks/mysql.yaml checks/newrole.yaml
+# vim checks/newrole.yaml
+
+alias hwswa2="`pwd`/hwswa2/hwswa2 -c `pwd`/cfg/main.cfg -s `pwd`/cfg/servers.yaml -n `pwd`/cfg/networks.yaml -r `pwd`/reports"
 
 3. =================== Usage
 
