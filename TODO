@@ -1,3 +1,5 @@
+* choose license
+
 * cleanup source tree from 3rd-party libs, create setup.py
 
 * add possibility to show reports for few servers at once, f.e.:
@@ -71,8 +73,6 @@ server2: report1
 
 * lspartitions.sh: filter out extended partitions
 
-* use virtualenv
-
 * rewrite to use classes (Server, f.e.)
 
 * handle not found role problem:
@@ -86,6 +86,8 @@ Traceback (most recent call last):
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 330, in get_checks
 IOError: [Errno 2] No such file or directory: '/root/akartashov/hwswa2/checks/paci_pcs.yaml'
 
+
+* DONE use virtualenv
 
 * DONE do not ignore (KeyboardInterrupt)
 

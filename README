@@ -11,22 +11,40 @@ Contents
 
 1. =================== Creating distribution
 
-Obtain the latest source from https://git.gorilych.dnsd.me/hwswa2.git/snapshot/HEAD.tar.gz
+Distribuition is created from git repo with the use of virtualenv and pyinstaller.
 
-Unpack it.
+Obtain the latest source (git repo):
 
-To prepare distribution, run in source directory:
+ from bitbucket:
 
-pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/ \
-            --clean pyinstaller/hwswa2.spec && \
-\cp -af README docs/ config/ checks/ pyinstaller/hwswa2/ && \
-pushd pyinstaller/ && \
-tar zcf hwswa2.tgz hwswa2 && \
-popd
+$ git clone git@bitbucket.org:gorilych/hwswa2.git
+$ cd hwswa2
 
-Distribution archive will be pyinstaller/hwswa2.tgz
+ or from git.gorilych.dnsd.me:
 
-Requirements: pyinstaller, python >=2.7, python-crypto >= 2.1, GnuMP
+$ wget -cN https://git.gorilych.dnsd.me/hwswa2.git/snapshot/HEAD.tar.gz
+$ tar zxf HEAD.tar.gz
+$ cd hwswa2-HEAD-*
+
+Prepare virtualenv:
+
+$ virtualenv --no-site-packages env
+$ source env/bin/activate
+
+Install requirements:
+
+(env)$ pip install -r requirements.txt
+
+Create distribution with pyinstaller:
+
+(env)$ pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/ \
+                   --clean pyinstaller/hwswa2.spec && \
+                   \cp -af README config/ checks/ pyinstaller/hwswa2/ && \
+                   pushd pyinstaller/ && tar zcf hwswa2.tgz hwswa2 && popd
+
+Distribution archive will be stored in pyinstaller/hwswa2.tgz
+
+Requirements: python >=2.6, virtualenv
 
 2. =================== Installation
 
