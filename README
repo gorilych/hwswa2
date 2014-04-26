@@ -44,7 +44,7 @@ Create distribution with pyinstaller:
 
 Distribution archive will be stored in pyinstaller/hwswa2.tgz
 
-Requirements: python >=2.6, virtualenv
+Requirements: python >=2.6, virtualenv, gcc + glibc-headers (to compile pycrypto)
 
 2. =================== Installation
 
