@@ -39,7 +39,7 @@ Create distribution with pyinstaller:
 
 (env)$ pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/ \
                    --clean pyinstaller/hwswa2.spec && \
-                   \cp -af README config/ checks/ pyinstaller/hwswa2/ && \
+                   \cp -af README LICENSE config/ checks/ pyinstaller/hwswa2/ && \
                    pushd pyinstaller/ && tar zcf hwswa2.tgz hwswa2 && popd
 
 Distribution archive will be stored in pyinstaller/hwswa2.tgz
