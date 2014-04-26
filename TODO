@@ -1,3 +1,8 @@
+* create setup.py 
+
+https://docs.python.org/2/distutils/setupscript.html
+http://guide.python-distribute.org/creation.html
+
 * choose license
 
 * cleanup source tree from 3rd-party libs, create setup.py
