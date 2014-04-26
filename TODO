@@ -3,8 +3,6 @@
 https://docs.python.org/2/distutils/setupscript.html
 http://guide.python-distribute.org/creation.html
 
-* choose license
-
 * cleanup source tree from 3rd-party libs, create setup.py
 
 * add possibility to show reports for few servers at once, f.e.:
@@ -91,6 +89,8 @@ Traceback (most recent call last):
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 330, in get_checks
 IOError: [Errno 2] No such file or directory: '/root/akartashov/hwswa2/checks/paci_pcs.yaml'
 
+
+* DONE choose license
 
 * DONE use virtualenv
 
