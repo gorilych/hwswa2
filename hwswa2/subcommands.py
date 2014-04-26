@@ -57,9 +57,9 @@ def firewall():
     for r in role:
       rr = r.lower()
       if not rr in roles:
-        roles[rr] = {server['name']}
+        roles[rr] = set(server['name'])
       else:
-        roles[rr] |= {server['name']}
+        roles[rr] |= set(server['name'])
 
   # expand rule groups to rules in firewall
   for server in servers:
