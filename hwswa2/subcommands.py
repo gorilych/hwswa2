@@ -45,6 +45,7 @@ def firewall():
         error('Found no IPs in last report for server %s' % server['name'])
         sys.exit(1)
       server['nw_ips'] = nw_ips
+      debug('IPs of %s: %s' % (server['name'], server['nw_ips']) )
 
   # collect roles
   roles = {} # dict {role1: [server1, server2], role2: [server3, server4]}
@@ -57,9 +58,10 @@ def firewall():
     for r in role:
       rr = r.lower()
       if not rr in roles:
-        roles[rr] = set(server['name'])
+        roles[rr] = set([server['name']])
       else:
-        roles[rr] |= set(server['name'])
+        roles[rr] |= set([server['name']])
+  debug("Roles: %s" % roles)
 
   # expand rule groups to rules in firewall
   for server in servers:
@@ -124,6 +126,7 @@ def firewall():
   for rule in joined_rules:
     rule['serverto'] = get_server(rule['serverto'])
     rule['serverfrom'] = get_server(rule['serverfrom'])
+    debug('Rule %s' % rule)
     try:
       toIP = rule['serverto']['nw_ips'][rule['network']]
     except KeyError:
