@@ -45,8 +45,8 @@ for dev in $(find /sys/block/ -maxdepth 1 \( -name 'sd*' -o -name 'sr*' -o -name
       mountpoint="-"
       filesystem="-"
     else
-      mountpoint=$(echo "$mounts" | grep '^/dev/'$partition | awk '{print $2}')
-      filesystem=$(echo "$mounts" | grep '^/dev/'$partition | awk '{print $3}')
+      mountpoint=$(echo "$mounts" | grep --max-count=1 '^/dev/'$partition | awk '{print $2}')
+      filesystem=$(echo "$mounts" | grep --max-count=1 '^/dev/'$partition | awk '{print $3}')
       mounts=$(echo "$mounts" | grep --invert-match '^/dev/'$partition)
     fi
     echo "$partition|$size|$mountpoint|$filesystem"
