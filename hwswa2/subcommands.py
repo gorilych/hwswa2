@@ -357,7 +357,7 @@ def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmpp
     if '_uses' in myparam:
       for key in myparam['_uses']:
         keyfile = ssh.mktemp(server, ftype='f', path=tmppath)
-        ssh.write(server, keyfile, yaml.dump(config[key]))
+        ssh.write(server, keyfile, yaml.safe_dump(config[key]))
         mydeps.update({myparam['_uses'][key]: keyfile})
       del myparam['_uses']
     # convert _script to _command
@@ -411,7 +411,7 @@ def _save_report(name, result):
   path = os.path.join(config['reportsdir'], name)
   reportfile = os.path.join(path, time.strftime('%F.%Hh%Mm%Ss'))
   if not os.path.exists(path): os.makedirs(path)
-  yaml.dump(result, open(reportfile, 'w'))
+  yaml.safe_dump(result, open(reportfile, 'w'))
   info('%s status: %s, report file: %s' %(name, result['check_status'], reportfile))
 
 def checkall():
