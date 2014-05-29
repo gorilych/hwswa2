@@ -1,3 +1,9 @@
+* compare two most recent reports if reportsdiff is called w/o report names
+
+* add report subcommand
+
+* add OK/NOK status to expectations and print them in separate subsections in (last)report
+
 * add ability to specify several servers to reboot
 
 * add listener/sender for manual checks
