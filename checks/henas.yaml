@@ -1,0 +1,14 @@
+description: Checks for HENAS role, NFS server for Linux NG Webcluster
+includes: [ common ]
+firewall:
+  - name: Incoming_from_HEWSL
+    description: Allow access to NFS share from cluster's webservers
+    policy: allow
+    direction: imcoming
+    networks: [backnet]
+    protos: [TCP,UDP]
+    ports: 111,2049,10300-10305
+    type: infra
+    connect_with:
+      roles: [hewsl]
+

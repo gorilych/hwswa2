@@ -1,0 +1,14 @@
+description: Checks for LINMNDB role, PostgreSQL database server for POA database
+includes: [ common ]
+firewall:
+  - name: Incoming_from_LinMN
+    description: Allow access to PostgreSQL from POA MN
+    policy: allow
+    direction: incoming
+    networks: [backnet]
+    protos: [TCP, UDP]
+    ports: 5432
+    type: infra
+    connect_with:
+      roles: [linmn]
+

@@ -1,0 +1,22 @@
+description: Checks for LINPPS role, linux privacy proxy server
+includes: [ common, poa.managed.fw ]
+firewall:
+  - name: Outgoing_to_PBA
+    description: Allow access to HTTPS on PBA
+    policy: allow
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443
+    type: infra
+    connect_with:
+      roles: [pbalinfe]
+  - name: apscatalog
+    description: "connection to (http://apscatalog.com)"
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 80
+    type: internet
+    connect_with:
+      hosts: [apscatalog.com]
