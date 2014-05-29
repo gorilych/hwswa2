@@ -120,6 +120,11 @@ def read_configuration():
   subparser.add_argument('servername', metavar='server')
   subparser.set_defaults(subcommand=subcommands.lastreport)
 
+  subparser = subparsers.add_parser('report', help='show particular report for server')
+  subparser.add_argument('servername', metavar='server')
+  subparser.add_argument('reportname', metavar='report')
+  subparser.set_defaults(subcommand=subcommands.show_report)
+
   subparser = subparsers.add_parser('reports', help='show all generated reports for the server')
   subparser.add_argument('servername', metavar='server')
   subparser.set_defaults(subcommand=subcommands.reports)

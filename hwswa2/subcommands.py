@@ -596,6 +596,13 @@ def lastreport():
   server = get_server(servername)
   _print_report(_last_report(server))
 
+def show_report():
+  servername = config['servername']
+  reportname = config['reportname']
+  server = get_server(servername)
+  report = _get_report(server, reportname)
+  _print_report(report)
+
 def reports():
   servername = config['servername']
   server = get_server(servername)
