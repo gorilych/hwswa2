@@ -1,3 +1,35 @@
+* add listener/sender for manual checks
+
+* add global, per server and per connection timeouts for firewall checks
+
+* BUG: handle non-existing server properly:
+
+[root@linpps akartashov]# hwswa2 lastreport linuinlb
+Traceback (most recent call last):
+  File "<string>", line 16, in <module>
+  File "<string>", line 12, in main
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.functions", line 32, in run_subcommand
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 597, in lastreport
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 580, in _last_report
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 562, in _reports
+TypeError: 'NoneType' object is unsubscriptable
+
+* BUG: timeout exception is not processed for get_cmd_out():
+
+Exception in thread linmn:
+Traceback (most recent call last):
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 532, in __bootstrap_inner
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 484, in run
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 249, in _check
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 378, in _get_param_value
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 357, in _get_param_value
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 136, in get_cmd_out
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 128, in exec_cmd
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.file", line 143, in read
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 1212, in _read
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 585, in recv
+timeout
+
 * add firewall checks for type: internet
 
 * allow expect inside role description
