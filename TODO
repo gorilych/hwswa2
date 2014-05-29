@@ -1,3 +1,5 @@
+* add ability to specify several servers to reboot
+
 * add listener/sender for manual checks
 
 * add global, per server and per connection timeouts for firewall checks
