@@ -13,6 +13,7 @@ firewall:
       roles: [pbalinfe]
   - name: apscatalog
     description: "connection to (http://apscatalog.com)"
+    policy: allow
     direction: outgoing
     networks: [frontnet]
     protos: [TCP]
