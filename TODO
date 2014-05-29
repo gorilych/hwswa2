@@ -1,3 +1,9 @@
+* add firewall checks for type: internet
+
+* allow expect inside role description
+
+* add expect for arbitrary parameter
+
 * create setup.py 
 
 https://docs.python.org/2/distutils/setupscript.html
