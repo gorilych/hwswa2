@@ -1,7 +1,5 @@
 * compare two most recent reports if reportsdiff is called w/o report names
 
-* add report subcommand
-
 * add OK/NOK status to expectations and print them in separate subsections in (last)report
 
 * add ability to specify several servers to reboot
@@ -135,6 +133,8 @@ Traceback (most recent call last):
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 330, in get_checks
 IOError: [Errno 2] No such file or directory: '/root/akartashov/hwswa2/checks/paci_pcs.yaml'
 
+
+* DONE add report subcommand
 
 * DONE choose license
 
