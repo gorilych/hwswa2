@@ -189,7 +189,10 @@ def _check_rule(rule):
             receivecmd = 'receive %s %s %s' % (proto, toIP, ok_range)
             status, result = ssh.serverd_cmd(serverto, receivecmd)
             if status: #receive ok
-              msgs = result.split() # each message is port:msg:fromaddr:fromport
+              if result == 'no messages':
+                msgs = []
+              else:
+                msgs = result.split() # each message is port:msg:fromaddr:fromport
               new_ok_range = list2range([int(msg.split(':')[0]) for msg in msgs])
               grand_result['OK'] = joinranges(grand_result['OK'], new_ok_range)
               nok_range = joinranges(nok_range, differenceranges(ok_range, new_ok_range))
