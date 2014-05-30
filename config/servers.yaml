@@ -1,7 +1,7 @@
 accounts:
- - &testaccount
-   login: test
-   password: testpassword
+ - &root
+   login: root
+   password: secret
    #or ssh-key: path/to/key
    # 'password' specifies either account password or ssh-key passphrase (if needed)
    # if ssh-key is not protected with password, or you have configured passwordless access via ~/.ssh,
@@ -12,16 +12,16 @@ accounts:
  - &testaccountwithsu
    login: test
    password: testpassword
-   # parameter su: specify root password here
    su: rootpassword
 servers:
- - {name: localhost, address: 127.0.0.1, role: PVCLIN, account: *testaccount, expect: [{ip: 4.4.4.4, network: frontnet}, {ip: 10.10.10.10, network: heartbeat}]}
- - {name: localhost2, address: 127.0.0.1, port: 21, role: PVCLIN, account: *testaccount}
- - {name: localhost3, address: 127.0.0.1, role: [PVCLIN, LINMN], account: *testaccount}
+ - { name: localhost, address: 127.0.0.1, role: PVCLIN, account: *root, expect: [{ip: 4.4.4.4, network: frontnet}, {ip: 10.10.10.10, network: heartbeat}] }
+ - { name: localhost2, address: 127.0.0.1, port: 21, role: PVCLIN, account: *root }
+ - { name: localhost3, address: 127.0.0.1, role: [PVCLIN, LINMN], account: *testaccountwithsu }
  # valid fields:
  # name: required
  # address: IP/hostname, required
  # port: optional, 22 by default
+ # gateway: name of another server used as jump host
  # role: required, can be list of roles
  # account: required
  # expect: array of expected server attributes, only ip/network is supported

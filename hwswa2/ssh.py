@@ -18,15 +18,9 @@ from logging import debug
 
 ssh_timeout = 30
 
-def connect(server, reconnect=False, timeout=30):
-  """Connects to server and returns SSHClient object"""
-  if 'sshclient' in server:
-    if reconnect:
-      server['sshclient'].close()
-      del server['sshclient']
-      debug("Will reconnect to server %s" % server['name'])
-    else:
-      return server['sshclient']
+def _connect(server, timeout=30):
+  '''Initiates connection and returns SSHClient object
+     Does not store information about the client'''
   debug("Trying to connect to server %s" % server['name'])
   hostname = server['address']
   if 'port' in server:
@@ -38,14 +32,14 @@ def connect(server, reconnect=False, timeout=30):
   key_filename      = None
   if 'password' in server['account']: password     = server['account']['password']
   if 'key'      in server['account']: key_filename = server['account']['key']
+  jump_channel = _jump_channel(server)
+
   client = paramiko.SSHClient()
   client.load_system_host_keys()
   client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
   try:
-    client.connect(hostname, port, username, password=password, key_filename=key_filename, timeout=timeout)
-    debug('Established connection with %s@%s:%s' % (username,hostname,port))
-    server['sshclient'] = client
-    return client
+    client.connect(hostname, port, username, password=password,
+      key_filename=key_filename, timeout=timeout, sock=jump_channel)
   except paramiko.BadHostKeyException:
     debug('BadHostKeyException raised while connecting to %s@%s:%s' % (username,hostname,port))
     server['lastConnectionError'] = 'BadHostKeyException raised while connecting to %s@%s:%s' % (username,hostname,port)
@@ -58,7 +52,25 @@ def connect(server, reconnect=False, timeout=30):
   except socket.error as serr:
     debug('socket.error raised while connecting to %s@%s:%s: %s' % (username,hostname,port,serr))
     server['lastConnectionError'] = 'socket.error raised while connecting to %s@%s:%s: %s' % (username,hostname,port,serr)
+  else:
+    debug('Established connection with %s@%s:%s' % (username,hostname,port))
+    return client
   return None
+
+
+def connect(server, reconnect=False, timeout=30):
+  '''Connects to server and returns SSHClient object
+     SSHClient is cached inside server object'''
+  if 'sshclient' in server:
+    if reconnect:
+      server['sshclient'].close()
+      del server['sshclient']
+      _cleanjump(server)
+      debug("Will reconnect to server %s" % server['name'])
+    else:
+      return server['sshclient']
+  server['sshclient'] = _connect(server)
+  return server['sshclient']
 
 def shell(server, privileged=True):
   '''Opens remote SSH session'''
@@ -300,6 +312,9 @@ def cleanup(server):
     if 'supath' in server:
       del server['supath']
     server['sshclient'].close()
+    if 'jumpclient' in server:
+      server['jumpclient'].close()
+      del server['jumpclient']
     debug("Closed connection to server %s" % server['name'])
     del server['sshclient']
     try:
@@ -314,6 +329,30 @@ def cleanup(server):
       del server['tmppath']
     except KeyError:
       pass
+
+def _cleanjump(server):
+  if 'jumpclient' in server:
+    server['jumpclient'].close()
+    del server['jumpclient']
+  if 'jumpchannel' in server:
+    del server['jumpchannel']
+
+def _jump_channel(server):
+  if 'gateway' in server:
+    hostname = server['address']
+    if 'port' in server:
+      port = server['port']
+    else:
+      port = 22
+    jumphost = aux.get_server(server['gateway'])
+    jumpclient = _connect(jumphost)
+    server['jumpclient'] = jumpclient
+    jumptransport = jumpclient.get_transport()
+    jumpchannel = jumptransport.open_channel('direct-tcpip', (hostname, port), ('127.0.0.1', 0))
+    server['jumpchannel'] = jumpchannel
+    return jumpchannel
+  else:
+    return None
 
 def pipe_to_channel(channel):
   '''redirects sys.stdin,out,err to/from channel'''
