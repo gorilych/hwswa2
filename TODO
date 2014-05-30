@@ -1,3 +1,5 @@
+* add common check for lvm lv/pg/pv
+
 * reboot: add check that server is not used as jump server
 
 * compare two most recent reports if reportsdiff is called w/o report names
