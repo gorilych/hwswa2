@@ -1,3 +1,5 @@
+* reboot: add check that server is not used as jump server
+
 * compare two most recent reports if reportsdiff is called w/o report names
 
 * add OK/NOK status to expectations and print them in separate subsections in (last)report
@@ -61,8 +63,6 @@ server2: report1
 * add --raw option to report subcommands
 
 * add --with-reboot/--wo-reboot option to check subcommand
-
-* add ssh-jumper support
 
 * add internet connection checker (say, to download.pa)
 
@@ -133,6 +133,8 @@ Traceback (most recent call last):
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 330, in get_checks
 IOError: [Errno 2] No such file or directory: '/root/akartashov/hwswa2/checks/paci_pcs.yaml'
 
+
+* DONE add ssh-jumper support
 
 * DONE add report subcommand
 
