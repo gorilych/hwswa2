@@ -32,8 +32,14 @@ def _connect(server, timeout=30):
   key_filename      = None
   if 'password' in server['account']: password     = server['account']['password']
   if 'key'      in server['account']: key_filename = server['account']['key']
-  jump_channel = _jump_channel(server)
 
+  try:
+    jump_channel = _jump_channel(server)
+  except _JumpException, je:
+    err_msg = 'Gateway failure while connecting: %s' % je
+    debug(err_msg)
+    server['lastConnectionError'] = err_msg
+    return None
   client = paramiko.SSHClient()
   client.load_system_host_keys()
   client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -69,8 +75,12 @@ def connect(server, reconnect=False, timeout=30):
       debug("Will reconnect to server %s" % server['name'])
     else:
       return server['sshclient']
-  server['sshclient'] = _connect(server)
-  return server['sshclient']
+  client = _connect(server)
+  if client is None:
+    return None
+  else:
+    server['sshclient'] = client
+    return server['sshclient']
 
 def shell(server, privileged=True):
   '''Opens remote SSH session'''
@@ -312,9 +322,7 @@ def cleanup(server):
     if 'supath' in server:
       del server['supath']
     server['sshclient'].close()
-    if 'jumpclient' in server:
-      server['jumpclient'].close()
-      del server['jumpclient']
+    _cleanjump(server)
     debug("Closed connection to server %s" % server['name'])
     del server['sshclient']
     try:
@@ -344,11 +352,19 @@ def _jump_channel(server):
       port = server['port']
     else:
       port = 22
+    if 'jumpclient' in server:
+      server['jumpclient'].close()
+      del server['jumpclient']
     jumphost = aux.get_server(server['gateway'])
     jumpclient = _connect(jumphost)
+    if jumpclient is None:
+      raise _JumpException("cannot connect to jump host %s: %s" % (server['gateway'], jumphost['lastConnectionError']) )
     server['jumpclient'] = jumpclient
     jumptransport = jumpclient.get_transport()
-    jumpchannel = jumptransport.open_channel('direct-tcpip', (hostname, port), ('127.0.0.1', 0))
+    try:
+      jumpchannel = jumptransport.open_channel('direct-tcpip', (hostname, port), ('127.0.0.1', 0))
+    except paramiko.ssh_exception.ChannelException, chan_e:
+      raise _JumpException("cannot create channel via jump host %s: %s" % (server['gateway'], chan_e) )
     server['jumpchannel'] = jumpchannel
     return jumpchannel
   else:
@@ -490,4 +506,11 @@ def serverd_cmd(server, cmd):
       return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
   else:
     return False, 'serverd not started'
+
+
+class _JumpException(Exception):
+  def __init__(self, value):
+    self.value = value
+  def __str__(self):
+    return repr(self.value)
 
