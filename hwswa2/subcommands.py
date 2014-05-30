@@ -454,7 +454,7 @@ def shell():
   if ssh.accessible(server):
     ssh.shell(server)
   else:
-    error("Failed to connect to server %s" % servername)
+    error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']) )
     sys.exit(1)
 
 def reboot():
@@ -468,7 +468,7 @@ def reboot():
   if ssh.accessible(server):
     print ssh.check_reboot(server)
   else:
-    error("Failed to connect to server %s" % servername)
+    error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']) )
     sys.exit(1)
 
 def exec_cmd():
@@ -486,7 +486,7 @@ def exec_cmd():
     exitstatus = ssh.exec_cmd_i(server, sshcmd, get_pty=get_pty)
     debug("exitstatus = %s" % exitstatus)
   else:
-    error("Failed to connect to server %s" % servername)
+    error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']) )
     sys.exit(1)
 
 def ni_exec_cmd():
@@ -504,7 +504,7 @@ def ni_exec_cmd():
     print("stderr = %s" % stderr)
     print("exitstatus = %s" % exitstatus)
   else:
-    error("Failed to connect to server %s" % servername)
+    error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']) )
     sys.exit(1)
 
 def put():
@@ -520,7 +520,7 @@ def put():
   if ssh.accessible(server):
     ssh.put(server, localpath, remotepath)
   else:
-    error("Failed to connect to server %s" % servername)
+    error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']) )
     sys.exit(1)
 
 def check_conn():
@@ -538,10 +538,10 @@ def check_conn():
     error("Cannot find server %s in servers list" % to_server_name)
     sys.exit(1)
   if not ssh.accessible(from_server):
-    error("Failed to connect to server %s" % from_server_name)
+    error("Failed to connect to server %s: %s" % (from_server_name, from_server['lastConnectionError']) )
     sys.exit(1)
   if not ssh.accessible(to_server):
-    error("Failed to connect to server %s" % to_server_name)
+    error("Failed to connect to server %s: %s" % (to_server_name, to_server['lastConnectionError']) )
     sys.exit(1)
   ssh.serverd_start(from_server)
   ssh.serverd_start(to_server)
