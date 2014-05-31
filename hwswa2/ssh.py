@@ -12,7 +12,7 @@ from fcntl import ioctl
 import select
 import paramiko
 import socket
-import hwswa2.aux as aux
+import hwswa2.auxiliary as aux
 from hwswa2.globals import config
 from logging import debug
 

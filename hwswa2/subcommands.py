@@ -4,7 +4,7 @@ import time
 from hwswa2.globals import config
 from logging import info, debug, error
 import hwswa2.ssh as ssh
-from hwswa2.aux import get_server, passbyval, threaded, splitrange, joinranges, list2range, differenceranges
+from hwswa2.auxiliary import get_server, passbyval, threaded, splitrange, joinranges, list2range, differenceranges
 import threading
 import Queue
 import time
