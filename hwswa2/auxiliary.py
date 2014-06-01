@@ -1,11 +1,6 @@
-import signal
 import time
 import copy
-import struct
-import sys
 import os
-import fcntl
-import termios
 from hwswa2.globals import config
 
 
@@ -90,52 +85,6 @@ def shell_escape(string):
     for char in ('"', '$', '`'):
         string = string.replace(char, '\%s' % char)
     return string
-
-
-def getTerminalSize():
-    import os
-
-    env = os.environ
-
-    def ioctl_GWINSZ(fd):
-        try:
-            import fcntl, termios, struct, os
-
-            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
-        except KeyboardInterrupt:
-            raise
-        except:
-            return
-        return cr
-
-    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-    if not cr:
-        try:
-            fd = os.open(os.ctermid(), os.O_RDONLY)
-            cr = ioctl_GWINSZ(fd)
-            os.close(fd)
-        except KeyboardInterrupt:
-            raise
-        except:
-            pass
-    if not cr:
-        cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
-        # ## Use get(key[, default]) instead of a try/catch
-        #try:
-        #  cr = (env['LINES'], env['COLUMNS'])
-        #except:
-        #  cr = (25, 80)
-    return (int(cr[0]), int(cr[1]))
-
-
-def term_winsz():
-    '''Return terminal window size (height, width)'''
-    winsz_fmt = "HHHH"
-    winsz_arg = " " * struct.calcsize(winsz_fmt)
-    if not sys.stdin.isatty():
-        # raise type("NotConnectToTTYDevice", (Exception,), {})()
-        return (25, 80)
-    return struct.unpack(winsz_fmt, fcntl.ioctl(sys.stdin, termios.TIOCGWINSZ, winsz_arg))[:2]
 
 
 def term_type():

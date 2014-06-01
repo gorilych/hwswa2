@@ -5,14 +5,19 @@ import os.path
 import sys
 import subprocess
 import signal
-import struct
-import termios
-import tty
-from fcntl import ioctl
+
+try:
+    import termios
+except:
+    termios_available = True
+else:
+    termios_available = False
+    import tty
 import select
 import paramiko
 import socket
 import hwswa2.auxiliary as aux
+from hwswa2.terminalsize import get_terminal_size
 from hwswa2.globals import config
 from logging import debug
 
@@ -327,7 +332,7 @@ def prepare_su_cmd(server, cmd, timeout=ssh_timeout):
         sutype = 'su'
         password = server['account']['su']
     if cmd == 'shell':  # pass window size instead of fifos
-        (stdout_fifo, stderr_fifo) = aux.getTerminalSize()
+        (stdout_fifo, stderr_fifo) = get_terminal_size()
     return 'python %s %s "%s" %s %s "%s" %s' % (su_py,
                                                 sutype,
                                                 aux.shell_escape(password),
@@ -445,7 +450,8 @@ def interactive_shell(channel):
     # remember current signal handler
     old_handler = signal.getsignal(signal.SIGWINCH)
     # remember old tty settings
-    old_tty = termios.tcgetattr(sys.stdin)
+    if termios_available:
+        old_tty = termios.tcgetattr(sys.stdin)
     # set our handler for winchange signal
     def on_win_resize(signum, frame):
         if not channel is None and \
@@ -460,13 +466,15 @@ def interactive_shell(channel):
 
     try:
         # change tty settings
-        tty.setraw(sys.stdin.fileno())
-        tty.setcbreak(sys.stdin.fileno())
+        if termios_available:
+            tty.setraw(sys.stdin.fileno())
+            tty.setcbreak(sys.stdin.fileno())
         # interact
         pipe_to_channel(channel)
     finally:
         signal.signal(signal.SIGWINCH, old_handler)
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
+        if termios_available:
+            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_tty)
 
 
 def serverd_start(server):
