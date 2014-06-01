@@ -7,7 +7,7 @@ from configobj import ConfigObj
 if getattr(sys, 'frozen', False):
     apppath = os.path.dirname(sys.executable)
 elif __file__:
-    apppath = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])), os.pardir))
+    apppath = os.path.abspath(os.path.dirname(os.path.realpath(sys.argv[0])))
 
 configspec = ConfigObj(["debug=boolean()",
                         "check_reboot=boolean()"],
