@@ -2,9 +2,11 @@ import stat
 import time
 import os
 import os.path
+import posixpath
 import sys
 import subprocess
 import signal
+import platform
 
 try:
     import termios
@@ -175,10 +177,16 @@ def get_cmd_out(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged
 
 
 def remove(server, path, privileged=True):
+    current_os = platform.system()
+    if current_os == 'Windows':
+        path = path.replace('\\','/')
     exec_cmd(server, "rm -rf %s" % path, privileged=privileged)
 
 
 def put(server, localpath, remotepath):
+    current_os = platform.system()
+    if current_os == 'Windows':
+        remotepath = remotepath.replace('\\','/')
     debug("Copying %s to %s:%s" % (localpath, server['name'], remotepath))
     if not os.path.exists(localpath):
         raise Exception("Local path does not exist: %s" % localpath)
@@ -188,7 +196,7 @@ def put(server, localpath, remotepath):
         if exists(server, remotepath):
             attrs = sftp.stat(remotepath)
             if stat.S_ISDIR(attrs.st_mode):
-                remotepath = os.path.join(remotepath, os.path.basename(localpath))
+                remotepath = posixpath.join(remotepath, os.path.basename(localpath))
             sftp.put(localpath, remotepath, confirm=True)
             sftp.chmod(remotepath, os.stat(localpath).st_mode)
         else:
@@ -196,7 +204,7 @@ def put(server, localpath, remotepath):
             sftp.chmod(remotepath, os.stat(localpath).st_mode)
     if os.path.isdir(localpath):
         if exists(server, remotepath):
-            rname = os.path.join(remotepath, os.path.basename(localpath))
+            rname = posixpath.join(remotepath, os.path.basename(localpath))
             mkdir(server, rname)
             put_dir_content(server, localpath, rname)
         else:
@@ -206,6 +214,9 @@ def put(server, localpath, remotepath):
 
 def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
     """Creates directory using mktemp and returns its name"""
+    current_os = platform.system()
+    if current_os == 'Windows':
+        path = path.replace('\\','/')
     sshcmd = 'mktemp '
     if ftype == 'd':
         sshcmd = sshcmd + '-d '
@@ -219,12 +230,18 @@ def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
 
 
 def mkdir(server, path):
+    current_os = platform.system()
+    if current_os == 'Windows':
+        path = path.replace('\\','/')
     client = connect(server)
     sftp = client.open_sftp()
     sftp.mkdir(path)
 
 
 def exists(server, path):
+    current_os = platform.system()
+    if current_os == 'Windows':
+        path = path.replace('\\','/')
     client = connect(server)
     sftp = client.open_sftp()
     try:
@@ -237,9 +254,12 @@ def exists(server, path):
 
 
 def put_dir_content(server, localdir, remotedir):
+    current_os = platform.system()
+    if current_os == 'Windows':
+        remotedir = remotedir.replace('\\','/')
     for f in os.listdir(localdir):
         lname = os.path.join(localdir, f)
-        rname = os.path.join(remotedir, f)
+        rname = posixpath.join(remotedir, f)
         if os.path.isfile(lname):
             put(server, lname, rname)
         if os.path.isdir(lname):
@@ -248,6 +268,9 @@ def put_dir_content(server, localdir, remotedir):
 
 
 def write(server, path, data):
+    current_os = platform.system()
+    if current_os == 'Windows':
+        path = path.replace('\\','/')
     client = connect(server)
     sftp = client.open_sftp()
     file = sftp.open(path, 'w')
@@ -321,9 +344,9 @@ def prepare_su_cmd(server, cmd, timeout=ssh_timeout):
     if not 'supath' in server:
         prepare_su(server)
     supath = server['supath']
-    su_py = os.path.join(supath, 'su.py')
-    stdout_fifo = os.path.join(supath, 'stdout')
-    stderr_fifo = os.path.join(supath, 'stderr')
+    su_py = posixpath.join(supath, 'su.py')
+    stdout_fifo = posixpath.join(supath, 'stdout')
+    stderr_fifo = posixpath.join(supath, 'stderr')
     if 'sudo' in server['account']:
         sutype = 'sudo'
         password = server['account']['sudo']
@@ -440,7 +463,7 @@ def pipe_to_channel(channel):
 
 def interactive_shell(channel):
     # get current terminal's settings
-    height, width = aux.term_winsz()
+    height, width = get_terminal_size()
     if not channel is None and \
             not channel.closed and \
             not channel.eof_received and \
