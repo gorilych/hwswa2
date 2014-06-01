@@ -421,7 +421,7 @@ def _prepare_cmd(cmd, cmd_prefix=None, deps=None):
 
 def _save_report(name, result):
     path = os.path.join(config['reportsdir'], name)
-    reportfile = os.path.join(path, time.strftime('%F.%Hh%Mm%Ss'))
+    reportfile = os.path.join(path, time.strftime('%Y-%m-%d.%Hh%Mm%Ss'))
     if not os.path.exists(path): os.makedirs(path)
     yaml.safe_dump(result, open(reportfile, 'w'))
     info('%s status: %s, report file: %s' % (name, result['check_status'], reportfile))
