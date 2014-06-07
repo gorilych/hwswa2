@@ -16,14 +16,14 @@ sys.stdout=Unbuffered(sys.stdout)
 sockets = []
 
 def check(address, ports):
-  '''Checks if address:port is listened'''
+  """Checks if address:port is listened"""
   PROC_TCP = "/proc/net/tcp"
   STATE = {'01':'ESTABLISHED', '02':'SYN_SENT', '03':'SYN_RECV',
            '04':'FIN_WAIT1', '05':'FIN_WAIT2', '06':'TIME_WAIT',
            '07':'CLOSE', '08':'CLOSE_WAIT', '09':'LAST_ACK',
            '0A':'LISTEN', '0B':'CLOSING' }
   def _load():
-    ''' Read the table of tcp connections & remove header  '''
+    """ Read the table of tcp connections & remove header  """
     f = open(PROC_TCP,'r')
     content = f.readlines()
     f.close()
@@ -110,7 +110,7 @@ def find_socket(proto, address, port):
   return None
 
 def portrange(ports):
-  '''Converts ports range 'port1,port2-port3,port4-port5,...' to list of ports'''
+  """Converts ports range 'port1,port2-port3,port4-port5,...' to list of ports"""
   ps = []
   for prange in ports.split(','):
     if prange.find('-') == -1: # single port
@@ -121,7 +121,7 @@ def portrange(ports):
   return ps
 
 def packports(ports):
-  '''Converts list ports to port range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9'''
+  """Converts list ports to port range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9"""
   if len(ports) == 0:
     return ''
   ps = sorted(ports)
@@ -144,33 +144,33 @@ def packports(ports):
 ## each command name should start with 'cmd_' prefix
 
 def cmd_check(address, ports):
-  '''checks if there are services listening on ports. usage: check address ports'''
+  """checks if there are services listening on ports. usage: check address ports"""
   return 'ports:' + packports(check(address, portrange(ports)))
 
 def cmd_close(proto, address, ports):
-  '''closes listening sockets. usage: close proto address ports'''
+  """closes listening sockets. usage: close proto address ports"""
   for p in portrange(ports):
     close(proto, address, p)
   return 'socket(s) closed'
 
 def cmd_closeall():
-  '''closeall: close all listening sockets'''
+  """closeall: close all listening sockets"""
   close_all()
   return 'sockets are closed'
 
 def cmd_exit():
-  '''exit: command to close all listening sockets and quit server'''
+  """exit: command to close all listening sockets and quit server"""
   close_all()
   sys.exit()
 
 def cmd_listen(proto, address, ports):
-  '''usage: listen proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056'''
+  """usage: listen proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056"""
   for p in portrange(ports):
     listen(proto, address, p)
   return "sockets are ready"
 
 def cmd_receive(proto, address, ports):
-  '''usage: receive proto address ports'''
+  """usage: receive proto address ports"""
   socks = []
   for p in portrange(ports):
     # pair = (index, socket)
@@ -195,14 +195,14 @@ def cmd_receive(proto, address, ports):
   return result
 
 def cmd_help(command=None):
-  '''usage: help command'''
+  """usage: help command"""
   if not (command is None):
     return commands[command].__doc__
   else:
     return 'use: help command. possible commands: %s' % ', '.join(commands.keys())
 
 def cmd_send(proto, address, ports):
-  '''usage: send proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056'''
+  """usage: send proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056"""
   portsOKQ = Queue.Queue()
   portsNOKQ = Queue.Queue()
 

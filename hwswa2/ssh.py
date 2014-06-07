@@ -5,10 +5,8 @@ import os.path
 import sys
 import subprocess
 import signal
-import struct
 import termios
 import tty
-from fcntl import ioctl
 import select
 import paramiko
 import socket
@@ -20,8 +18,8 @@ ssh_timeout = 30
 
 
 def _connect(server, timeout=30):
-    '''Initiates connection and returns SSHClient object
-       Does not store information about the client'''
+    """Initiates connection and returns SSHClient object
+       Does not store information about the client"""
     debug("Trying to connect to server %s" % server['name'])
     hostname = server['address']
     if 'port' in server:
@@ -69,8 +67,8 @@ def _connect(server, timeout=30):
 
 
 def connect(server, reconnect=False, timeout=30):
-    '''Connects to server and returns SSHClient object
-       SSHClient is cached inside server object'''
+    """Connects to server and returns SSHClient object
+       SSHClient is cached inside server object"""
     if 'sshclient' in server:
         if reconnect:
             server['sshclient'].close()
@@ -88,7 +86,7 @@ def connect(server, reconnect=False, timeout=30):
 
 
 def shell(server, privileged=True):
-    '''Opens remote SSH session'''
+    """Opens remote SSH session"""
     client = connect(server)
     channel = client.invoke_shell(aux.term_type())
     if privileged and ('su' in server['account'] or 'sudo' in server['account']):
@@ -399,7 +397,7 @@ def _jump_channel(server):
 
 
 def pipe_to_channel(channel):
-    '''redirects sys.stdin,out,err to/from channel'''
+    """redirects sys.stdin,out,err to/from channel"""
     while True:
         try:
             r, w, e = select.select([sys.stdin, channel], [], [])
@@ -470,7 +468,7 @@ def interactive_shell(channel):
 
 
 def serverd_start(server):
-    '''Starts serverd.py on server'''
+    """Starts serverd.py on server"""
     try:
         client = connect(server)
         serverd_py = os.path.join(config['rscriptdir'], 'bin32', 'serverd.py')
@@ -505,7 +503,7 @@ def serverd_start(server):
 
 
 def serverd_stop(server):
-    '''Stops serverd.py on server'''
+    """Stops serverd.py on server"""
     if 'serverd' in server:
         serverd_cmd(server, 'exit')
         server['serverd']['stdin'].close()
@@ -513,7 +511,7 @@ def serverd_stop(server):
 
 
 def serverd_cmd(server, cmd):
-    '''Sends command to serverd.py and returns tuple (status_ok_or_not, result)'''
+    """Sends command to serverd.py and returns tuple (status_ok_or_not, result)"""
     if 'serverd' in server:
         stdin = server['serverd']['stdin']
         stdout = server['serverd']['stdout']

@@ -57,9 +57,8 @@ def init_logger():
     config['logger'].addHandler(console)
 
 
-# #################################
-### Reads configuration from command line args and main.cfg
 def read_configuration():
+    """Reads configuration from command line args and main.cfg"""
     ### Parsing commandline options
     parser = argparse.ArgumentParser(
         prog='hwswa2', argument_default=argparse.SUPPRESS,

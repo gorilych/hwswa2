@@ -1,20 +1,18 @@
 import os.path
 import yaml
-import time
 from hwswa2.globals import config
 from logging import info, debug, error
 import hwswa2.ssh as ssh
-from hwswa2.auxiliary import get_server, passbyval, threaded, splitrange, joinranges, list2range, differenceranges
+from hwswa2.auxiliary import get_server, splitrange, joinranges, list2range, differenceranges
 import threading
 import Queue
 import time
 from copy import deepcopy
-from sys import exit
 import sys
 
 
 def firewall():
-    '''Check connections between servers'''
+    """Check connections between servers"""
     allnames = [elem['name'] for elem in config['servers']]
 
     servers = []
@@ -603,8 +601,8 @@ def check_conn():
 
 
 def _reports(server):
-    '''Returns list of reports for server, ordered by time (first element is the last report):
-       [ {'file': ..., 'path': ..., 'time': ...}, ... ]'''
+    """Returns list of reports for server, ordered by time (first element is the last report):
+       [ {'file': ..., 'path': ..., 'time': ...}, ... ]"""
     name = server['name']
     path = os.path.join(config['reportsdir'], name)
     if not os.path.isdir(path):

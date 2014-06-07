@@ -25,7 +25,7 @@ def read_from_to(fifo_name, fout):
   fifo.close()
 
 def term_winsz():
-  '''Return terminal window size (height, width)'''
+  """Return terminal window size (height, width)"""
   winsz_fmt = "HHHH"
   winsz_arg = " "*struct.calcsize(winsz_fmt)
   if not sys.stdin.isatty():

@@ -1,4 +1,3 @@
-import signal
 import time
 import copy
 import struct
@@ -55,15 +54,15 @@ def threaded(f, daemon=False):
     import Queue, threading
 
     def wrapped_f(q, *args, **kwargs):
-        '''this function calls the decorated function and puts the
-           result in a queue'''
+        """this function calls the decorated function and puts the
+           result in a queue"""
         ret = f(*args, **kwargs)
         q.put(ret)
 
     def wrap(*args, **kwargs):
-        '''this is the function returned from the decorator. It fires off
+        """this is the function returned from the decorator. It fires off
            wrapped_f in a new thread and returns the thread object with
-           the result queue attached'''
+           the result queue attached"""
 
         q = Queue.Queue()
 
@@ -129,7 +128,7 @@ def getTerminalSize():
 
 
 def term_winsz():
-    '''Return terminal window size (height, width)'''
+    """Return terminal window size (height, width)"""
     winsz_fmt = "HHHH"
     winsz_arg = " " * struct.calcsize(winsz_fmt)
     if not sys.stdin.isatty():
@@ -139,12 +138,12 @@ def term_winsz():
 
 
 def term_type():
-    '''Return terminal type'''
+    """Return terminal type"""
     return os.environ.get('TERM', 'linux')
 
 
 def range2list(rstr):
-    '''Converts range to list, f.e. 1-3,5,7-9 -> [1,2,3,5,7,8,9]'''
+    """Converts range to list, f.e. 1-3,5,7-9 -> [1,2,3,5,7,8,9]"""
     if rstr == '':
         return []
     ls = []
@@ -158,7 +157,7 @@ def range2list(rstr):
 
 
 def list2range(ls):
-    '''Converts list ls to range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9'''
+    """Converts list ls to range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9"""
     if len(ls) == 0:
         return ''
     sls = sorted(ls)
@@ -179,12 +178,12 @@ def list2range(ls):
 
 
 def splitlist(ls, chunksize):
-    '''Split list into chunks of maximum chunksize'''
+    """Split list into chunks of maximum chunksize"""
     return [ls[i:i + chunksize] for i in range(0, len(ls), chunksize)]
 
 
 def splitrange(rg, chunksize):
-    '''Split range into chunks of maximum chunksize'''
+    """Split range into chunks of maximum chunksize"""
     ls = range2list(rg)
     if len(ls) == 0:
         return ['', ]

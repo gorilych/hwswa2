@@ -1,7 +1,5 @@
-#################################
-##### Global parameters
-
-import os, sys
+import os
+import sys
 from configobj import ConfigObj
 
 if getattr(sys, 'frozen', False):
