@@ -727,7 +727,7 @@ def _deepdiff(val1, val2):
 def reportdiff():
     server = get_server(config['servername'])
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        error("Cannot find server %s in servers list" % config['servername'])
         sys.exit(1)
     report1 = _get_report(server, config['report1'])
     report2 = _get_report(server, config['report2'])
