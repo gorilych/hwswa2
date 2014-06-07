@@ -10,7 +10,7 @@ from logging import info, debug, error
 import hwswa2.subcommands as subcommands
 from hwswa2.ssh import cleanup
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 
 def read_servers():
