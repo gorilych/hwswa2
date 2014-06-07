@@ -213,6 +213,9 @@ def check():
         if not name in allnames:
             error("Cannot find server %s in servers list" % name)
             sys.exit(1)
+        if 'dontcheck' in get_server(name):
+            info("Skipping server %s because of dontcheck option" % name)
+            config['servernames'].remove(name)
     results = Queue.Queue()
     cth = {}
     for name in config['servernames']:
@@ -500,6 +503,9 @@ def reboot():
         if not name in allnames:
             error("Cannot find server %s in servers list" % name)
             sys.exit(1)
+        if 'dontcheck' in get_server(name):
+            info("Skipping server %s because of dontcheck option" % name)
+            config['servernames'].remove(name)
     results = Queue.Queue()
     cth = {}
     for name in config['servernames']:

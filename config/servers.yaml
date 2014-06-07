@@ -19,6 +19,8 @@ servers:
  - { name: localhost3, address: 127.0.0.1, role: [PVCLIN, LINMN], account: *testaccountwithsu }
  # valid fields:
  # name: required
+ # dontcheck: optional, means that server is not to be checked/rebooted/prepared
+ #            this is useful for gateways, for example
  # address: IP/hostname, required
  # port: optional, 22 by default
  # gateway: name of another server used as jump host
