@@ -97,8 +97,8 @@ def read_configuration():
     subparser.add_argument('servername', metavar='server')
     subparser.set_defaults(subcommand=subcommands.shell)
 
-    subparser = subparsers.add_parser('reboot', help='reboot server and check time')
-    subparser.add_argument('servername', metavar='server')
+    subparser = subparsers.add_parser('reboot', help='reboot server(s) and measure reboot time')
+    subparser.add_argument('servernames', nargs='+', help='servers to reboot', metavar='server')
     subparser.set_defaults(subcommand=subcommands.reboot)
 
     subparser = subparsers.add_parser('exec', help='execute command interactively')

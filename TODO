@@ -1,3 +1,4 @@
+
 * add common check for lvm lv/pg/pv
 
 * reboot: add check that server is not used as jump server
@@ -5,8 +6,6 @@
 * compare two most recent reports if reportsdiff is called w/o report names
 
 * add OK/NOK status to expectations and print them in separate subsections in (last)report
-
-* add ability to specify several servers to reboot
 
 * add listener/sender for manual checks
 
@@ -109,6 +108,8 @@ server2: report1
 * lspartitions.sh: filter out extended partitions
 
 * rewrite to use classes (Server, f.e.)
+
+* DONE add ability to specify several servers to reboot
 
 * DONE add --with-reboot/--wo-reboot option to check subcommand
 

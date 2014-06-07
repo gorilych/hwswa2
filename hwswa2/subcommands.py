@@ -492,20 +492,47 @@ def shell():
         error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
         sys.exit(1)
 
-
 def reboot():
-    """Reboots server and prints results"""
-    servername = config['servername']
-    debug("Rebooting server %s" % servername)
-    server = get_server(servername)
-    if not server:
-        error("Cannot find server %s in servers list" % servername)
-        sys.exit(1)
+    """Reboots specified servers"""
+    debug("Rebooting servers: %s" % config['servernames'])
+    allnames = [elem['name'] for elem in config['servers']]
+    for name in config['servernames']:
+        if not name in allnames:
+            error("Cannot find server %s in servers list" % name)
+            sys.exit(1)
+    results = Queue.Queue()
+    cth = {}
+    for name in config['servernames']:
+        cth[name] = threading.Thread(name=name, target=_reboot, args=(get_server(name), results))
+        cth[name].start()
+    def there_is_alive_check_thread():
+        for name in config['servernames']:
+            if cth[name].is_alive():
+                return True
+        return False
+    while there_is_alive_check_thread():
+        while not results.empty():
+            result = results.get()
+            print("%s: %s" % (result['servername'], result['result']))
+        time.sleep(1)
+    while not results.empty():
+        result = results.get()
+        print("%s: %s" % (result['servername'], result['result']))
+
+
+def _reboot(server, resultsqueue):
+    """Reboots server"""
+    debug("Rebooting server %s" % server['name'])
+    result = {'servername': server['name']}
     if ssh.accessible(server):
-        print ssh.check_reboot(server)
+        check_reboot_result = ssh.check_reboot(server)
+        if isinstance(check_reboot_result, (int, long)):
+            result['result'] = "%s seconds" % check_reboot_result
+        else:
+            result['result'] = check_reboot_result
     else:
-        error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
-        sys.exit(1)
+        result['result'] = "Failed to connect to server: %s" % (server['lastConnectionError'])
+    resultsqueue.put(result)
 
 
 def exec_cmd():

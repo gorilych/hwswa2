@@ -264,7 +264,10 @@ def is_it_me(server):
 
 
 def check_reboot(server, timeout=300):
-    """Reboot the server and check the time it takes to come up"""
+    """Reboots the server and checks the time it takes to come up
+
+    Returns number of seconds (int/long) or reason why check is not possible (string)
+    """
     if is_it_me(server):
         return "we are running here, no reboot"
     starttime = time.time()
@@ -281,7 +284,7 @@ def check_reboot(server, timeout=300):
         delta = time.time() - starttime
         # wait till boot
         if aux.wait_for(accessible, [server, True], timeout - delta):
-            return round(time.time() - starttime)
+            return int(round(time.time() - starttime))
         else:
             return "server is not accessible after %s seconds" % timeout
     else:
