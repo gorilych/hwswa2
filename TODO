@@ -1,3 +1,6 @@
+* start using http://sphinx-doc.org/
+
+* copy custom remote scripts as already deleted files
 
 * add common check for lvm lv/pg/pv
 
