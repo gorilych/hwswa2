@@ -174,7 +174,7 @@ def remove(server, path, privileged=True):
 
 
 def put(server, localpath, remotepath):
-    debug("Copying %s to %s:%s" % (localpath, server['name'], remotepath))
+    debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath))
     if not os.path.exists(localpath):
         raise Exception("Local path does not exist: %s" % localpath)
     client = connect(server)
