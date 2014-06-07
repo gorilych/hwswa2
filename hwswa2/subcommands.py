@@ -216,10 +216,16 @@ def check():
             error("Cannot find server %s in servers list" % name)
             sys.exit(1)
     results = Queue.Queue()
+    cth = {}
     for name in config['servernames']:
-        cth = threading.Thread(name=name, target=_check, args=(get_server(name), results))
-        cth.start()
-    while threading.active_count() > 1:
+        cth[name] = threading.Thread(name=name, target=_check, args=(get_server(name), results))
+        cth[name].start()
+    def there_is_alive_check_thread():
+        for name in config['servernames']:
+            if cth[name].is_alive():
+                return True
+        return False
+    while there_is_alive_check_thread():
         while not results.empty():
             result = results.get()
             _save_report(result['name'], result)
