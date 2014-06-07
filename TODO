@@ -112,7 +112,7 @@ server2: report1
 
 * rewrite to use classes (Server, f.e.)
 
-* handle not found role problem:
+* DONE handle not found role problem:
 
 # hwswa2 check PCS01
 Exception in thread PCS01:

@@ -249,8 +249,12 @@ def _check(server, resultsqueue):
         info("Server %s is not accessible" % name)
     else:
         result['accessible'] = 'Yes'
+        try:
+            (parameters, requirements, fw) = get_checks(role)
+        except _CheckException as ce:
+            error(ce)
+            sys.exit(1)
         _prepare_remote_scripts(server)
-        (parameters, requirements, firewall) = get_checks(role)
         result['check_status'] = 'in progress'
         result['parameters'] = _get_param_value(server, parameters,
                                                 cmd_prefix=server['cmd_prefix'],
@@ -321,13 +325,14 @@ def get_checks(roles, included_roles=None):
 
     roles - list of roles, from more specific to less specific
             or one role
-    Returns tuple (parameters, requirements)
+    Returns tuple (parameters, requirements, firewall)
+    Can raise _CheckException
     """
     if included_roles is None:
         included_roles = []
     parameters = {}
     requirements = {}
-    firewall = []
+    frwll = []
     checksdir = config['checksdir']
     if type(roles) == type([]):  # list of roles
         for role in roles:
@@ -335,31 +340,47 @@ def get_checks(roles, included_roles=None):
                 (rp, rq, fw) = get_checks(role, included_roles)
                 rp.update(parameters)
                 rq.update(requirements)
-                fw.extend(firewall)
+                fw.extend(frwll)
                 parameters = rp
                 requirements = rq
-                firewall = fw
+                frwll = fw
     else:  # one role
         role = roles
         if not (role in included_roles):
-            role_yaml = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
-            if 'parameters' in role_yaml: parameters = role_yaml['parameters']
-            if 'requirements' in role_yaml: requirements = role_yaml['requirements']
-            if 'firewall' in role_yaml: firewall = role_yaml['firewall']
-            parameters['_type'] = 'dictionary'
-            included_roles.append(role)
+            try:
+                role_yaml = yaml.load(open(os.path.join(checksdir, role.lower() + '.yaml')))
+            except Exception as e:
+                err_msg = "Cannot load role %s from file %s: %s" % (role, os.path.join(checksdir, role.lower() + '.yaml'), e)
+                raise _CheckException(err_msg)
+            else:
+                if 'parameters' in role_yaml: parameters = role_yaml['parameters']
+                if 'requirements' in role_yaml: requirements = role_yaml['requirements']
+                if 'firewall' in role_yaml: frwll = role_yaml['firewall']
+                parameters['_type'] = 'dictionary'
+                included_roles.append(role)
 
-            # process includes
-            if 'includes' in role_yaml:
-                (rp, rq, fw) = get_checks(role_yaml['includes'], included_roles)
-                rp.update(parameters)
-                rq.update(requirements)
-                fw.extend(firewall)
-                parameters = rp
-                requirements = rq
-                firewall = fw
-    return (parameters, requirements, firewall)
+                # process includes
+                if 'includes' in role_yaml:
+                    try:
+                        (rp, rq, fw) = get_checks(role_yaml['includes'], included_roles)
+                    except _CheckException as ce:
+                        err_msg = "Cannot load role %s: %s" % (role, ce)
+                        raise _CheckException(err_msg)
+                    else:
+                        rp.update(parameters)
+                        rq.update(requirements)
+                        fw.extend(frwll)
+                        parameters = rp
+                        requirements = rq
+                        frwll = fw
+    return parameters, requirements, frwll
 
+class _CheckException(Exception):
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
 
 #@passbyval
 def _get_param_value(server, param, cmd_prefix=None, deps={}, binpath=None, tmppath='/tmp'):
