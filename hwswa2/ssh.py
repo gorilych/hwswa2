@@ -46,20 +46,21 @@ def _connect(server, timeout=30):
         client.connect(hostname, port, username, password=password,
                        key_filename=key_filename, timeout=timeout, sock=jump_channel)
     except paramiko.BadHostKeyException:
-        debug('BadHostKeyException raised while connecting to %s@%s:%s' % (username, hostname, port))
         server['lastConnectionError'] = 'BadHostKeyException raised while connecting to %s@%s:%s' % (
         username, hostname, port)
+        debug(server['lastConnectionError'])
     except paramiko.AuthenticationException:
-        debug('Authentication failure while connecting to %s@%s:%s' % (username, hostname, port))
         server['lastConnectionError'] = 'Authentication failure while connecting to %s@%s:%s' % (
         username, hostname, port)
-    except paramiko.SSHException:
-        debug('SSHException raised while connecting to %s@%s:%s' % (username, hostname, port))
-        server['lastConnectionError'] = 'SSHException raised while connecting to %s@%s:%s' % (username, hostname, port)
+        debug(server['lastConnectionError'])
+    except paramiko.SSHException as pe:
+        server['lastConnectionError'] = 'SSHException raised while connecting to %s@%s:%s: %s' % (
+            username, hostname, port, pe)
+        debug(server['lastConnectionError'])
     except socket.error as serr:
-        debug('socket.error raised while connecting to %s@%s:%s: %s' % (username, hostname, port, serr))
         server['lastConnectionError'] = 'socket.error raised while connecting to %s@%s:%s: %s' % (
         username, hostname, port, serr)
+        debug(server['lastConnectionError'])
     else:
         debug('Established connection with %s@%s:%s' % (username, hostname, port))
         return client
