@@ -52,8 +52,6 @@ server2: report1
 
 * add --raw option to report subcommands
 
-* add --with-reboot/--wo-reboot option to check subcommand
-
 * add internet connection checker (say, to download.pa)
 
 * add aliases for roles
@@ -111,6 +109,8 @@ server2: report1
 * lspartitions.sh: filter out extended partitions
 
 * rewrite to use classes (Server, f.e.)
+
+* DONE add --with-reboot/--wo-reboot option to check subcommand
 
 * DONE handle not found role problem:
 
