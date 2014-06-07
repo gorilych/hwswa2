@@ -2,9 +2,9 @@ accounts:
  - &root
    login: root
    password: secret
-   #or ssh-key: path/to/key
-   # 'password' specifies either account password or ssh-key passphrase (if needed)
-   # if ssh-key is not protected with password, or you have configured passwordless access via ~/.ssh,
+   #or key: path/to/ssh/key
+   # 'password' specifies either account password or ssh key passphrase (if needed)
+   # if key is not protected with password, or you have configured passwordless access via ~/.ssh,
    #   do not specify 'password'
    # for su/sudo use
    #   sudo: testpassword <- if sudo is passwordless, leave this field empty
