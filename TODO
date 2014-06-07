@@ -12,18 +12,6 @@
 
 * add global, per server and per connection timeouts for firewall checks
 
-* BUG: handle non-existing server properly:
-
-[root@linpps akartashov]# hwswa2 lastreport linuinlb
-Traceback (most recent call last):
-  File "<string>", line 16, in <module>
-  File "<string>", line 12, in main
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.functions", line 32, in run_subcommand
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 597, in lastreport
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 580, in _last_report
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 562, in _reports
-TypeError: 'NoneType' object is unsubscriptable
-
 * BUG: timeout exception is not processed for get_cmd_out():
 
 Exception in thread linmn:
@@ -135,6 +123,17 @@ Traceback (most recent call last):
   File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 330, in get_checks
 IOError: [Errno 2] No such file or directory: '/root/akartashov/hwswa2/checks/paci_pcs.yaml'
 
+* DONE BUG: handle non-existing server properly:
+
+[root@linpps akartashov]# hwswa2 lastreport linuinlb
+Traceback (most recent call last):
+  File "<string>", line 16, in <module>
+  File "<string>", line 12, in main
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.functions", line 32, in run_subcommand
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 597, in lastreport
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 580, in _last_report
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 562, in _reports
+TypeError: 'NoneType' object is unsubscriptable
 
 * DONE add ssh-jumper support
 
