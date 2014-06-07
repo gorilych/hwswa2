@@ -1,4 +1,13 @@
 description: Checks for HEWSL role, linux NG cluster web server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, poa.managed.fw ]
+includes: [ common, poa.managed.fw, ngwebserver.fw ]
+firewall:
+  - name: Outgoing_to_HELB
+    description: Allow access to Ganglia
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    protos: [UDP]
+    ports: 8649
+    type: infra
+    connect_with:
+      roles: [helb]

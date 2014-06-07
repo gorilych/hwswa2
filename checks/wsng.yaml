@@ -1,4 +1,4 @@
 description: Checks for WSNG role, linux NG standalone webserver
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, poa.managed.fw ]
+includes: [ common, poa.managed.fw, ngwebserver.fw ]

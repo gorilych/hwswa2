@@ -55,7 +55,12 @@ done
 
 if [ ${#mounts} -gt 0 ]; then
   echo "$mounts" | while read p m fs; do
-    size=$(df $m --human-readable --portability --print-type | tail -1 | awk '{print $3}')
+    if [ "$fs" = "swap" ]; then
+      size=$(swapon -s | awk '$1=="'$p'"{print $3; exit}')
+      size=$(human $(expr $size \* 1024))
+    else
+      size=$(df $m --human-readable --portability --print-type | tail -1 | awk '{print $3}')
+    fi
     p=${p##*/}
     echo "$p|$size|$m|$fs"
   done

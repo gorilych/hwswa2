@@ -1,4 +1,14 @@
 description: Checks for PBALINBE role, linux PBA database server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ common ]
+firewall:
+  - name: Incoming_from_PBA
+    description: Allow access to PostgreSQL from PBA App
+    policy: allow
+    direction: incoming
+    networks: [backnet]
+    protos: [TCP, UDP]
+    ports: 5432
+    type: infra
+    connect_with:
+      roles: [pbalinfe]
+
