@@ -12,12 +12,12 @@ import paramiko
 import socket
 import hwswa2.auxiliary as aux
 from hwswa2.globals import config
-from logging import debug
+from logging import debug, error
 
 ssh_timeout = 30
 
 
-def _connect(server, timeout=30):
+def _connect(server, timeout=ssh_timeout):
     """Initiates connection and returns SSHClient object
        Does not store information about the client"""
     debug("Trying to connect to server %s" % server['name'])
@@ -67,7 +67,7 @@ def _connect(server, timeout=30):
     return None
 
 
-def connect(server, reconnect=False, timeout=30):
+def connect(server, reconnect=False, timeout=ssh_timeout):
     """Connects to server and returns SSHClient object
        SSHClient is cached inside server object"""
     if 'sshclient' in server:
@@ -78,7 +78,7 @@ def connect(server, reconnect=False, timeout=30):
             debug("Will reconnect to server %s" % server['name'])
         else:
             return server['sshclient']
-    client = _connect(server)
+    client = _connect(server, timeout)
     if client is None:
         return None
     else:
@@ -202,8 +202,8 @@ def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
     """Creates directory using mktemp and returns its name"""
     sshcmd = 'mktemp '
     if ftype == 'd':
-        sshcmd = sshcmd + '-d '
-    sshcmd = sshcmd + '-p %s %s' % (path, template)
+        sshcmd += '-d '
+    sshcmd += '-p %s %s' % (path, template)
     tmpdir = get_cmd_out(server, sshcmd, privileged=False)
     if 'tmpdirs' in server:
         server['tmpdirs'].append(tmpdir)
@@ -324,10 +324,14 @@ def prepare_su_cmd(server, cmd, timeout=ssh_timeout):
     if 'sudo' in server['account']:
         sutype = 'sudo'
         password = server['account']['sudo']
-        if password == None: password = ''
+        if password is None:
+            password = ''
     elif 'su' in server['account']:
         sutype = 'su'
         password = server['account']['su']
+    else:
+        error("BUG: prepare_su_cmd() call for server %s, while it does not have account with su/sudo", server['name'])
+        return None
     if cmd == 'shell':  # pass window size instead of fifos
         (stdout_fifo, stderr_fifo) = aux.getTerminalSize()
     return 'python %s %s "%s" %s %s "%s" %s' % (su_py,
