@@ -596,6 +596,23 @@ def put():
         sys.exit(1)
 
 
+def get():
+    """Copy file from server"""
+    servername = config['servername']
+    localpath = config['localpath']
+    remotepath = config['remotepath']
+    debug("Copying to '%s' from '%s' on server %s" % (localpath, remotepath, servername))
+    server = get_server(servername)
+    if not server:
+        error("Cannot find server %s in servers list" % servername)
+        sys.exit(1)
+    if ssh.accessible(server):
+        ssh.get(server, localpath, remotepath)
+    else:
+        error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
+        sys.exit(1)
+
+
 def check_conn():
     """Checks connection between two servers"""
     from_server_name = config['server1']

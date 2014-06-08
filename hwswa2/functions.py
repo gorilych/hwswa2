@@ -118,6 +118,12 @@ def read_configuration():
     subparser.add_argument('remotepath')
     subparser.set_defaults(subcommand=subcommands.put)
 
+    subparser = subparsers.add_parser('get', help='copy file from server')
+    subparser.add_argument('servername', metavar='server')
+    subparser.add_argument('remotepath')
+    subparser.add_argument('localpath')
+    subparser.set_defaults(subcommand=subcommands.get)
+
     subparser = subparsers.add_parser('firewall', help='check connections between servers')
     subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
     subparser.set_defaults(subcommand=subcommands.firewall)

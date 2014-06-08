@@ -173,9 +173,9 @@ def remove(server, path, privileged=True):
 
 
 def put(server, localpath, remotepath):
-    debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath))
+    debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
     if not os.path.exists(localpath):
-        raise Exception("Local path does not exist: %s" % localpath)
+        raise Exception("Local path does not exist: %s" % localpath.decode('utf-8'))
     client = connect(server)
     sftp = client.open_sftp()
     if os.path.isfile(localpath):
@@ -196,6 +196,32 @@ def put(server, localpath, remotepath):
         else:
             mkdir(server, remotepath)
             put_dir_content(server, localpath, remotepath)
+
+
+def get(server, localpath, remotepath):
+    debug("Copying to %s from %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
+    client = connect(server)
+    sftp = client.open_sftp()
+    if not exists(server, remotepath):
+        raise Exception("Remote path does not exist: %s" % remotepath.decode('utf-8'))
+    if isdir(server, remotepath):
+        if os.path.exists(localpath):
+            lname = os.path.join(localpath, os.path.basename(remotepath))
+            os.makedirs(lname)
+            get_dir_content(server, lname, remotepath)
+        else:
+            os.makedirs(localpath)
+            get_dir_content(server, localpath, remotepath)
+    elif isfile(server, remotepath):
+        attrs = sftp.stat(remotepath)
+        if os.path.exists(localpath):
+            if os.path.isdir(localpath):
+                localpath = os.path.join(localpath, os.path.basename(remotepath))
+            sftp.get(remotepath, localpath)
+            os.chmod(localpath, attrs.st_mode)
+        else:  # localpath does not exist
+            sftp.get(remotepath, localpath)
+            os.chmod(localpath, attrs.st_mode)
 
 
 def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
@@ -239,6 +265,37 @@ def put_dir_content(server, localdir, remotedir):
         if os.path.isdir(lname):
             mkdir(server, rname)
             put_dir_content(server, lname, rname)
+
+
+def get_dir_content(server, localdir, remotedir):
+    for f in listdir(server, remotedir):
+        lname = os.path.join(localdir, f)
+        rname = os.path.join(remotedir, f)
+        if isfile(server, rname):
+            get(server, lname, rname)
+        if isdir(server, rname):
+            os.makedirs(lname)
+            get_dir_content(server, lname, rname)
+
+
+def listdir(server, remotedir):
+    client = connect(server)
+    sftp = client.open_sftp()
+    return sftp.listdir(remotedir)
+
+
+def isdir(server, remotepath):
+    client = connect(server)
+    sftp = client.open_sftp()
+    attrs = sftp.stat(remotepath)
+    return stat.S_ISDIR(attrs.st_mode)
+
+
+def isfile(server, remotepath):
+    client = connect(server)
+    sftp = client.open_sftp()
+    attrs = sftp.stat(remotepath)
+    return stat.S_ISREG(attrs.st_mode)
 
 
 def write(server, path, data):
