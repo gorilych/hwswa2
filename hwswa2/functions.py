@@ -6,6 +6,7 @@ from validate import Validator
 import yaml
 
 from hwswa2.globals import apppath, configspec, config
+from hwswa2.auxiliary import merge_config
 from logging import info, debug, error
 import hwswa2.subcommands as subcommands
 from hwswa2.ssh import cleanup
@@ -166,7 +167,7 @@ def read_configuration():
     config_from_file.validate(val)
 
     # update defaults by values from configuration file
-    config.update(config_from_file.dict())
+    merge_config(config, config_from_file.dict())
 
     # update defaults by values from command line args
     # values from command line take precedence over configuration file options

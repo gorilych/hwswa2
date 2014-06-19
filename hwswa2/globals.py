@@ -24,7 +24,10 @@ config['networksfile'] = config['configdir'] + '/' + 'networks.yaml'
 config['logfile'] = config['logdir'] + '/' + 'hwswa2.log'
 config['reportsdir'] = config['logdir'] + '/' + 'reports'
 config['rscriptdir'] = config['checksdir'] + '/' + 'remote-scripts'
-config['firewall'] = { 'send_timeout': 1 }
+config['firewall'] = {
+    'send_timeout': 1,
+    'max_open_sockets': 100,
+    }
 
 exitcode = 0 
 

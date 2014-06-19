@@ -202,3 +202,21 @@ def differenceranges(rg1, rg2):
     s1 = set(range2list(rg1))
     s2 = set(range2list(rg2))
     return list2range(list(s1.difference(s2)))
+
+def merge_config(conf1, conf2):
+    """Updates conf1 with values from conf2, recursively
+
+    If key for conf1[key] does not exist in conf2, value of conf1[key] is preserved.
+    If value is a dict, then conf1[key] is updated with merge_config(conf1[key], conf2[key])
+    If key for conf1[key] exists in conf2 and value is not dict - value is updated by conf2[key]
+    If key for conf2[key] does not exist in conf1, value is added
+    """
+    for key in conf1:
+        if key in conf2:
+            if isinstance(conf1[key], dict):
+                merge_config(conf1[key], conf2[key])
+            else:
+                conf1[key] = conf2[key]
+    for key in conf2:
+        if not key in conf1:
+            conf1[key] = conf2[key]

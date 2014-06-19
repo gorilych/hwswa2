@@ -152,7 +152,7 @@ def firewall():
 
 
 def _check_rule(rule):
-    maxopensockets = 256
+    maxopensockets = config['firewall']['max_open_sockets']
     send_timeout = config['firewall']['send_timeout']
     serverfrom = rule['serverfrom']
     serverto = rule['serverto']
