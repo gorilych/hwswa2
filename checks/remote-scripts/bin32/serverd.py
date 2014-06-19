@@ -227,8 +227,9 @@ def cmd_send(proto, address, ports, timeout=1):
     portsOKQ = Queue.Queue()
     portsNOKQ = Queue.Queue()
 
+    timeout=float(timeout)
     def thread_send(proto, address, port, portsOKQ, portsNOKQ):
-        if send(proto, address, port, timeout):
+        if send(proto, address, port, timeout=timeout):
             portsOKQ.put(port)
         else:
             portsNOKQ.put(port)
