@@ -153,6 +153,7 @@ def firewall():
 
 def _check_rule(rule):
     maxopensockets = 256
+    send_timeout = config['firewall']['send_timeout']
     serverfrom = rule['serverfrom']
     serverto = rule['serverto']
     proto = rule['proto']
@@ -170,7 +171,7 @@ def _check_rule(rule):
                     'OK': '', 'NOK': '', 'failures': []}
     for ps in splitrange(ports, maxopensockets):
         listencmd = 'listen %s %s %s' % (proto, toIP, ps)
-        sendcmd = 'send %s %s %s' % (proto, toIP, ps)
+        sendcmd = 'send %s %s %s %s' % (proto, toIP, ps, send_timeout)
         status, result = ssh.serverd_cmd(serverto, listencmd)
         if status:  # listen ok
             status, result = ssh.serverd_cmd(serverfrom, sendcmd)
