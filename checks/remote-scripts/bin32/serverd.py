@@ -1,4 +1,4 @@
-# !/usr/bin/env python
+#!/usr/bin/env python
 import os, sys, socket, select, traceback, Queue, threading, time
 
 
