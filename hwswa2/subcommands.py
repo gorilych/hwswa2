@@ -25,7 +25,7 @@ def firewall():
     # collect IPs from last reports
     for server in servers:
         report = _last_report(server)
-        if not ('parameters' in report and \
+        if report is None or not ('parameters' in report and \
                             'network' in report['parameters'] and \
                             'network_interfaces' in report['parameters']['network']):
             error('Report (with nic info) for server %s is not generated, check the server first' % server['name'])
