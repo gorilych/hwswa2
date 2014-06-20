@@ -1,0 +1,33 @@
+description: Firewall checks for branding
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+firewall:
+  - name: to_online_store
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    ports: 80,443
+    type: infra
+    protos: [TCP]
+    connect_with:
+        roles: [pbalinos]
+  - name: from_branding
+    policy: allow
+    group: yes
+    direction: outgoing
+    networks: [frontnet]
+    type: infra
+    protos: [TCP]
+    rules:
+      - name: to_file_manager 
+        ports: 1299
+        connect_with: {roles: [fileman]}
+      - name: to_phppgadm
+        ports: 9114
+        connect_with: {roles: [phppgadm]}
+      - name: to_webmail_sslpr_pba
+        ports: 443
+        connect_with: {roles: [atmail, impwebmail, winsslpr, pbalinfe, pbawinfe]}
+      - name: to_awstats_mssqladm
+        ports: 80
+        connect_with: {roles: [awstats, mssqldataadm]}
