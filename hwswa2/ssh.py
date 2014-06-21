@@ -563,7 +563,7 @@ def serverd_start(server):
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        debug('serverd not started: %s' % e.message)
+        debug('serverd not started: %s' % e.args)
         return False
 
 
