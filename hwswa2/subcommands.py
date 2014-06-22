@@ -1,15 +1,17 @@
 import os.path
 import yaml
-from hwswa2.globals import config
-from logging import info, debug, error
-import hwswa2.ssh as ssh
-from hwswa2.auxiliary import get_server, splitrange, joinranges, list2range, differenceranges
+import logging
 import threading
 import Queue
 import time
-from copy import deepcopy
 import sys
+from copy import deepcopy
 
+from hwswa2.globals import config
+import hwswa2.ssh as ssh
+from hwswa2.auxiliary import get_server, splitrange, joinranges, list2range, differenceranges
+
+logger = logging.getLogger(__name__)
 
 def firewall():
     """Check connections between servers"""
@@ -18,7 +20,7 @@ def firewall():
     servers = []
     for name in config['servernames']:
         if not name in allnames:
-            error("Cannot find server %s in servers list" % name)
+            logger.error("Cannot find server %s in servers list" % name)
             sys.exit(1)
         servers.append(get_server(name))
 
@@ -28,7 +30,7 @@ def firewall():
         if report is None or not ('parameters' in report and \
                             'network' in report['parameters'] and \
                             'network_interfaces' in report['parameters']['network']):
-            error('Report (with nic info) for server %s is not generated, check the server first' % server['name'])
+            logger.error('Report (with nic info) for server %s is not generated, check the server first' % server['name'])
             sys.exit(1)
         else:
             nics = report['parameters']['network']['network_interfaces']
@@ -38,10 +40,10 @@ def firewall():
                 for ip in ips:
                     nw_ips[ip['network']] = ip['address']
             if len(nw_ips) == 0:
-                error('Found no IPs in last report for server %s' % server['name'])
+                logger.error('Found no IPs in last report for server %s' % server['name'])
                 sys.exit(1)
             server['nw_ips'] = nw_ips
-            debug('IPs of %s: %s' % (server['name'], server['nw_ips']))
+            logger.debug('IPs of %s: %s' % (server['name'], server['nw_ips']))
 
     # collect roles
     roles = {}  # dict {role1: [server1, server2], role2: [server3, server4]}
@@ -57,7 +59,7 @@ def firewall():
                 roles[rr] = set([server['name']])
             else:
                 roles[rr] |= set([server['name']])
-    debug("Roles: %s" % roles)
+    logger.debug("Roles: %s" % roles)
 
     # expand rule groups to rules in firewall
     for server in servers:
@@ -92,7 +94,7 @@ def firewall():
                         this_server_key = 'serverfrom'
                         other_server_key = 'serverto'
                     else:
-                        info('Rule %s: wrong direction %s (should be either outgoing or incoming)' \
+                        logger.info('Rule %s: wrong direction %s (should be either outgoing or incoming)' \
                              % (rule['description'], rule['direction']))
                         continue
                     for r in rule['connect_with']['roles']:
@@ -122,17 +124,17 @@ def firewall():
     for rule in joined_rules:
         rule['serverto'] = get_server(rule['serverto'])
         rule['serverfrom'] = get_server(rule['serverfrom'])
-        debug('Rule %s' % rule)
+        logger.debug('Rule %s' % rule)
         try:
             toIP = rule['serverto']['nw_ips'][rule['network']]
         except KeyError:
-            error('Cannot find IP for server %s from network %s' % (rule['serverto'], rule['network']))
+            logger.error('Cannot find IP for server %s from network %s' % (rule['serverto'], rule['network']))
             sys.exit(1)
         rule['toIP'] = toIP
         try:
             fromIP = rule['serverfrom']['nw_ips'][rule['network']]
         except KeyError:
-            error('Cannot find IP for server %s from network %s' % (rule['serverfrom'], rule['network']))
+            logger.error('Cannot find IP for server %s from network %s' % (rule['serverfrom'], rule['network']))
             sys.exit(1)
         rule['fromIP'] = fromIP
 
@@ -208,14 +210,14 @@ def _check_rule(rule):
 
 def check():
     """Check only specified servers"""
-    debug("Checking servers: %s" % config['servernames'])
+    logger.debug("Checking servers: %s" % config['servernames'])
     allnames = [elem['name'] for elem in config['servers']]
     for name in config['servernames']:
         if not name in allnames:
-            error("Cannot find server %s in servers list" % name)
+            logger.error("Cannot find server %s in servers list" % name)
             sys.exit(1)
         if 'dontcheck' in get_server(name):
-            info("Skipping server %s because of dontcheck option" % name)
+            logger.info("Skipping server %s because of dontcheck option" % name)
             config['servernames'].remove(name)
     results = Queue.Queue()
     cth = {}
@@ -248,13 +250,13 @@ def _check(server, resultsqueue):
     if not ssh.accessible(server):
         result['check_status'] = 'server is not accessible'
         result['accessible'] = 'NO, %s' % server['lastConnectionError']
-        info("Server %s is not accessible" % name)
+        logger.info("Server %s is not accessible" % name)
     else:
         result['accessible'] = 'Yes'
         try:
             (parameters, requirements, fw) = get_checks(role)
         except _CheckException as ce:
-            error(ce)
+            logger.error(ce)
             sys.exit(1)
         _prepare_remote_scripts(server)
         result['check_status'] = 'in progress'
@@ -453,12 +455,12 @@ def _save_report(name, result):
     reportfile = os.path.join(path, time.strftime('%F.%Hh%Mm%Ss'))
     if not os.path.exists(path): os.makedirs(path)
     yaml.safe_dump(result, open(reportfile, 'w'))
-    info('%s status: %s, report file: %s' % (name, result['check_status'], reportfile))
+    logger.info('%s status: %s, report file: %s' % (name, result['check_status'], reportfile))
 
 
 def checkall():
     """Check all servers"""
-    debug("Checking all servers")
+    logger.debug("Checking all servers")
     allnames = [elem['name'] for elem in config['servers']]
     config['servernames'] = allnames
     check()
@@ -466,17 +468,17 @@ def checkall():
 
 def prepare():
     """Prepare only specified servers"""
-    debug("Preparing servers: %s" % config['servernames'])
+    logger.debug("Preparing servers: %s" % config['servernames'])
     allnames = [elem['name'] for elem in config['servers']]
     for name in config['servernames']:
         if not name in allnames:
-            error("Cannot find server %s in servers list" % name)
+            logger.error("Cannot find server %s in servers list" % name)
             sys.exit(1)
 
 
 def prepareall():
     """Prepare all servers"""
-    debug("Preparing all servers")
+    logger.debug("Preparing all servers")
     allnames = [elem['name'] for elem in config['servers']]
     config['servernames'] = allnames
     prepare()
@@ -485,27 +487,27 @@ def prepareall():
 def shell():
     """Open interactive shell to specific server"""
     servername = config['servername']
-    debug("Opening interactive shell to server %s" % servername)
+    logger.debug("Opening interactive shell to server %s" % servername)
     server = get_server(servername)
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     if ssh.accessible(server):
         ssh.shell(server)
     else:
-        error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
+        logger.error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
         sys.exit(1)
 
 def reboot():
     """Reboots specified servers"""
-    debug("Rebooting servers: %s" % config['servernames'])
+    logger.debug("Rebooting servers: %s" % config['servernames'])
     allnames = [elem['name'] for elem in config['servers']]
     for name in config['servernames']:
         if not name in allnames:
-            error("Cannot find server %s in servers list" % name)
+            logger.error("Cannot find server %s in servers list" % name)
             sys.exit(1)
         if 'dontcheck' in get_server(name):
-            info("Skipping server %s because of dontcheck option" % name)
+            logger.info("Skipping server %s because of dontcheck option" % name)
             config['servernames'].remove(name)
     results = Queue.Queue()
     cth = {}
@@ -529,7 +531,7 @@ def reboot():
 
 def _reboot(server, resultsqueue):
     """Reboots server"""
-    debug("Rebooting server %s" % server['name'])
+    logger.debug("Rebooting server %s" % server['name'])
     result = {'servername': server['name']}
     if ssh.accessible(server):
         check_reboot_result = ssh.check_reboot(server)
@@ -548,16 +550,16 @@ def exec_cmd():
     sshcmd = " ".join(config['sshcmd'])
     if 'tty' in config:
         get_pty = config['tty']
-    debug("Executing `%s` on server %s" % (sshcmd, servername))
+    logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     server = get_server(servername)
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     if ssh.accessible(server):
         exitstatus = ssh.exec_cmd_i(server, sshcmd, get_pty=get_pty)
-        debug("exitstatus = %s" % exitstatus)
+        logger.debug("exitstatus = %s" % exitstatus)
     else:
-        error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
+        logger.error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
         sys.exit(1)
 
 
@@ -565,10 +567,10 @@ def ni_exec_cmd():
     """Exec command on specified server non-interactively"""
     servername = config['servername']
     sshcmd = " ".join(config['sshcmd'])
-    debug("Executing `%s` on server %s" % (sshcmd, servername))
+    logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     server = get_server(servername)
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     if ssh.accessible(server):
         stdout, stderr, exitstatus = ssh.exec_cmd(server, sshcmd)
@@ -576,7 +578,7 @@ def ni_exec_cmd():
         print("stderr = %s" % stderr)
         print("exitstatus = %s" % exitstatus)
     else:
-        error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
+        logger.error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
         sys.exit(1)
 
 
@@ -585,15 +587,15 @@ def put():
     servername = config['servername']
     localpath = config['localpath']
     remotepath = config['remotepath']
-    debug("Copying '%s' to '%s' on server %s" % (localpath, remotepath, servername))
+    logger.debug("Copying '%s' to '%s' on server %s" % (localpath, remotepath, servername))
     server = get_server(servername)
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     if ssh.accessible(server):
         ssh.put(server, localpath, remotepath)
     else:
-        error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
+        logger.error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
         sys.exit(1)
 
 
@@ -602,15 +604,15 @@ def get():
     servername = config['servername']
     localpath = config['localpath']
     remotepath = config['remotepath']
-    debug("Copying to '%s' from '%s' on server %s" % (localpath, remotepath, servername))
+    logger.debug("Copying to '%s' from '%s' on server %s" % (localpath, remotepath, servername))
     server = get_server(servername)
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     if ssh.accessible(server):
         ssh.get(server, localpath, remotepath)
     else:
-        error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
+        logger.error("Failed to connect to server %s: %s" % (servername, server['lastConnectionError']))
         sys.exit(1)
 
 
@@ -623,16 +625,16 @@ def check_conn():
     from_server = get_server(from_server_name)
     to_server = get_server(to_server_name)
     if not from_server:
-        error("Cannot find server %s in servers list" % from_server_name)
+        logger.error("Cannot find server %s in servers list" % from_server_name)
         sys.exit(1)
     if not to_server:
-        error("Cannot find server %s in servers list" % to_server_name)
+        logger.error("Cannot find server %s in servers list" % to_server_name)
         sys.exit(1)
     if not ssh.accessible(from_server):
-        error("Failed to connect to server %s: %s" % (from_server_name, from_server['lastConnectionError']))
+        logger.error("Failed to connect to server %s: %s" % (from_server_name, from_server['lastConnectionError']))
         sys.exit(1)
     if not ssh.accessible(to_server):
-        error("Failed to connect to server %s: %s" % (to_server_name, to_server['lastConnectionError']))
+        logger.error("Failed to connect to server %s: %s" % (to_server_name, to_server['lastConnectionError']))
         sys.exit(1)
     ssh.serverd_start(from_server)
     ssh.serverd_start(to_server)
@@ -693,7 +695,7 @@ def lastreport():
     servername = config['servername']
     server = get_server(servername)
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     _print_report(_last_report(server))
 
@@ -710,7 +712,7 @@ def reports():
     servername = config['servername']
     server = get_server(servername)
     if not server:
-        error("Cannot find server %s in servers list" % servername)
+        logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     print '\n'.join(r['file'] for r in _reports(server))
 
@@ -778,7 +780,7 @@ def _deepdiff(val1, val2):
 def reportdiff():
     server = get_server(config['servername'])
     if not server:
-        error("Cannot find server %s in servers list" % config['servername'])
+        logger.error("Cannot find server %s in servers list" % config['servername'])
         sys.exit(1)
     report1 = _get_report(server, config['report1'])
     report2 = _get_report(server, config['report2'])
@@ -828,7 +830,7 @@ def _print_report(report):
                                                          d['name'] + ' ' + \
                                                          d['size'] for d in val)
                     else:
-                        info('wrong type for value: %s' % key)
+                        logger.info('wrong type for value: %s' % key)
                     del parameters[key]
             # print all the rest (scalars only)
             for key in parameters:

@@ -7,7 +7,6 @@ import yaml
 
 from hwswa2.globals import apppath, configspec, config
 from hwswa2.auxiliary import merge_config
-from logging import info, debug, error
 import hwswa2.subcommands as subcommands
 from hwswa2.ssh import cleanup
 from hwswa2.aliases import AliasedSubParsersAction
@@ -15,20 +14,21 @@ from hwswa2.aliases import AliasedSubParsersAction
 
 __version__ = '0.2'
 
+logger = logging.getLogger(__name__)
 
 def read_servers():
     config['servers'] = yaml.load(open(config['serversfile']))['servers']
-    debug("Read info from servers file: %s" % config['servers'])
+    logger.debug("Read info from servers file: %s" % config['servers'])
     # check for dups
     names = [elem['name'] for elem in config['servers']]
     if len(names) != len(set(names)):
-        error("Found duplicates in servers file! Exiting ...")
+        logger.error("Found duplicates in servers file! Exiting ...")
         sys.exit(1)
 
 
 def read_networks():
     config['networks'] = yaml.load(open(config['networksfile']))['networks']
-    debug("Read info from networks file: %s" % config['networks'])
+    logger.debug("Read info from networks file: %s" % config['networks'])
 
 
 def run_subcommand():
@@ -37,27 +37,6 @@ def run_subcommand():
     finally:
         for server in config['servers']:
             cleanup(server)
-
-
-def init_logger():
-    if not os.path.exists(os.path.dirname(config['logfile'])):
-        os.makedirs(os.path.dirname(config['logfile']))
-    logging.basicConfig(filename=config['logfile'], filemode='a', level=logging.INFO,
-                        format="%(asctime)s %(levelname)s [%(threadName)s:%(module)s.%(funcName)s()] %(message)s")
-    if sys.hexversion >= 0x2070000: logging.captureWarnings(True)
-    config['logger'] = logging.getLogger()
-    if config['debug']:
-        config['logger'].setLevel(logging.DEBUG)
-    logging.getLogger("paramiko").setLevel(logging.WARNING)
-    # define a Handler which writes INFO messages or higher to the sys.stderr
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    # set a format which is simpler for console use
-    formatter = logging.Formatter('%(message)s')
-    # tell the handler to use this format
-    console.setFormatter(formatter)
-    # add the handler to the root logger
-    config['logger'].addHandler(console)
 
 
 def read_configuration():

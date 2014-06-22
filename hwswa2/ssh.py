@@ -10,9 +10,11 @@ import tty
 import select
 import paramiko
 import socket
+import logging
 import hwswa2.auxiliary as aux
 from hwswa2.globals import config
-from logging import debug, error
+
+logger = logging.getLogger(__name__)
 
 ssh_timeout = 30
 
@@ -20,7 +22,7 @@ ssh_timeout = 30
 def _connect(server, timeout=ssh_timeout):
     """Initiates connection and returns SSHClient object
        Does not store information about the client"""
-    debug("Trying to connect to server %s" % server['name'])
+    logger.debug("Trying to connect to server %s" % server['name'])
     hostname = server['address']
     if 'port' in server:
         port = server['port']
@@ -36,7 +38,7 @@ def _connect(server, timeout=ssh_timeout):
         jump_channel = _jump_channel(server)
     except _JumpException, je:
         err_msg = 'Gateway failure while connecting: %s' % je
-        debug(err_msg)
+        logger.debug(err_msg)
         server['lastConnectionError'] = err_msg
         return None
     client = paramiko.SSHClient()
@@ -48,21 +50,21 @@ def _connect(server, timeout=ssh_timeout):
     except paramiko.BadHostKeyException:
         server['lastConnectionError'] = 'BadHostKeyException raised while connecting to %s@%s:%s' % (
         username, hostname, port)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     except paramiko.AuthenticationException:
         server['lastConnectionError'] = 'Authentication failure while connecting to %s@%s:%s' % (
         username, hostname, port)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     except paramiko.SSHException as pe:
         server['lastConnectionError'] = 'SSHException raised while connecting to %s@%s:%s: %s' % (
             username, hostname, port, pe)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     except socket.error as serr:
         server['lastConnectionError'] = 'socket.error raised while connecting to %s@%s:%s: %s' % (
         username, hostname, port, serr)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     else:
-        debug('Established connection with %s@%s:%s' % (username, hostname, port))
+        logger.debug('Established connection with %s@%s:%s' % (username, hostname, port))
         return client
     return None
 
@@ -75,7 +77,7 @@ def connect(server, reconnect=False, timeout=ssh_timeout):
             server['sshclient'].close()
             del server['sshclient']
             _cleanjump(server)
-            debug("Will reconnect to server %s" % server['name'])
+            logger.debug("Will reconnect to server %s" % server['name'])
         else:
             return server['sshclient']
     client = _connect(server, timeout)
@@ -146,11 +148,11 @@ def exec_cmd_i(server, sshcmd, privileged=True, timeout=ssh_timeout, get_pty=Fal
 
 def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
     """Executes command and returns tuple of stdout, stderr and status"""
-    debug("Executing %s on server %s" % (sshcmd, server['name']))
+    logger.debug("Executing %s on server %s" % (sshcmd, server['name']))
     client = connect(server)
     if privileged and ('su' in server['account'] or 'sudo' in server['account']):
         sshcmd = prepare_su_cmd(server, sshcmd, timeout)
-        debug("Privileged command %s on server %s" % (sshcmd, server['name']))
+        logger.debug("Privileged command %s on server %s" % (sshcmd, server['name']))
     stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout, get_pty=False)
     if input_data:
         stdin.write(input_data)
@@ -158,7 +160,7 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
     stdout_data = stdout.read().splitlines()
     stderr_data = stderr.read().splitlines()
     status = stdout.channel.recv_exit_status()
-    debug("Executed %s on server %s: stdout %s, stderr %s, exit status %s" %
+    logger.debug("Executed %s on server %s: stdout %s, stderr %s, exit status %s" %
           (sshcmd, server['name'], stdout_data, stderr_data, status))
     return stdout_data, stderr_data, status
 
@@ -173,7 +175,7 @@ def remove(server, path, privileged=True):
 
 
 def put(server, localpath, remotepath):
-    debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
+    logger.debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
     if not os.path.exists(localpath):
         raise Exception("Local path does not exist: %s" % localpath.decode('utf-8'))
     client = connect(server)
@@ -199,7 +201,7 @@ def put(server, localpath, remotepath):
 
 
 def get(server, localpath, remotepath):
-    debug("Copying to %s from %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
+    logger.debug("Copying to %s from %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
     client = connect(server)
     sftp = client.open_sftp()
     if not exists(server, remotepath):
@@ -317,7 +319,7 @@ def is_it_me(server):
         mybootid = subprocess.Popen(['cat', '/proc/sys/kernel/random/boot_id'], stdout=subprocess.PIPE).communicate()[
             0].strip()
     server_bootid = bootid(server)
-    debug("Is it me? Comparing %s and %s" % (mybootid, server_bootid))
+    logger.debug("Is it me? Comparing %s and %s" % (mybootid, server_bootid))
     return mybootid == server_bootid
 
 
@@ -335,10 +337,10 @@ def check_reboot(server, timeout=300):
         raise
     except:  # we are going to ignore this
         pass
-    debug("reboot command is sent, now wait till server is down")
+    logger.debug("reboot command is sent, now wait till server is down")
     # wait till shutdown:
     if aux.wait_for_not(accessible, [server, True], timeout):
-        debug("Server %s is down" % server['name'])
+        logger.debug("Server %s is down" % server['name'])
         delta = time.time() - starttime
         # wait till boot
         if aux.wait_for(accessible, [server, True], timeout - delta):
@@ -387,7 +389,7 @@ def prepare_su_cmd(server, cmd, timeout=ssh_timeout):
         sutype = 'su'
         password = server['account']['su']
     else:
-        error("BUG: prepare_su_cmd() call for server %s, while it does not have account with su/sudo", server['name'])
+        logger.error("BUG: prepare_su_cmd() call for server %s, while it does not have account with su/sudo", server['name'])
         return None
     if cmd == 'shell':  # pass window size instead of fifos
         (stdout_fifo, stderr_fifo) = aux.getTerminalSize()
@@ -410,7 +412,7 @@ def cleanup(server):
             del server['supath']
         server['sshclient'].close()
         _cleanjump(server)
-        debug("Closed connection to server %s" % server['name'])
+        logger.debug("Closed connection to server %s" % server['name'])
         del server['sshclient']
         try:
             del server['cmd_prefix']
@@ -552,7 +554,7 @@ def serverd_start(server):
         banner = stdout.readline()
         if not banner.startswith('started_ok'):
             banner = stdout.readline()
-        debug('serverd started on %s: %s' % (server['name'], banner))
+        logger.debug('serverd started on %s: %s' % (server['name'], banner))
         server['serverd'] = {'r_serverd_py': r_serverd_py,
                              'privileged': r_serverd_py_privileged,
                              'pty': get_pty,
@@ -563,7 +565,7 @@ def serverd_start(server):
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        debug('serverd not started: %s' % e.args)
+        logger.debug('serverd not started: %s' % e.args)
         return False
 
 
@@ -580,15 +582,15 @@ def serverd_cmd(server, cmd):
     if 'serverd' in server:
         stdin = server['serverd']['stdin']
         stdout = server['serverd']['stdout']
-        debug('command: ' + cmd)
+        logger.debug('command: ' + cmd)
         stdin.write(cmd + '\n')
         reply = stdout.readline().strip()
-        debug('accept reply: ' + reply)
+        logger.debug('accept reply: ' + reply)
         accepted, space, reason = reply.partition(' ')
         if accepted == 'accepted_ok':
-            debug('command accepted on server %s: %s' % (server['name'], reason))
+            logger.debug('command accepted on server %s: %s' % (server['name'], reason))
             reply = stdout.readline().strip()
-            debug('result reply: ' + reply)
+            logger.debug('result reply: ' + reply)
             result_status, space, result = reply.partition(' ')
             if result_status == 'result_ok':
                 return True, result
