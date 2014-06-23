@@ -15,6 +15,13 @@ _servers = {}
 _servers_to_init_later = {}
 
 
+def get_server(name):
+    if name in _servers:
+        return _servers[name]()
+    else:
+        return None
+
+
 def server_factory(serverdict):
     global _servers, _servers_to_init_later
     # remove stale references
