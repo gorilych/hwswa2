@@ -2,9 +2,13 @@ import logging
 import paramiko
 import socket
 
+import hwswa2.server
 from hwswa2.server import Server, ServerException
 
 logger = logging.getLogger(__name__)
+
+# default timeout value for all operations
+TIMEOUT = hwswa2.server.TIMEOUT
 
 
 class LinuxServerException(ServerException):
@@ -36,17 +40,12 @@ class LinuxServer(Server):
             address = self.account['login'] + '@' + self.address + ':' + self.port
         return address
 
-    def is_connected(self):
-        return self._sshclient is not None
-
-    def _connect(self, timeout=None):
+    def _new_sshclient(self, timeout=TIMEOUT):
         """Initiates connection and returns SSHClient object
 
         Returns None if connection fails.
         """
         logger.debug("Trying to connect to %s" % self)
-        if timeout is None:
-            timeout = self._timeout
         username = self.account['login']
         if 'password' in self.account:
             password = self.account['password']
@@ -67,19 +66,16 @@ class LinuxServer(Server):
                            key_filename=key_filename, timeout=timeout, sock=self._sshtunnel)
         except paramiko.BadHostKeyException:
             self._last_connection_error = 'BadHostKeyException raised while connecting to %s' % self._address()
-            logger.error(self._last_connection_error)
         except paramiko.AuthenticationException:
             self._last_connection_error = 'Authentication failure while connecting to %s' % self._address()
-            logger.error(self._last_connection_error)
         except paramiko.SSHException as pe:
             self._last_connection_error = 'SSHException raised while connecting to %s: %s' % (self._address(), pe)
-            logger.error(self._last_connection_error)
         except socket.error as serr:
             self._last_connection_error = 'socket.error raised while connecting to %s: %s' % (self._address(), serr)
-            logger.error(self._last_connection_error)
         else:
             logger.debug('Established connection with %s' % self)
             return client
+        logger.error(self._last_connection_error)
         return None
 
     def _connect_to_gateway(self):
@@ -103,41 +99,40 @@ class LinuxServer(Server):
         if self.gateway is not None:
             self.gateway.destroy_tunnel(self.name)
 
-    def connect(self, reconnect=False, timeout=None):
+    def _connect(self, reconnect=False, timeout=TIMEOUT):
         """Initiates SSH connection to the server.
 
-            Returns true if connection was successful.
+        Returns true if connection was successful.
         """
-        if timeout is None:
-            timeout = self._timeout
         if self.is_connected() and not reconnect:
             return True
         else:
             if reconnect:
-                self.disconnect()
+                self._disconnect()
                 logger.debug("Will reconnect to %s" % self)
-            client = self._connect(timeout)
+            client = self._new_sshclient(timeout)
             if client is None:
                 return False
             else:
                 self._sshclient = client
                 return True
 
-    def disconnect(self):
+    def _disconnect(self):
         if self._sshclient is not None:
             logger.debug("Will disconnect from %s" % self)
             self._sshclient.close()
             self._sshclient = None
             self._disconnect_from_gateway()
 
-    def create_tunnel(self, name, address, port, timeout=None):
+    def is_connected(self):
+        return self._sshclient is not None
+
+    def create_tunnel(self, name, address, port, timeout=TIMEOUT):
         """Creates SSH tunnel via itself, using separate connection
 
         Returns tunnel, which can be used as socket
         Raises TunnelException in case of failure
         """
-        if timeout is None:
-            timeout = self._timeout
         if name in self._sshtunnels:
             if self._sshtunnels[name]['sshclient'] is not None:
                 if self._sshtunnels[name]['tunnel'] is not None:
@@ -145,7 +140,7 @@ class LinuxServer(Server):
                 else:
                     self._sshtunnels[name]['sshclient'].close()
         self._sshtunnels[name] = {'sshclient': None, 'tunnel': None}
-        sshclient = self._connect(timeout=timeout)
+        sshclient = self._new_sshclient(timeout=timeout)
         if sshclient is None:
             del self._sshtunnels[name]
             raise TunnelException(self._last_connection_error)
@@ -171,6 +166,36 @@ class LinuxServer(Server):
         except:
             pass
 
+    def write(self, path, data):
+        if self._connect():
+            sftp = self._sshclient.open_sftp()
+            f = sftp.open(path, 'w')
+            f.write(data)
+            f.close()
+
+    def mkdir(self, path):
+        if self._connect():
+            sftp = self._sshclient.open_sftp()
+            sftp.mkdir(path)
+
+    def exec_cmd(self, sshcmd, input_data=None, timeout=TIMEOUT, privileged=True):
+        """Executes command and returns tuple of stdout, stderr and status"""
+        logger.debug("Executing %s on %s" % (sshcmd, self))
+        if self._connect():
+            if privileged and ('su' in self.account or 'sudo' in self.account):
+                sshcmd = self._prepare_su_cmd(sshcmd, timeout)
+                logger.debug("Privileged command %s on %s" % (sshcmd, self))
+            stdin, stdout, stderr = self._sshclient.exec_command(sshcmd, timeout=timeout, get_pty=False)
+            if input_data:
+                stdin.write(input_data)
+                stdin.flush()
+            stdout_data = stdout.read().splitlines()
+            stderr_data = stderr.read().splitlines()
+            status = stdout.channel.recv_exit_status()
+            logger.debug("Executed '%s' on %s: stdout '%s', stderr '%s', exit status %s" %
+                  (sshcmd, self, stdout_data, stderr_data, status))
+            return stdout_data, stderr_data, status
+
     def __del__(self):
         # remove ssh tunnel connections
         servers = [server for server in self._sshtunnels]
@@ -183,4 +208,4 @@ class LinuxServer(Server):
         if self.is_connected():
             for tmp in self._tmp:
                 self.remove(tmp, privileged=False)
-            self.disconnect()
+            self._disconnect()

@@ -2,6 +2,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# default timeout value for all operations
+TIMEOUT = 30
 
 class Server(object):
 
@@ -25,8 +27,6 @@ class Server(object):
         self.expect = expect
         self._last_connection_error = None
         self._accessible = None
-        # default timeout value for all operations
-        self._timeout = 30
         # list of temporary dirs/files
         self._tmp = []
 
@@ -42,20 +42,20 @@ class Server(object):
         return cls(**initargs)
 
     def __str__(self):
-        return "server %s (%s)" % (self.name, self.role)
+        return "server %s" % self.name
 
     def last_connection_error(self):
         return self._last_connection_error
 
     def accessible(self, retry=False):
         if self._accessible is None or retry:
-            if self.connect(reconnect=retry):
+            if self._connect(reconnect=retry):
                 self._accessible = True
             else:
                 self._accessible = False
         return self._accessible
 
-    def connect(self, reconnect=False, timeout=None):
+    def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
 
             Returns true if connection was successful.
