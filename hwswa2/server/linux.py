@@ -126,7 +126,11 @@ class LinuxServer(Server):
 
     def _disconnect_from_gateway(self):
         if self.gateway is not None:
-            self.gateway.destroy_tunnel(self.name)
+            try:
+                self.gateway.destroy_tunnel(self.name)
+            finally:
+                self._sshtunnel = None
+
 
     def _connect(self, reconnect=False, timeout=TIMEOUT):
         """Initiates SSH connection to the server.
