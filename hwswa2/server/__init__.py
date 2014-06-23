@@ -4,6 +4,7 @@ logger = logging.getLogger(__name__)
 
 # default timeout value for all operations
 TIMEOUT = 30
+REBOOT_TIMEOUT = 300
 
 class Server(object):
 
@@ -29,6 +30,8 @@ class Server(object):
         self._accessible = None
         # list of temporary dirs/files
         self._tmp = []
+        # remote agent
+        self._agent = None
 
     @classmethod
     def fromserverdict(cls, serverdict):
@@ -64,8 +67,29 @@ class Server(object):
 
 
 class ServerException(Exception):
+    """Base class for server exceptions"""
     def __init__(self, value):
         self.value = value
 
     def __str__(self):
         return repr(self.value)
+
+
+class TunnelException(ServerException):
+    """Exception for tunnel creation"""
+    pass
+
+
+class TimeoutException(ServerException):
+    """Timeout exception for server operations
+
+    Attributes:
+        msg - error message
+        **kwargs - additional information, f.e. partial result of function execution
+    """
+    def __init__(self, msg, **kwargs):
+        self.msg = msg
+        self.details = kwargs
+
+    def __str__(self):
+        return self.msg
