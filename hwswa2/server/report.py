@@ -5,6 +5,7 @@ import os
 
 logger = logging.getLogger(__name__)
 
+
 class ReportException(Exception):
 
     def __init__(self, value):

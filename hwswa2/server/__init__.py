@@ -1,6 +1,5 @@
 import logging
 import os
-import yaml
 import time
 
 from hwswa2.server.report import Report, ReportException
@@ -10,6 +9,7 @@ logger = logging.getLogger(__name__)
 # default timeout value for all operations
 TIMEOUT = 30
 REBOOT_TIMEOUT = 300
+
 
 class Server(object):
 
@@ -32,6 +32,7 @@ class Server(object):
         self.gateway = gateway
         self.expect = expect
         self.reports = []
+        self.nw_ips = {}
         self._last_connection_error = None
         self._accessible = None
         # list of temporary dirs/files
