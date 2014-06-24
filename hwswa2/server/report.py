@@ -70,6 +70,22 @@ class Report(object):
                     if nwname is not None:
                         ip['network'] = nwname
 
+    def get_nw_ips(self, networks=None):
+        """Obtains network -> ip dict from report"""
+        if networks is not None:
+            self.fix_networks(networks)
+        try:
+            nics = self.data['parameters']['network']['network_interfaces']
+        except KeyError:
+            return {}
+        else:
+            nw_ips = {}
+            for nic in nics:
+                ips = nic['ip']
+                for ip in ips:
+                    nw_ips[ip['network']] = ip['address']
+            return nw_ips
+
     def save(self, yamlfile=None):
         if self.data is None:
             raise ReportException("Won't save empty report")

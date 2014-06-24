@@ -3,6 +3,7 @@ import os
 import time
 
 from hwswa2.server.report import Report, ReportException
+from hwswa2.server.role import RoleCollection
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class Server(object):
             self.roles = []
         else:
             self.roles = [role, ]
+        self.rolecollection = None
         self.account = account
         self.address = address
         self.port = port
@@ -107,7 +109,7 @@ class Server(object):
     def last_finished_report(self):
         return next((r for r in self.reports if r.finished()), None)
 
-    def get_nw_ips(self, networks=None):
+    def find_nw_ips(self, networks=None):
         """Collect network -> ip into self.nw_ips from last finished report
         
         Returns true on success
@@ -117,27 +119,16 @@ class Server(object):
             logger.error("No finished reports for %s" % self)
             return False
         else:
-            if networks is not None:
-                lfr.fix_networks(networks)
-            report = lfr.data
-            if not ('parameters' in report and
-                    'network' in report['parameters'] and
-                    'network_interfaces' in report['parameters']['network']):
-                logger.error("Last finished report for %s does not contain nic info")
+            self.nw_ips = lfr.get_nw_ips(networks)
+            if self.nw_ips == {}:
+                logger.error('Found no IPs for %s' % self)
                 return False
             else:
-                nw_ips = {}
-                nics = report['parameters']['network']['network_interfaces']
-                for nic in nics:
-                    ips = nic['ip']
-                    for ip in ips:
-                        nw_ips[ip['network']] = ip['address']
-                if nw_ips == {}:
-                    logger.error('Found no IPs for %s' % self)
-                    return False
-                else:
-                    self.nw_ips = nw_ips
-                    return True
+                return True
+
+    def init_rolecollection(self, checksdir):
+        if self.rolecollection is None:
+            self.rolecollection = RoleCollection(self.roles, checksdir)
 
 
 class ServerException(Exception):
