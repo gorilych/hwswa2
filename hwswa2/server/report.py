@@ -24,7 +24,7 @@ class Report(object):
         if data is None:
             self._read()
         else:
-            self._data = data
+            self.data = data
         self.time = time
 
     def _read(self, yamlfile=None):
@@ -35,18 +35,42 @@ class Report(object):
         else:
             self._yamlfile = yamlfile
         try:
-            self._data = yaml.load(open(yamlfile))
+            self.data = yaml.load(open(yamlfile))
         except IOError as ie:
             raise ReportException("Error opening file %s: %s" % (yamlfile, ie))
         except yaml.YAMLError as ye:
             raise ReportException("Error parsing file %s: %s" % (yamlfile, ye))
 
+    def finished(self):
+        return self.data is not None and 'check_status' in self.data and self.data['check_status'] == 'finished'
+
     def filename(self):
         """Returns file name of report file"""
         return os.path.basename(self._yamlfile)
 
+    def fix_networks(self, networks):
+        """Substitutes network name for network address in report
+
+        1.2.3.0/24 -> frontnet
+
+        @param networks: list of dicts: [ {'network': nw, 'address': addr, 'prefix': px}, ... ]
+        """
+        report = self.data
+        try:
+            nics = report['parameters']['network']['network_interfaces']
+        except (TypeError, KeyError):
+            pass
+        else:
+            for nic in nics:
+                ips = nic['ip']
+                for ip in ips:
+                    nw = ip['network']
+                    nwname = next((n['network'] for n in networks if nw == n['address'] + '/' + n['prefix']), None)
+                    if nwname is not None:
+                        ip['network'] = nwname
+
     def save(self, yamlfile=None):
-        if self._data is None:
+        if self.data is None:
             raise ReportException("Won't save empty report")
         if yamlfile is None:
             if self._yamlfile is None:
@@ -55,12 +79,12 @@ class Report(object):
         else:
             self._yamlfile = yamlfile
         try:
-            yaml.safe_dump(self._data, open(yamlfile, 'w'))
+            yaml.safe_dump(self.data, open(yamlfile, 'w'))
         except (IOError, yaml.YAMLError) as e:
             raise ReportException("Error writing to file %s: %s" % (yamlfile, e))
 
     def show(self):
-        report = self._data
+        report = self.data
         if report is None:
             print('NO REPORT')
         else:
@@ -128,9 +152,9 @@ class Report(object):
   
 
     @staticmethod
-    def diff(oldr, newr):
+    def print_diff(oldr, newr):
         """Prints reports differences: oldr->newr"""
-        diff = _deepdiff(oldr._data, newr._data)
+        diff = _deepdiff(oldr.data, newr.data)
         print("       ###DIFF NEW###")
         Report(data=diff['new']).show()
         print("       ###DIFF OLD###")
