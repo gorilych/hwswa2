@@ -1,6 +1,7 @@
 import logging
 import yaml
 import copy
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class ReportException(Exception):
 
 class Report(object):
 
-    def __init__(self, data=None, yamlfile=None):
+    def __init__(self, data=None, yamlfile=None, time=None):
         """Constructs report either from data or from yamlfile"""
         if data is None and yamlfile is None:
             raise ReportException("Report(None, None) is not allowed. Specify at least one arg")
@@ -24,6 +25,7 @@ class Report(object):
             self._read()
         else:
             self._data = data
+        self.time = time
 
     def _read(self, yamlfile=None):
         if yamlfile is None:
@@ -38,6 +40,10 @@ class Report(object):
             raise ReportException("Error opening file %s: %s" % (yamlfile, ie))
         except yaml.YAMLError as ye:
             raise ReportException("Error parsing file %s: %s" % (yamlfile, ye))
+
+    def filename(self):
+        """Returns file name of report file"""
+        return os.path.basename(self._yamlfile)
 
     def save(self, yamlfile=None):
         if self._data is None:

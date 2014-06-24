@@ -1,4 +1,9 @@
 import logging
+import os
+import yaml
+import time
+
+from hwswa2.server.report import Report, ReportException
 
 logger = logging.getLogger(__name__)
 
@@ -26,12 +31,14 @@ class Server(object):
         #gateway should be Server object
         self.gateway = gateway
         self.expect = expect
+        self.reports = []
         self._last_connection_error = None
         self._accessible = None
         # list of temporary dirs/files
         self._tmp = []
         # remote agent
         self._agent = None
+        # ordered list of reports, last generated report goes first
 
     @classmethod
     def fromserverdict(cls, serverdict):
@@ -64,6 +71,37 @@ class Server(object):
             Returns true if connection was successful.
         """
         raise NotImplemented
+
+    def read_reports(self, reportsdir):
+        """Read server reports"""
+        path = os.path.join(reportsdir, self.name)
+        timeformat = '%Y-%m-%d.%Hh%Mm%Ss'
+        reports = []
+        if os.path.isdir(path):
+            for filename in os.listdir(path):
+                filepath = os.path.join(path, filename)
+                if os.path.isfile(filepath):
+                    try:
+                        filetime = time.mktime(time.strptime(filename, timeformat))
+                        reports.append(Report(yamlfile=filepath, time=filetime))
+                    except ValueError as ve:
+                        logger.debug("File name %s is not in format %s: %s" % (filename, timeformat, ve))
+                    except ReportException as re:
+                        logger.debug("Error reading report from file %s: %s" % (filename, re))
+            self.reports = sorted(reports, key=lambda report: report.time, reverse = True)
+
+    def list_reports(self):
+        for report in self.reports:
+            print(report.filename())
+
+    def report(self, name):
+        return next((r for r in self.reports if name == r.filename()), None)
+
+    def last_report(self):
+        if self.reports:
+            return self.reports[0]
+        else:
+            return None
 
 
 class ServerException(Exception):
