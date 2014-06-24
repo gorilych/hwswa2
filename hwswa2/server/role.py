@@ -3,6 +3,8 @@ import yaml
 import os
 import copy
 
+import hwswa2.auxiliary as aux
+
 logger = logging.getLogger(__name__)
 
 # dict of roles {name: role}
@@ -106,6 +108,21 @@ class Role(object):
         included_requirements.update(requirements)
         return included_requirements
 
+    @staticmethod
+    def _unroll_fw_groups(firewall):
+        rulegroups = [g for g in firewall if ('group' in g) and g['group']]
+        rules = [r for r in firewall if (not ('group' in r)) or (not r['group'])]
+        for rg in rulegroups:
+            common_props = [key for key in ['connect_with', 'type', 'ports',
+                                            'protos', 'networks', 'direction',
+                                            'policy'] if key in rg]
+            for r in rg['rules']:
+                for key in common_props:
+                    if not (key in r):
+                        r[key] = rg[key]
+                rules.append(r)
+        return rules
+
     def _firewall(self):
         firewall = []
         if 'firewall' in self.data:
@@ -113,13 +130,59 @@ class Role(object):
         for role in self.includes:
             rf = copy.deepcopy(role.firewall)
             firewall.extend(rf)
+        firewall = Role._unroll_fw_groups(firewall)
         return firewall
+
+    def all_included_roles(self):
+        air = [r.name for r in self.includes]
+        for r in self.includes:
+            air.extend(r.all_included_roles())
+        return air
+
+    def collect_incoming_fw_rules(self, fromrole):
+        myrole_names = self.all_included_roles()
+        myrole_names.append(self.name)
+        fromrole_names = fromrole.all_included_roles()
+        fromrole_names.append(fromrole.name)
+        incoming_rules = []
+        # first check incoming rules in our firewall
+        for rule in self.firewall:
+            if rule['direction'] == 'incoming' and rule['type'] == 'infra':
+                for r in rule['connect_with']['roles']:
+                    if r.lower() in fromrole_names:
+                        for proto in rule['protos']:
+                            for network in rule['networks']:
+                                incoming_rules.append({'network': network,
+                                                       'proto': proto.lower(),
+                                                       'ports': str(rule['ports'])})
+        # now check outgoing rules in other firewall
+        for rule in fromrole.firewall:
+            if rule['direction'] == 'outgoing' and rule['type'] == 'infra':
+                for r in rule['connect_with']['roles']:
+                    if r.lower() in myrole_names:
+                        for proto in rule['protos']:
+                            for network in rule['networks']:
+                                incoming_rules.append({'network': network,
+                                                       'proto': proto.lower(),
+                                                       'ports': str(rule['ports'])})
+        # join ports for the same rules, so not to check twice
+        joined_rules = []
+        for rule in incoming_rules:
+            joined_rule = next((jr for jr in joined_rules
+                                if jr['network'] == rule['network'] and
+                                   jr['proto'] == rule['proto']), None)
+            if joined_rule is None:
+                joined_rules.append(rule)
+            else:
+                joined_rule['ports'] = aux.joinranges(joined_rule['ports'], rule['ports'])
+        return joined_rules
 
 
 class RoleCollection(Role):
     """Collection of roles, which can be assigned to a server"""
 
     def __init__(self, roles, checksdir):
+        self.name = ''
         self._roles= ' '.join(roles)
         self.data = {'includes': roles}
         self._checksdir = checksdir
