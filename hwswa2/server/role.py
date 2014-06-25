@@ -11,15 +11,6 @@ logger = logging.getLogger(__name__)
 roles = {}
 
 
-class RoleException(Exception):
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
 def role_factory(name, checksdir):
     """ Factory for roles
     :param name: role name
@@ -33,6 +24,15 @@ def role_factory(name, checksdir):
         role = Role(name, checksdir)
         roles[name] = role
         return role
+
+
+class RoleException(Exception):
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
 
 
 class Role(object):
@@ -139,27 +139,32 @@ class Role(object):
             air.extend(r.all_included_roles())
         return air
 
-    def collect_incoming_fw_rules(self, fromrole):
-        myrole_names = self.all_included_roles()
-        myrole_names.append(self.name)
-        fromrole_names = fromrole.all_included_roles()
-        fromrole_names.append(fromrole.name)
+    def collect_incoming_fw_rules(self, other):
+        """Collect firewall rules for incoming connections from other role
+
+        :param other: other role
+        :return: list of rules [{network: .., proto: .., ports: ..,}, ...]
+        """
+        role_names = self.all_included_roles()
+        role_names.append(self.name)
+        other_role_names = other.all_included_roles()
+        other_role_names.append(other.name)
         incoming_rules = []
         # first check incoming rules in our firewall
         for rule in self.firewall:
             if rule['direction'] == 'incoming' and rule['type'] == 'infra':
                 for r in rule['connect_with']['roles']:
-                    if r.lower() in fromrole_names:
+                    if r.lower() in other_role_names:
                         for proto in rule['protos']:
                             for network in rule['networks']:
                                 incoming_rules.append({'network': network,
                                                        'proto': proto.lower(),
                                                        'ports': str(rule['ports'])})
         # now check outgoing rules in other firewall
-        for rule in fromrole.firewall:
+        for rule in other.firewall:
             if rule['direction'] == 'outgoing' and rule['type'] == 'infra':
                 for r in rule['connect_with']['roles']:
-                    if r.lower() in myrole_names:
+                    if r.lower() in role_names:
                         for proto in rule['protos']:
                             for network in rule['networks']:
                                 incoming_rules.append({'network': network,
