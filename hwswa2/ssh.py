@@ -10,17 +10,19 @@ import tty
 import select
 import paramiko
 import socket
+import logging
 import hwswa2.auxiliary as aux
 from hwswa2.globals import config
-from logging import debug
+
+logger = logging.getLogger(__name__)
 
 ssh_timeout = 30
 
 
-def _connect(server, timeout=30):
+def _connect(server, timeout=ssh_timeout):
     """Initiates connection and returns SSHClient object
        Does not store information about the client"""
-    debug("Trying to connect to server %s" % server['name'])
+    logger.debug("Trying to connect to server %s" % server['name'])
     hostname = server['address']
     if 'port' in server:
         port = server['port']
@@ -36,7 +38,7 @@ def _connect(server, timeout=30):
         jump_channel = _jump_channel(server)
     except _JumpException, je:
         err_msg = 'Gateway failure while connecting: %s' % je
-        debug(err_msg)
+        logger.debug(err_msg)
         server['lastConnectionError'] = err_msg
         return None
     client = paramiko.SSHClient()
@@ -48,26 +50,26 @@ def _connect(server, timeout=30):
     except paramiko.BadHostKeyException:
         server['lastConnectionError'] = 'BadHostKeyException raised while connecting to %s@%s:%s' % (
         username, hostname, port)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     except paramiko.AuthenticationException:
         server['lastConnectionError'] = 'Authentication failure while connecting to %s@%s:%s' % (
         username, hostname, port)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     except paramiko.SSHException as pe:
         server['lastConnectionError'] = 'SSHException raised while connecting to %s@%s:%s: %s' % (
             username, hostname, port, pe)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     except socket.error as serr:
         server['lastConnectionError'] = 'socket.error raised while connecting to %s@%s:%s: %s' % (
         username, hostname, port, serr)
-        debug(server['lastConnectionError'])
+        logger.debug(server['lastConnectionError'])
     else:
-        debug('Established connection with %s@%s:%s' % (username, hostname, port))
+        logger.debug('Established connection with %s@%s:%s' % (username, hostname, port))
         return client
     return None
 
 
-def connect(server, reconnect=False, timeout=30):
+def connect(server, reconnect=False, timeout=ssh_timeout):
     """Connects to server and returns SSHClient object
        SSHClient is cached inside server object"""
     if 'sshclient' in server:
@@ -75,10 +77,10 @@ def connect(server, reconnect=False, timeout=30):
             server['sshclient'].close()
             del server['sshclient']
             _cleanjump(server)
-            debug("Will reconnect to server %s" % server['name'])
+            logger.debug("Will reconnect to server %s" % server['name'])
         else:
             return server['sshclient']
-    client = _connect(server)
+    client = _connect(server, timeout)
     if client is None:
         return None
     else:
@@ -146,11 +148,11 @@ def exec_cmd_i(server, sshcmd, privileged=True, timeout=ssh_timeout, get_pty=Fal
 
 def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=True):
     """Executes command and returns tuple of stdout, stderr and status"""
-    debug("Executing %s on server %s" % (sshcmd, server['name']))
+    logger.debug("Executing %s on server %s" % (sshcmd, server['name']))
     client = connect(server)
     if privileged and ('su' in server['account'] or 'sudo' in server['account']):
         sshcmd = prepare_su_cmd(server, sshcmd, timeout)
-        debug("Privileged command %s on server %s" % (sshcmd, server['name']))
+        logger.debug("Privileged command %s on server %s" % (sshcmd, server['name']))
     stdin, stdout, stderr = client.exec_command(sshcmd, timeout=timeout, get_pty=False)
     if input_data:
         stdin.write(input_data)
@@ -158,7 +160,7 @@ def exec_cmd(server, sshcmd, input_data=None, timeout=ssh_timeout, privileged=Tr
     stdout_data = stdout.read().splitlines()
     stderr_data = stderr.read().splitlines()
     status = stdout.channel.recv_exit_status()
-    debug("Executed %s on server %s: stdout %s, stderr %s, exit status %s" %
+    logger.debug("Executed %s on server %s: stdout %s, stderr %s, exit status %s" %
           (sshcmd, server['name'], stdout_data, stderr_data, status))
     return stdout_data, stderr_data, status
 
@@ -173,9 +175,9 @@ def remove(server, path, privileged=True):
 
 
 def put(server, localpath, remotepath):
-    debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath))
+    logger.debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
     if not os.path.exists(localpath):
-        raise Exception("Local path does not exist: %s" % localpath)
+        raise Exception("Local path does not exist: %s" % localpath.decode('utf-8'))
     client = connect(server)
     sftp = client.open_sftp()
     if os.path.isfile(localpath):
@@ -198,12 +200,38 @@ def put(server, localpath, remotepath):
             put_dir_content(server, localpath, remotepath)
 
 
+def get(server, localpath, remotepath):
+    logger.debug("Copying to %s from %s:%s" % (localpath.decode('utf-8'), server['name'], remotepath.decode('utf-8')))
+    client = connect(server)
+    sftp = client.open_sftp()
+    if not exists(server, remotepath):
+        raise Exception("Remote path does not exist: %s" % remotepath.decode('utf-8'))
+    if isdir(server, remotepath):
+        if os.path.exists(localpath):
+            lname = os.path.join(localpath, os.path.basename(remotepath))
+            os.makedirs(lname)
+            get_dir_content(server, lname, remotepath)
+        else:
+            os.makedirs(localpath)
+            get_dir_content(server, localpath, remotepath)
+    elif isfile(server, remotepath):
+        attrs = sftp.stat(remotepath)
+        if os.path.exists(localpath):
+            if os.path.isdir(localpath):
+                localpath = os.path.join(localpath, os.path.basename(remotepath))
+            sftp.get(remotepath, localpath)
+            os.chmod(localpath, attrs.st_mode)
+        else:  # localpath does not exist
+            sftp.get(remotepath, localpath)
+            os.chmod(localpath, attrs.st_mode)
+
+
 def mktemp(server, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
     """Creates directory using mktemp and returns its name"""
     sshcmd = 'mktemp '
     if ftype == 'd':
-        sshcmd = sshcmd + '-d '
-    sshcmd = sshcmd + '-p %s %s' % (path, template)
+        sshcmd += '-d '
+    sshcmd += '-p %s %s' % (path, template)
     tmpdir = get_cmd_out(server, sshcmd, privileged=False)
     if 'tmpdirs' in server:
         server['tmpdirs'].append(tmpdir)
@@ -241,6 +269,37 @@ def put_dir_content(server, localdir, remotedir):
             put_dir_content(server, lname, rname)
 
 
+def get_dir_content(server, localdir, remotedir):
+    for f in listdir(server, remotedir):
+        lname = os.path.join(localdir, f)
+        rname = os.path.join(remotedir, f)
+        if isfile(server, rname):
+            get(server, lname, rname)
+        if isdir(server, rname):
+            os.makedirs(lname)
+            get_dir_content(server, lname, rname)
+
+
+def listdir(server, remotedir):
+    client = connect(server)
+    sftp = client.open_sftp()
+    return sftp.listdir(remotedir)
+
+
+def isdir(server, remotepath):
+    client = connect(server)
+    sftp = client.open_sftp()
+    attrs = sftp.stat(remotepath)
+    return stat.S_ISDIR(attrs.st_mode)
+
+
+def isfile(server, remotepath):
+    client = connect(server)
+    sftp = client.open_sftp()
+    attrs = sftp.stat(remotepath)
+    return stat.S_ISREG(attrs.st_mode)
+
+
 def write(server, path, data):
     client = connect(server)
     sftp = client.open_sftp()
@@ -260,7 +319,7 @@ def is_it_me(server):
         mybootid = subprocess.Popen(['cat', '/proc/sys/kernel/random/boot_id'], stdout=subprocess.PIPE).communicate()[
             0].strip()
     server_bootid = bootid(server)
-    debug("Is it me? Comparing %s and %s" % (mybootid, server_bootid))
+    logger.debug("Is it me? Comparing %s and %s" % (mybootid, server_bootid))
     return mybootid == server_bootid
 
 
@@ -278,10 +337,10 @@ def check_reboot(server, timeout=300):
         raise
     except:  # we are going to ignore this
         pass
-    debug("reboot command is sent, now wait till server is down")
+    logger.debug("reboot command is sent, now wait till server is down")
     # wait till shutdown:
     if aux.wait_for_not(accessible, [server, True], timeout):
-        debug("Server %s is down" % server['name'])
+        logger.debug("Server %s is down" % server['name'])
         delta = time.time() - starttime
         # wait till boot
         if aux.wait_for(accessible, [server, True], timeout - delta):
@@ -324,10 +383,14 @@ def prepare_su_cmd(server, cmd, timeout=ssh_timeout):
     if 'sudo' in server['account']:
         sutype = 'sudo'
         password = server['account']['sudo']
-        if password == None: password = ''
+        if password is None:
+            password = ''
     elif 'su' in server['account']:
         sutype = 'su'
         password = server['account']['su']
+    else:
+        logger.error("BUG: prepare_su_cmd() call for server %s, while it does not have account with su/sudo", server['name'])
+        return None
     if cmd == 'shell':  # pass window size instead of fifos
         (stdout_fifo, stderr_fifo) = aux.getTerminalSize()
     return 'python %s %s "%s" %s %s "%s" %s' % (su_py,
@@ -349,7 +412,7 @@ def cleanup(server):
             del server['supath']
         server['sshclient'].close()
         _cleanjump(server)
-        debug("Closed connection to server %s" % server['name'])
+        logger.debug("Closed connection to server %s" % server['name'])
         del server['sshclient']
         try:
             del server['cmd_prefix']
@@ -491,7 +554,7 @@ def serverd_start(server):
         banner = stdout.readline()
         if not banner.startswith('started_ok'):
             banner = stdout.readline()
-        debug('serverd started on %s: %s' % (server['name'], banner))
+        logger.debug('serverd started on %s: %s' % (server['name'], banner))
         server['serverd'] = {'r_serverd_py': r_serverd_py,
                              'privileged': r_serverd_py_privileged,
                              'pty': get_pty,
@@ -502,7 +565,7 @@ def serverd_start(server):
     except KeyboardInterrupt:
         raise
     except Exception as e:
-        debug('serverd not started: %s' % e.message)
+        logger.debug('serverd not started: %s' % e.args)
         return False
 
 
@@ -519,15 +582,15 @@ def serverd_cmd(server, cmd):
     if 'serverd' in server:
         stdin = server['serverd']['stdin']
         stdout = server['serverd']['stdout']
-        debug('command: ' + cmd)
+        logger.debug('command: ' + cmd)
         stdin.write(cmd + '\n')
         reply = stdout.readline().strip()
-        debug('accept reply: ' + reply)
+        logger.debug('accept reply: ' + reply)
         accepted, space, reason = reply.partition(' ')
         if accepted == 'accepted_ok':
-            debug('command accepted on server %s: %s' % (server['name'], reason))
+            logger.debug('command accepted on server %s: %s' % (server['name'], reason))
             reply = stdout.readline().strip()
-            debug('result reply: ' + reply)
+            logger.debug('result reply: ' + reply)
             result_status, space, result = reply.partition(' ')
             if result_status == 'result_ok':
                 return True, result

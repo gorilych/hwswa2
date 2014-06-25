@@ -2,6 +2,17 @@
 Version History
 ===============
 
+0.2.1 (2014-06-25)
+    - Added: subcommand aliases
+    - Added: subcommand get
+    - Fixed: firewall subcommand does not work at all
+    - Fixed: timeout value is not used by firewall
+    - Added: in firewall: ability to specify number of concurrently checked ports
+      in configuration (main.cfg: section [firewall], max_open_sockets)
+    - Added: firewall rules for roles linpps, sysbu, ui, branding
+    - Fixed: log messages show 'logging.info()' instead of 'calling-module.calling-function()'
+    - Fixed: other minor bugs
+
 0.2 (2014-06-08)
     - Added: dontcheck option for servers
     - Added: subcommand reboot: ability to specify more than one server

@@ -1,4 +1,4 @@
-# !/usr/bin/env python
+#!/usr/bin/env python
 import os, sys, socket, select, traceback, Queue, threading, time
 
 
@@ -222,13 +222,14 @@ def cmd_help(command=None):
         return 'use: help command. possible commands: %s' % ', '.join(commands.keys())
 
 
-def cmd_send(proto, address, ports):
-    """usage: send proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056"""
+def cmd_send(proto, address, ports, timeout=1):
+    """usage: send proto address ports [timeout]. Ports arg example 1050,1100-1200,2024,2040-2056"""
     portsOKQ = Queue.Queue()
     portsNOKQ = Queue.Queue()
 
+    timeout=float(timeout)
     def thread_send(proto, address, port, portsOKQ, portsNOKQ):
-        if send(proto, address, port):
+        if send(proto, address, port, timeout=timeout):
             portsOKQ.put(port)
         else:
             portsNOKQ.put(port)
@@ -236,11 +237,16 @@ def cmd_send(proto, address, ports):
     for port in portrange(ports):
         th = threading.Thread(target=thread_send, args=(proto, address, port, portsOKQ, portsNOKQ))
         th.start()
-    while threading.activeCount() > 1:
-        time.sleep(0.3)
 
     portsOK = []
     portsNOK = []
+    while threading.activeCount() > 1:
+        while not portsOKQ.empty():
+            portsOK.append(portsOKQ.get())
+        while not portsNOKQ.empty():
+            portsNOK.append(portsNOKQ.get())
+        time.sleep(0.1)
+
     while not portsOKQ.empty():
         portsOK.append(portsOKQ.get())
     while not portsNOKQ.empty():

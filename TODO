@@ -1,3 +1,13 @@
+* add subcommand copy (to copy file from one server to another)
+
+  hwswa2 copy server1 remotepath1 server2 remotepath2
+
+* after adding subcommand copy, replace copy/put/get with one interface scp:
+
+  hwswa2 scp server1:remotepath1 server2:remotepath1
+  hwswa2 scp localpath server:remotepath
+  hwswa2 scp server:remotepath localpath
+
 * start using http://sphinx-doc.org/
 
 * copy custom remote scripts as already deleted files
