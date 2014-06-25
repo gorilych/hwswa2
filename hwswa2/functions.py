@@ -12,7 +12,7 @@ from hwswa2.ssh import cleanup
 from hwswa2.aliases import AliasedSubParsersAction
 
 
-__version__ = '0.2'
+__version__ = '0.2.1'
 
 logger = logging.getLogger(__name__)
 
