@@ -131,7 +131,6 @@ class LinuxServer(Server):
             finally:
                 self._sshtunnel = None
 
-
     def _connect(self, reconnect=False, timeout=TIMEOUT):
         """Initiates SSH connection to the server.
 
@@ -189,8 +188,8 @@ class LinuxServer(Server):
 
     def _prepare_su(self):
         """Copies su.py to remote server and returns path to containing directory"""
-        su_py = os.path.join(config['rscriptdir'], 'bin32', 'su.py')
-        pexpect_py = os.path.join(config['rscriptdir'], 'bin32', 'pexpect.py')
+        su_py = os.path.join(self._remote_scripts_dir, 'bin32', 'su.py')
+        pexpect_py = os.path.join(self._remote_scripts_dir, 'bin32', 'pexpect.py')
         # create directory
         supath = self.mktemp(template='su.XXXX', path='/tmp')
         self.put(pexpect_py, supath)
@@ -562,9 +561,11 @@ class LinuxServer(Server):
 
     def agent_start(self):
         """Starts remote agent on server"""
+        if self._agent is not None:
+            return True
         try:
             if self._connect():
-                serverd_py = os.path.join(config['rscriptdir'], 'bin32', 'serverd.py')
+                serverd_py = os.path.join(self._remote_scripts_dir, 'bin32', 'serverd.py')
                 # remote path
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
                 self.put(serverd_py, r_serverd_py)
@@ -592,7 +593,7 @@ class LinuxServer(Server):
             raise
         except Exception as e:
             logger.debug("agent not started, exception %s: %s"
-                         % (type(e).__name__, e.args))
+                         % (type(e).__name__, e.args), exc_info=True)
             return False
 
     def agent_stop(self):
@@ -604,11 +605,14 @@ class LinuxServer(Server):
             except Exception as e:
                 logger.debug("could not stop agent, exception %s: %s"
                              % (type(e).__name__, e.args))
-            self._agent = None
+            finally:
+                self._agent = None
 
     def agent_cmd(self, cmd):
         """Sends command to remote agent and returns tuple (status, result)"""
-        if self._agent is not None:
+        if not self.agent_start():
+            return False, 'agent not started'
+        else:
             stdin = self._agent['stdin']
             stdout = self._agent['stdout']
             logger.debug('command: ' + cmd)
@@ -616,7 +620,11 @@ class LinuxServer(Server):
             reply = stdout.readline().strip()
             logger.debug('accept reply: ' + reply)
             accepted, space, reason = reply.partition(' ')
-            if accepted == 'accepted_ok':
+            if accepted == 'accepted_notok':
+                return False, 'command not accepted: ' + reason
+            elif not accepted == 'accepted_ok':
+                return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
+            else:  # accepted == 'accepted_ok'
                 logger.debug('command accepted on server %s: %s' % (self, reason))
                 reply = stdout.readline().strip()
                 logger.debug('result reply: ' + reply)
@@ -627,9 +635,3 @@ class LinuxServer(Server):
                     return False, 'command failed: ' + result
                 else:
                     return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
-            elif accepted == 'accepted_notok':
-                return False, 'command not accepted: ' + reason
-            else:
-                return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
-        else:
-            return False, 'agent not started'

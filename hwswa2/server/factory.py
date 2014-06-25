@@ -22,7 +22,7 @@ def get_server(name):
         return None
 
 
-def server_factory(serverdict):
+def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
     global _servers, _servers_to_init_later
     # remove stale references
     _servers = {n: r for n, r in _servers.iteritems() if r() is not None}
@@ -47,9 +47,9 @@ def server_factory(serverdict):
         serverdict['ostype'] = 'linux'
 
     if serverdict['ostype'] == 'linux':
-        server = LinuxServer.fromserverdict(serverdict)
+        server = LinuxServer.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
     else:
-        server = Server.fromserverdict(serverdict)
+        server = Server.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
 
     _servers[name] = ref(server)
     if not name in _servers_to_init_later:

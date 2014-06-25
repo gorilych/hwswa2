@@ -2,6 +2,7 @@ import logging
 import os
 import time
 
+import hwswa2.auxiliary as aux
 from hwswa2.server.report import Report, ReportException
 from hwswa2.server.role import RoleCollection
 
@@ -15,7 +16,8 @@ REBOOT_TIMEOUT = 300
 class Server(object):
 
     def __init__(self, name, account, address,
-                 role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None):
+                 role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None,
+                 roles_dir=None, reports_dir=None, remote_scripts_dir=None):
         self.name = name
         self.ostype = ostype
         self.role = role
@@ -26,6 +28,9 @@ class Server(object):
         else:
             self.roles = [role, ]
         self.rolecollection = None
+        self._roles_dir = roles_dir
+        if roles_dir is not None:
+            self.init_rolecollection(roles_dir)
         self.account = account
         self.address = address
         self.port = port
@@ -34,17 +39,30 @@ class Server(object):
         self.gateway = gateway
         self.expect = expect
         self.reports = []
+        self._reports_dir = reports_dir
+        if reports_dir is not None:
+            self.read_reports(reports_dir)
+        # {network: ip, ...}
         self.nw_ips = {}
+        self.find_nw_ips()
         self._last_connection_error = None
         self._accessible = None
+        self._remote_scripts_dir = remote_scripts_dir
         # list of temporary dirs/files
         self._tmp = []
         # remote agent
         self._agent = None
         # ordered list of reports, last generated report goes first
 
+    def _connect(self, reconnect=False, timeout=None):
+        """Initiates connection to the server.
+
+            Returns true if connection was successful.
+        """
+        raise NotImplemented
+
     @classmethod
-    def fromserverdict(cls, serverdict):
+    def fromserverdict(cls, serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
         """Instantiate from server dict which can be read from servers.yaml"""
         # these properties can be defined in servers.yaml
         properties = ['account', 'name', 'role', 'address', 'port', 'ostype', 'expect', 'dontcheck', 'gateway']
@@ -52,7 +70,7 @@ class Server(object):
         for key in properties:
             if key in serverdict:
                 initargs[key] = serverdict[key]
-        return cls(**initargs)
+        return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, **initargs)
 
     def __str__(self):
         return "server %s" % self.name
@@ -68,16 +86,9 @@ class Server(object):
                 self._accessible = False
         return self._accessible
 
-    def _connect(self, reconnect=False, timeout=None):
-        """Initiates connection to the server.
-
-            Returns true if connection was successful.
-        """
-        raise NotImplemented
-
-    def read_reports(self, reportsdir):
+    def read_reports(self, reports_dir):
         """Read server reports"""
-        path = os.path.join(reportsdir, self.name)
+        path = os.path.join(reports_dir, self.name)
         timeformat = '%Y-%m-%d.%Hh%Mm%Ss'
         reports = []
         if os.path.isdir(path):
@@ -126,9 +137,109 @@ class Server(object):
             else:
                 return True
 
-    def init_rolecollection(self, checksdir):
+    def init_rolecollection(self, roles_dir):
         if self.rolecollection is None:
-            self.rolecollection = RoleCollection(self.roles, checksdir)
+            self.rolecollection = RoleCollection(self.roles, roles_dir)
+
+    def agent_start(self):
+        """Starts remote agent on server"""
+        raise NotImplemented
+
+    def agent_stop(self):
+        """Stops remote agent on server"""
+        raise NotImplemented
+
+    def agent_cmd(self, cmd):
+        """Sends command to remote agent and returns tuple (status, result)"""
+        raise NotImplemented
+
+    def check_firewall_with(self, other,
+                            concurrent_ports=100,
+                            port_timeout=1,
+                            max_closed=100,
+                            max_failures=10):
+        """Check firewall for incoming connections from other server.
+
+        :param other: Server
+        :return: generator of { OK: [{proto: .., network: .., ports: ..}, ..],
+                                NOK: [ ... ],
+                                failures: [ ... ],
+                                OKnum: num,
+                                NOKnum: num,
+                                failed: num,
+                                left: num }
+        :raises: FirewallException
+        """
+        logger.debug("Checking connections %s <- %s" % (self, other))
+        rules = self.rolecollection.collect_incoming_fw_rules(other.rolecollection)
+        ports_left = reduce(lambda s, rule: s + aux.range_len(rule['ports']), rules, 0)
+        grand_result = {'OK': [], 'NOK': [], 'failures': [],
+                        'OKnum': 0, 'NOKnum': 0, 'failed': 0,
+                        'left': ports_left}
+
+        def _update_grand_result(status, proto, network, ports):
+            if not ports == '':
+                res = next((res for res in grand_result[status]
+                            if res['proto'] == proto and res['network'] == network), None)
+                if res is None:
+                    grand_result[status].append({'proto': proto,
+                                                 'network': network,
+                                                 'ports': ports})
+                else:
+                    res['ports'] = aux.joinranges(res['ports'], ports)
+                num_field = status + 'num'
+                ports_num = aux.range_len(ports)
+                grand_result[num_field] = grand_result[num_field] + ports_num
+                grand_result['left'] = grand_result['left'] - ports_num
+
+        def _update_grand_result_failures(num, message):
+            grand_result['failures'].append(message)
+            grand_result['failed'] = grand_result['failed'] + num
+            grand_result['left'] = grand_result['left'] - num
+
+        for rule in rules:
+            logger.debug("Rule %s" % rule)
+            network = rule['network']
+            ip = self.nw_ips[network]
+            proto = rule['proto']
+            ports = rule['ports']
+            for ps in aux.splitrange(ports, concurrent_ports):
+                if grand_result['failed'] > max_failures:
+                    raise FirewallException("Number of failures exceeded allowed limit")
+                if grand_result['NOKnum'] > max_closed:
+                    raise FirewallException("Number of closed ports exceeded allowed limit")
+                listencmd = 'listen %s %s %s' % (proto, ip, ps)
+                sendcmd = 'send %s %s %s %s' % (proto, ip, ps, port_timeout)
+                status, result = self.agent_cmd(listencmd)
+                if not status:  # listen failed
+                    _update_grand_result_failures(aux.range_len(ps), 'listen failure: ' + result)
+                else:  # listen ok
+                    status, result = other.agent_cmd(sendcmd)
+                    if not status:  # send failed
+                        _update_grand_result_failures(aux.range_len(ps), 'send failure: ' + result)
+                    else:  # send ok
+                        ok, space, nok = result.partition(' ')
+                        OK, colon, ok_range = ok.partition(':')
+                        NOK, colon, nok_range = nok.partition(':')
+                        if proto == 'tcp':  # for tcp: success on send is enough
+                            _update_grand_result('OK', proto, network, ok_range)
+                            _update_grand_result('NOK', proto, network, nok_range)
+                        elif proto == 'udp':  # for udp: we need to receive to be sure
+                            receivecmd = 'receive %s %s %s' % (proto, ip, ok_range)
+                            status, result = self.agent_cmd(receivecmd)
+                            if not status:  # receive failed
+                                _update_grand_result_failures(aux.range_len(ps), 'receive failure: ' + result)
+                            else:  # receive ok
+                                if result == 'no messages':
+                                    msgs = []
+                                else:
+                                    msgs = result.split()  # each message is port:msg:fromaddr:fromport
+                                ok_range = aux.list2range([int(msg.split(':')[0]) for msg in msgs])
+                                nok_range = aux.differenceranges(ps, ok_range)
+                                _update_grand_result('OK', proto, network, ok_range)
+                                _update_grand_result('NOK', proto, network, nok_range)
+                self.agent_cmd('closeall')
+                yield grand_result
 
 
 class ServerException(Exception):
@@ -158,3 +269,8 @@ class TimeoutException(ServerException):
 
     def __str__(self):
         return self.msg
+
+
+class FirewallException(ServerException):
+    """Exception for tunnel creation"""
+    pass
