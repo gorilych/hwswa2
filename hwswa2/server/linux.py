@@ -10,11 +10,11 @@ import termios
 import tty
 import time
 import subprocess
+import posixpath
 
 import hwswa2.auxiliary as aux
-from hwswa2.globals import config
 import hwswa2.server
-from hwswa2.server import Server, ServerException, TunnelException
+from hwswa2.server import Server, ServerException, TunnelException, TimeoutException
 
 logger = logging.getLogger(__name__)
 
@@ -207,9 +207,7 @@ class LinuxServer(Server):
                 return True
             except KeyboardInterrupt:
                 raise
-            except Exception as e:
-                logger.debug("sftp.stat(%s) raised exception %s: %s"
-                             % (path, type(e).__name__, e.args))
+            except IOError as ie:
                 return False
 
     def _listdir(self, remotedir):
@@ -429,13 +427,16 @@ class LinuxServer(Server):
             if privileged and ('su' in self.account or 'sudo' in self.account):
                 cmd = self._prepare_su_cmd(cmd, timeout)
                 logger.debug("Privileged command: %s" % cmd)
-            stdin, stdout, stderr = self._sshclient.exec_command(cmd, timeout=timeout, get_pty=False)
-            if input_data:
-                stdin.write(input_data)
-                stdin.flush()
-            stdout_data = stdout.read().splitlines()
-            stderr_data = stderr.read().splitlines()
-            status = stdout.channel.recv_exit_status()
+            try:
+                stdin, stdout, stderr = self._sshclient.exec_command(cmd, timeout=timeout, get_pty=False)
+                if input_data:
+                    stdin.write(input_data)
+                    stdin.flush()
+                stdout_data = stdout.read().splitlines()
+                stderr_data = stderr.read().splitlines()
+                status = stdout.channel.recv_exit_status()
+            except socket.timeout as e:
+                raise TimeoutException("Timeout during execution of %s" % cmd)
             logger.debug("Executon results: exit status %s, stdout %s, stderr %s" %
                          (status, stdout_data, stderr_data))
             return stdout_data, stderr_data, status
