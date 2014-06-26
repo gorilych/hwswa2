@@ -153,6 +153,22 @@ class Server(object):
         """Sends command to remote agent and returns tuple (status, result)"""
         raise NotImplemented
 
+    def param_cmd(self, cmd):
+        """Execute cmd in prepared environment to obtain some server parameter
+
+        :param cmd: raw command to execute
+        :return: (status, output, failure)
+        """
+        raise NotImplemented
+
+    def param_script(self, script):
+        """Execute script in prepared environment to obtain some server parameter
+
+        :param script: script content
+        :return: (status, output, failure)
+        """
+        raise NotImplemented
+
     def check_firewall_with(self, other,
                             concurrent_ports=100,
                             port_timeout=1,
@@ -240,6 +256,14 @@ class Server(object):
                                 _update_grand_result('NOK', proto, network, nok_range)
                 self.agent_cmd('closeall')
                 yield grand_result
+
+    def collect_parameters(self):
+        """Generate report
+
+        :return: generator of { parameters: parameters, progress: progress, failures: failures }
+        """
+        logger.debug("Start collecting parameters for %s" % self)
+        return self.rolecollection.collect_parameters(self.param_cmd, self.param_script)
 
 
 class ServerException(Exception):
