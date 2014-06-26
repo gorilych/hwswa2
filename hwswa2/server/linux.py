@@ -41,6 +41,8 @@ class LinuxServer(Server):
         else:
             self._port = self.port
         self._supath = None
+        self._param_cmd_prefix = None
+        self._param_binpath = None
 
     def __del__(self):
         # remove ssh tunnel connections
@@ -198,6 +200,30 @@ class LinuxServer(Server):
         self.exec_cmd("mkfifo %s" % os.path.join(supath, 'stdout'), privileged=False)
         self.exec_cmd("mkfifo %s" % os.path.join(supath, 'stderr'), privileged=False)
         self._supath = supath
+
+    def _prepare_param_scripts(self):
+        """Copy remote scripts to server, configure cmd prefix
+
+        :return True on success
+        """
+        if self._param_cmd_prefix is not None:
+            return True
+        try:
+            arch = self.get_cmd_out('uname --machine', privileged=False)
+            if arch.endswith('64'):
+                rscriptdir = os.path.join(self._remote_scripts_dir,'bin64')
+            else:
+                rscriptdir = os.path.join(self._remote_scripts_dir,'bin32')
+            remote_hwswa2_dir = self.mktemp()
+        except ServerException as se:
+            logger.error("Failed to prepare remote scripts for parameters check: %s" % se)
+            return False
+        else:
+            binpath = posixpath.join(remote_hwswa2_dir, 'bin')
+            self.put(rscriptdir, binpath)
+            self._param_binpath = binpath
+            self._param_cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
+            return True
 
     def _exists(self, path):
         if self._connect():
@@ -636,3 +662,35 @@ class LinuxServer(Server):
                     return False, 'command failed: ' + result
                 else:
                     return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
+
+    def param_cmd(self, cmd):
+        """Execute cmd in prepared environment to obtain some server parameter
+
+        :param cmd: raw command to execute
+        :return: (status, output, failure)
+        """
+        if not self._prepare_param_scripts():
+            return False, None, "Remote scripts are not on the server"
+        prefixed_cmd = self._param_cmd_prefix + cmd
+        try:
+            output = self.get_cmd_out(prefixed_cmd)
+        except TimeoutException as te:
+            output = None
+            if 'output' in te.details:
+                output = te.details['output']
+            return False, output, "Timeout exception: %s" % te
+        else:
+            return True, output, None
+
+    def param_script(self, script):
+        """Execute script in prepared environment to obtain some server parameter
+
+        :param script: script content
+        :return: (status, output, failure)
+        """
+        if not self._prepare_param_scripts():
+            return False, None, "Remote scripts are not on the server"
+        scriptpath = self.mktemp(ftype='f', path=self._param_binpath)
+        self.write(scriptpath, script)
+        self.exec_cmd('chmod +x %s' % scriptpath)
+        return self.param_cmd(scriptpath)
