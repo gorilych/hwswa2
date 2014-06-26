@@ -133,6 +133,127 @@ class Role(object):
         firewall = Role._unroll_fw_groups(firewall)
         return firewall
 
+    @staticmethod
+    def _get_param_value(param, param_cmd, param_script, deps=None):
+        """Get param using passed functions
+
+        :param param: parameter
+        :param param_cmd: function to execute parameter' command
+        :param param_script: function to execute parameter' script
+        :param
+        :return: generator of { param: param, progress: progress, failures: failures }
+        """
+        if deps is None:
+            deps = {}
+        mydeps = copy.deepcopy(deps)
+        myparam = copy.deepcopy(param)
+        progress = 0
+        curprogress = 0
+        if isinstance(myparam, (str, unicode)):
+            if mydeps:
+                cmd = myparam % mydeps
+            else:
+                cmd = myparam
+            status, output, failure = param_cmd(cmd)
+            yield {'param': output, 'progress': 1, 'failures': failure}
+        else:  # non-scalar type
+            if not '_type' in myparam: # dictionary is default type
+                myparam['_type'] = 'dictionary'
+            # different type processing
+            if myparam['_type'] == 'dictionary':
+                val = {}
+                failures = {}
+                for p in myparam:
+                    if not p.startswith('_'):
+                        for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
+                            val[p] = copy.deepcopy(pv['param'])
+                            curprogress = progress + pv['progress']
+                            if pv['failures'] is not None:
+                                failures[p] = copy.deepcopy(pv['failures'])
+                            if failures:
+                                curfailures = copy.deepcopy(failures)
+                            else:
+                                curfailures = None
+                            yield {'param': val, 'progress': curprogress, 'failures': curfailures}
+                        progress = curprogress
+
+            elif myparam['_type'] == 'table':
+                val = []
+                if '_command' in myparam:
+                    if mydeps:
+                        cmd = myparam['_command'] % mydeps
+                    else:
+                        cmd = myparam['_command']
+                    status, rows, failure = param_cmd(cmd)
+                elif '_script' in myparam:
+                    if mydeps:
+                        script = myparam['_script'] % mydeps
+                    else:
+                        script = myparam['_script']
+                    status, rows, failure = param_script(script)
+                else:
+                    status, rows, failure = False, None, "Parameter of type table has no _command or _script"
+                if not status:
+                    yield {'param': rows, 'progress': 1, 'failures': failure}
+                else:
+                    if not '_separator' in myparam:
+                        myparam['_separator'] = ' '
+                    if not rows == '':
+                        maxsplit = len(myparam['_fields']) - 1
+                        for row in rows.split('\n'):
+                            val.append(dict(zip(myparam['_fields'], row.split(myparam['_separator'], maxsplit))))
+                    yield {'param': val, 'progress': 1, 'failures': failure}
+            elif myparam['_type'] == 'list':
+                # evaluate generator first
+                for generator in myparam['_generator']:  # there should be only one
+                    placeholder = myparam['_generator'][generator]
+                    if mydeps:
+                        cmd = myparam[generator] % mydeps
+                    else:
+                        cmd = myparam[generator]
+                    status, gen_values, failure = param_cmd(cmd)
+                    if not status:
+                        yield {'param': gen_values, 'progress': 1, 'failures': failure}
+                    else:
+                        gen_values = gen_values.split('\n')
+                        del myparam[generator]
+                        val = []
+                        failures = []
+                        progress = 1
+                        for gen_value in gen_values:
+                            mydeps[placeholder] = gen_value
+                            elem = {generator: gen_value}
+                            failure = {}
+                            # evaluate other parameters based on generator
+                            for p in myparam:
+                                if not p.startswith('_'):
+                                    curval = copy.deepcopy(val)
+                                    curfailures = copy.deepcopy(failures)
+                                    for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
+                                        curval = copy.deepcopy(val)
+                                        curfailures = copy.deepcopy(failures)
+                                        elem[p] = pv['param']
+                                        if pv['failures'] is not None:
+                                            failure[p] = pv['failures']
+                                        curval.append(elem)
+                                        if failure == {}:
+                                            curfailures.append(None)
+                                        else:
+                                            curfailures.append(failure)
+                                        curprogress = progress + pv['progress']
+                                        if [f for f in curfailures if f is not None]:
+                                            report_failures = curfailures
+                                        else:
+                                            report_failures = None
+                                        yield {'param': curval, 'progress': curprogress, 'failures': report_failures}
+                                progress = curprogress
+                            val = curval
+                            failures = curfailures
+            else:  # unclear type
+                yield {'param': None,
+                       'progress': 1,
+                       'failures': "Unexpected _type for parameter: %s" % myparam['_type']}
+
     def all_included_roles(self):
         air = [r.name for r in self.includes]
         for r in self.includes:
@@ -181,6 +302,21 @@ class Role(object):
             else:
                 joined_rule['ports'] = aux.joinranges(joined_rule['ports'], rule['ports'])
         return joined_rules
+
+    def collect_parameters(self, param_cmd, param_script):
+        """Collect parameters using passed functions
+
+        :param param_cmd: function to execute parameter' command
+        :param param_script: function to execute parameter' script
+        :return: generator of { parameters: parameters, progress: progress, failures: failures }
+        """
+        parameters = copy.deepcopy(self.parameters)
+        for result in Role._get_param_value(parameters, param_cmd, param_script):
+            my_result = copy.deepcopy(result)
+            my_result['parameters'] = my_result['param']
+            del my_result['param']
+            yield my_result
+
 
 
 class RoleCollection(Role):
