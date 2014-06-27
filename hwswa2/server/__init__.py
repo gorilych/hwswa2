@@ -15,6 +15,8 @@ REBOOT_TIMEOUT = 300
 
 class Server(object):
 
+    time_format = '%Y-%m-%d.%Hh%Mm%Ss'
+
     def __init__(self, name, account, address,
                  role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None,
                  roles_dir=None, reports_dir=None, remote_scripts_dir=None):
@@ -38,6 +40,7 @@ class Server(object):
         #gateway should be Server object
         self.gateway = gateway
         self.expect = expect
+        # ordered list of reports, last generated report goes first
         self.reports = []
         self._reports_dir = reports_dir
         if reports_dir is not None:
@@ -45,6 +48,11 @@ class Server(object):
         # {network: ip, ...}
         self.nw_ips = {}
         self.find_nw_ips()
+        self.parameters = None
+        self.param_failures = None
+        self.param_check_status = "not started"
+        self.param_check_time = None
+        self.report = None
         self._last_connection_error = None
         self._accessible = None
         self._remote_scripts_dir = remote_scripts_dir
@@ -52,7 +60,6 @@ class Server(object):
         self._tmp = []
         # remote agent
         self._agent = None
-        # ordered list of reports, last generated report goes first
 
     def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
@@ -89,7 +96,7 @@ class Server(object):
     def read_reports(self, reports_dir):
         """Read server reports"""
         path = os.path.join(reports_dir, self.name)
-        timeformat = '%Y-%m-%d.%Hh%Mm%Ss'
+        timeformat = Server.time_format
         reports = []
         if os.path.isdir(path):
             for filename in os.listdir(path):
@@ -102,7 +109,7 @@ class Server(object):
                         logger.debug("File name %s is not in format %s: %s" % (filename, timeformat, ve))
                     except ReportException as re:
                         logger.debug("Error reading report from file %s: %s" % (filename, re))
-            self.reports = sorted(reports, key=lambda report: report.time, reverse = True)
+            self.reports = sorted(reports, key=lambda report: report.time, reverse=True)
 
     def list_reports(self):
         for report in self.reports:
@@ -127,12 +134,12 @@ class Server(object):
         """
         lfr = self.last_finished_report()
         if lfr is None:
-            logger.error("No finished reports for %s" % self)
+            logger.warning("No finished reports for %s" % self)
             return False
         else:
             self.nw_ips = lfr.get_nw_ips(networks)
             if self.nw_ips == {}:
-                logger.error('Found no IPs for %s' % self)
+                logger.warning('Found no IPs for %s' % self)
                 return False
             else:
                 return True
@@ -263,7 +270,45 @@ class Server(object):
         :return: generator of { parameters: parameters, progress: progress, failures: failures }
         """
         logger.debug("Start collecting parameters for %s" % self)
-        return self.rolecollection.collect_parameters(self.param_cmd, self.param_script)
+        if not self.accessible():
+            self.param_check_status = "server is not accessible"
+            self.parameters = {}
+            return
+        else:
+            self.param_check_status = "in progress"
+        for result in self.rolecollection.collect_parameters(self.param_cmd, self.param_script):
+            self.param_check_status = "in progress, %s checks" % result['progress']
+            self.parameters = result['parameters']
+            self.param_failures = result['failures']
+            self.param_check_time = time.time()
+            yield result['progress']
+        self.param_check_status = "finished"
+
+    def prepare_and_save_report(self, networks=None, rtime=None):
+        """Prepare report from previously generated parameters. Save it to reports dir.
+
+        :param networks: array of network descriptions [{name: .., address: .., prefix: ..},...]
+        :param rtime: report creation time, used for filename
+        :return: True on success
+        """
+        if self.parameters is None:
+            return False
+        if rtime is None:
+            rtime = time.localtime()
+        yamlfile = os.path.join(self._reports_dir, self.name, time.strftime(Server.time_format, rtime))
+        self.report = Report(data={'check_status': self.param_check_status,
+                                   'check_time': time.ctime(self.param_check_time),
+                                   'role': self.role,
+                                   'parameters': self.parameters,
+                                   'parameters_failures': self.param_failures},
+                             yamlfile=yamlfile,
+                             time=rtime)
+        self.reports.insert(0, self.report)
+        if self.report.finished():
+            self.report.fix_networks(networks)
+            self.report.check_expect(self.expect)
+        self.report.save()
+        return True
 
 
 class ServerException(Exception):
