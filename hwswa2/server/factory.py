@@ -1,5 +1,6 @@
 import logging
 
+from contextlib import contextmanager
 from weakref import ref
 
 from hwswa2.server import Server
@@ -20,6 +21,20 @@ def get_server(name):
         return _servers[name]()
     else:
         return None
+
+
+def server_names():
+    return [name for name in _servers]
+
+
+@contextmanager
+def servers_context(servers_list, roles_dir, reports_dir, remote_scripts_dir):
+    srvrs = []
+    for serverdict in servers_list:
+        srvrs.append(server_factory(serverdict, roles_dir, reports_dir, remote_scripts_dir))
+    yield srvrs
+    for srvr in srvrs:
+        srvr.cleanup()
 
 
 def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
