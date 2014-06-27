@@ -44,7 +44,7 @@ class LinuxServer(Server):
         self._param_cmd_prefix = None
         self._param_binpath = None
 
-    def __del__(self):
+    def cleanup(self):
         # remove ssh tunnel connections
         servers = [server for server in self._sshtunnels]
         for server in servers:
