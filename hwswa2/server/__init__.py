@@ -77,6 +77,8 @@ class Server(object):
         for key in properties:
             if key in serverdict:
                 initargs[key] = serverdict[key]
+        if 'dontcheck' in initargs:
+            initargs['dontcheck'] = True
         return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, **initargs)
 
     def __str__(self):
