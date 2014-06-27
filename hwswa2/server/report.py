@@ -66,7 +66,7 @@ class Report(object):
                 ips = nic['ip']
                 for ip in ips:
                     nw = ip['network']
-                    nwname = next((n['network'] for n in networks if nw == n['address'] + '/' + n['prefix']), None)
+                    nwname = next((n['name'] for n in networks if nw == n['address'] + '/' + str(n['prefix'])), None)
                     if nwname is not None:
                         ip['network'] = nwname
 
@@ -85,6 +85,52 @@ class Report(object):
                 for ip in ips:
                     nw_ips[ip['network']] = ip['address']
             return nw_ips
+
+    def get_ip_nw_nic(self):
+        """Obtain list of ip-network-nic
+
+        :return: [{ip:, network:, nic:}, ...]
+        """
+        ip_nw_nic = []
+        try:
+            interfaces = self.data['parameters']['network']['network_interfaces']
+        except KeyError:
+            pass
+        else:
+            for nic in interfaces:
+                for ip in nic['ip']:
+                    ip_nw_nic.append({'ip': ip['address'], 'nw': ip['network'], 'nic': nic['name']})
+        return ip_nw_nic
+
+    def check_expect(self, expect=None):
+        """ Check parameters for expected values and update report data
+
+        :param expect: list of expected parameters
+        """
+        if expect is None:
+            return
+        self.data['expect'] = {}
+        ip_nw_nic = self.get_ip_nw_nic()
+        for expectation in expect:
+            # checking expected IP addresses
+            if 'ip' in expectation:
+                e_key = e_ip = expectation['ip']
+                if 'network' in expectation:
+                    e_nw = expectation['network']
+                    e_key += '/' + e_nw
+                e_found = next((ip for ip in ip_nw_nic if ip['ip'] == e_ip), None)
+                if e_found is None:
+                    self.data['expect'][e_key] = 'NOT OK, IP address NOT found'
+                else:
+                    if not 'network' in expectation:
+                        self.data['expect'][e_key] = 'OK, IP address found on ' + e_found['nic']
+                    else:
+                        if e_nw == e_found['nw']:
+                            self.data['expect'][e_key] = 'OK, IP address found on ' + e_found['nic']
+                        else:
+                            self.data['expect'][e_key] = 'NOT OK, IP address found on ' + e_found['nic'] + \
+                                                         ' but network is NOT the same: ' + e_found['nw']
+
 
     def save(self, yamlfile=None):
         if self.data is None:
@@ -108,7 +154,7 @@ class Report(object):
             # print all scalars
             for key in report:
                 val = report[key]
-                if isinstance(val, (type(None), str, int, float, bool)):
+                if isinstance(val, (type(None), str, unicode, int, float, bool)):
                     print(key + ', ' + str(val))
             if 'expect' in report:
                 print('  Expectations')
@@ -124,7 +170,7 @@ class Report(object):
                             'yum_repos', 'umask']:
                     if key in parameters:
                         val = parameters[key]
-                        if isinstance(val, (type(None), str, int, float, bool)):
+                        if isinstance(val, (type(None), str, unicode, int, float, bool)):
                             print(key + ', ' + str(val))
                         elif key == 'processors':
                             count = val['count']
@@ -147,7 +193,7 @@ class Report(object):
                 # print all the rest (scalars only)
                 for key in parameters:
                     val = parameters[key]
-                    if isinstance(val, (type(None), str, int, float, bool)):
+                    if isinstance(val, (type(None), str, unicode, int, float, bool)):
                         print(key + ', ' + str(val))
                 if 'network' in parameters:
                     print('  Network parameters')
@@ -155,7 +201,7 @@ class Report(object):
                     # print scalars
                     for key in network:
                         val = network[key]
-                        if isinstance(val, (type(None), str, int, float, bool)):
+                        if isinstance(val, (type(None), str, unicode, int, float, bool)):
                             print(key + ', ' + str(val))
                     if 'network_interfaces' in network:
                         nic_ips = []
