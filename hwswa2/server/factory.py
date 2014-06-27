@@ -33,8 +33,24 @@ def servers_context(servers_list, roles_dir, reports_dir, remote_scripts_dir):
     for serverdict in servers_list:
         srvrs.append(server_factory(serverdict, roles_dir, reports_dir, remote_scripts_dir))
     yield srvrs
+    # clean up in proper order, gateways last
+    with_gw = []
+    ordered_srvrs = []
     for srvr in srvrs:
-        srvr.cleanup()
+        if srvr.gateway is None:
+            ordered_srvrs.append(srvr)
+        else:
+            with_gw.append(srvr)
+    while with_gw:
+        for s in with_gw:
+            if s.gateway in ordered_srvrs:
+                ordered_srvrs.append(s)
+        with_gw = [s for s in with_gw if s not in ordered_srvrs]
+    ordered_srvrs.reverse()
+    for s in ordered_srvrs:
+        s.cleanup()
+
+
 
 
 def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
