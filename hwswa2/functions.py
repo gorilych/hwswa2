@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import argparse
 import logging
 from configobj import ConfigObj
@@ -28,8 +29,11 @@ def read_servers():
 
 
 def read_networks():
-    config['networks'] = yaml.load(open(config['networksfile']))['networks']
-    logger.debug("Read info from networks file: %s" % config['networks'])
+    logger.debug("Read networks from cli: %s" % config['networks'])
+    networks_from_file = yaml.load(open(config['networksfile']))['networks']
+    logger.debug("Read info from networks file: %s" % networks_from_file)
+    config['networks'].extend(networks_from_file)
+    logger.debug("Resulting networks: %s" % config['networks'])
 
 
 def run_subcommand():
@@ -38,6 +42,16 @@ def run_subcommand():
                          config['reportsdir'],
                          config['rscriptdir']):
         config['subcommand']()
+
+
+def _network(string):
+    """'Convert network:addr/prefix' to {name: 'network', address: 'addr', prefix: 'prefix'}"""
+    regex = re.compile("^(\w+):((?:\d{1,3}\.){3}\d{1,3})/(\d{1,2})$")
+    match = regex.match(string)
+    if not match:
+        raise argparse.ArgumentTypeError("Network not in format name:addr/prefix: %s" % string)
+    else:
+        return {'name': match.group(1), 'address': match.group(2), 'prefix': match.group(3)}
 
 
 def read_configuration():
@@ -52,6 +66,9 @@ def read_configuration():
     parser.add_argument('-c', '--config', help='path to config file', dest='configfile')
     parser.add_argument('-s', '--servers', help='path to servers file', dest='serversfile')
     parser.add_argument('-n', '--networks', help='path to networks file', dest='networksfile')
+    parser.add_argument('-k', '--network', help='network in format name:addr/prefix',
+                        type=_network, action='append', metavar='NETWORK', dest='networks',
+                        default=[])
     parser.add_argument('-l', '--log', help='path to log file', dest='logfile')
     parser.add_argument('-r', '--reports', help='directory to store reports', dest='reportsdir')
     parser.add_argument('-d', '--debug', help='enable debug', action='store_true')
