@@ -13,6 +13,8 @@ Version History
     - Added: firewall will convert ip.add.re.ss/net.add.re.ss/prefix to ip.add.re.ss/networkname
              automatically if networks.yaml is updated, no need to rerun checks
     - Fixed: long remote output can be truncated by exec subcommand
+    - Added: firewall subcommand: progress is reported every 10 seconds (configurable value)
+    - Added: check subcommand: progress is reported every 5 seconds (configurable value)
 
 0.2.1 (2014-06-25)
     - Added: subcommand aliases
