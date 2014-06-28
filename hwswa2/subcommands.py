@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def firewall():
     """Check connections between servers"""
     start_time = time.time()
-    report_period = 5
+    report_period = config['firewall']['report_period']
     servers = []
     for name in config['servernames']:
         server = get_server(name)
@@ -84,7 +84,7 @@ def firewall():
 def check():
     """Check only specified servers"""
     check_time = time.localtime()
-    report_period = 2
+    report_period = config['check']['report_period']
     logger.info("Checking servers: %s" % config['servernames'])
     servers = []
     for name in config['servernames']:
