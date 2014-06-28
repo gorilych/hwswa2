@@ -298,7 +298,10 @@ class Server(object):
             return False
         if rtime is None:
             rtime = time.localtime()
-        yamlfile = os.path.join(self._reports_dir, self.name, time.strftime(Server.time_format, rtime))
+        reports_path = os.path.join(self._reports_dir, self.name)
+        if not os.path.exists(reports_path):
+            os.makedirs(reports_path)
+        yamlfile = os.path.join(reports_path, time.strftime(Server.time_format, rtime))
         self.report = Report(data={'check_status': self.param_check_status,
                                    'check_time': time.ctime(self.param_check_time),
                                    'role': self.role,
