@@ -53,6 +53,7 @@ class Server(object):
         self.param_check_status = "not started"
         self.param_check_time = None
         self.report = None
+        self.check_reboot_result = None
         self._last_connection_error = None
         self._accessible = None
         self._remote_scripts_dir = remote_scripts_dir

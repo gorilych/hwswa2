@@ -537,7 +537,8 @@ class LinuxServer(Server):
         Returns number of seconds (int/long) or reason why check is not possible (string)
         """
         if self._is_it_me():
-            return "we are running here, no reboot"
+            self.check_reboot_result = "we are running here, no reboot"
+            return self.check_reboot_result
         logger.debug("Trying to reboot %s" % self)
         starttime = time.time()
         try:  # reboot will most probably fail with socket.timeout exception
@@ -555,17 +556,21 @@ class LinuxServer(Server):
             delta = time.time() - starttime
             # wait till boot
             if aux.wait_for(self.accessible, [True], timeout - delta):
-                return int(round(time.time() - starttime))
+                self.check_reboot_result = int(round(time.time() - starttime))
+                return self.check_reboot_result
             else:
-                return "server is not accessible after %s seconds" % timeout
+                self.check_reboot_result = "server is not accessible after %s seconds" % timeout
+                return self.check_reboot_result
         else:
             # check uptime, it can be the case server reboots too fast
             uptime, space, idle = self.get_cmd_out('cat /proc/uptime', privileged=False).partition(' ')
             uptime = float(uptime)
             if uptime < timeout + 10:
-                return 0
+                self.check_reboot_result = 0
+                return self.check_reboot_result
             else:
-                return "server does not go to reboot: still accessible after %s seconds" % timeout
+                self.check_reboot_result = "server does not go to reboot: still accessible after %s seconds" % timeout
+                return self.check_reboot_result
 
     def shell(self, privileged=True):
         """Opens remote SSH session"""
