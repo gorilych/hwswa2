@@ -234,9 +234,9 @@ class Server(object):
             proto = rule['proto']
             ports = rule['ports']
             for ps in aux.splitrange(ports, concurrent_ports):
-                if grand_result['failed'] > max_failures:
+                if grand_result['failed'] > max_failures > 0:
                     raise FirewallException("Number of failures exceeded allowed limit")
-                if grand_result['NOKnum'] > max_closed:
+                if grand_result['NOKnum'] > max_closed > 0:
                     raise FirewallException("Number of closed ports exceeded allowed limit")
                 listencmd = 'listen %s %s %s' % (proto, ip, ps)
                 sendcmd = 'send %s %s %s %s' % (proto, ip, ps, port_timeout)
