@@ -24,7 +24,7 @@ firewall:
         connect_with: {roles: [linmailldap]}
       - ports: 4433-4435
         connect_with: {roles: [pvclin, pvclinbu, pvcwin, pvcwinbu]}
-      - ports: 4432
+      - ports: 4432,4465
         connect_with: {roles: [paci_im]}
       - ports: 48480
         connect_with: {roles: [wpesrvdb, wpesrv]}
