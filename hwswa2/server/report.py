@@ -226,7 +226,7 @@ class Report(object):
 
 def _is_equal(val1, val2):
     diff = _deepdiff(val1, val2)
-    return not ((diff['old'] is None) or (diff['new'] is None))
+    return (diff['old'] is None) and (diff['new'] is None)
 
 
 def _deepdiff(oldval, newval):
