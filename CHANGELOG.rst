@@ -2,7 +2,7 @@
 Version History
 ===============
 
-0.3  (in progress)
+0.3.0 (2014-06-29)
     - Removed: check_reboot option. Use reboot subcommand instead
     - Fixed: firewall does not fail if server is not accessible
     - Added: check and checkall use the same time string for report file names of all servers
