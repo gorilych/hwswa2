@@ -15,6 +15,8 @@ Version History
     - Fixed: long remote output can be truncated by exec subcommand
     - Added: firewall subcommand: progress is reported every 10 seconds (configurable value)
     - Added: check subcommand: progress is reported every 5 seconds (configurable value)
+    - Added: firewall subcommand: will stop after 10 failures or 500 closed/filtered ports discovered
+             (per servers pair, configurable values)
 
 0.2.1 (2014-06-25)
     - Added: subcommand aliases

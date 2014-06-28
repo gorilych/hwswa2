@@ -16,6 +16,8 @@ def firewall():
     """Check connections between servers"""
     start_time = time.time()
     report_period = config['firewall']['report_period']
+    max_failures = config['firewall']['max_failures']
+    max_closed_ports = config['firewall']['max_closed_ports']
     servers = []
     for name in config['servernames']:
         server = get_server(name)
@@ -36,7 +38,9 @@ def firewall():
             if not other_s.name == s.name:
                 logger.info("Checking %s <- %s" % (s.name, other_s.name))
                 try:
-                    for res in s.check_firewall_with(other_s):
+                    for res in s.check_firewall_with(other_s,
+                                                     max_closed=max_closed_ports,
+                                                     max_failures=max_failures):
                         results[s.name][other_s.name] = res
                         cur_time = time.time()
                         if cur_time - start_time > report_period:

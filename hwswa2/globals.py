@@ -16,6 +16,8 @@ configspec['firewall'] = {
     'send_timeout': 'float(0, 99, default=1)',
     'max_open_sockets': 'integer(1,10000,default=100)',
     'report_period': 'integer(1,10000,default=10)',
+    'max_failures': 'integer(0,10000,default=10)',
+    'max_closed_ports': 'integer(0,10000,default=500)',
     }
 configspec['check'] = {
     'report_period': 'integer(1,10000,default=5)',
@@ -40,6 +42,8 @@ config['firewall'] = {
     'send_timeout': 1,
     'max_open_sockets': 100,
     'report_period': 10,
+    'max_failures': 10,
+    'max_closed_ports': 500,
     }
 
 exitcode = 0 
