@@ -319,11 +319,11 @@ class LinuxServer(Server):
                     sys.stderr.flush()
             if channel.exit_status_ready():
                 break
-        if channel.recv_ready():
+        while channel.recv_ready():
             x = channel.recv(1024)
             sys.stdout.write(x)
             sys.stdout.flush()
-        if channel.recv_stderr_ready():
+        while channel.recv_stderr_ready():
             x = channel.recv_stderr(1024)
             sys.stderr.write(x)
             sys.stderr.flush()
