@@ -14,7 +14,7 @@ import posixpath
 from ipcalc import Network
 
 import hwswa2.auxiliary as aux
-from hwswa2.globals import config
+
 import hwswa2.server
 from hwswa2.server import Server, ServerException, TunnelException, TimeoutException
 
