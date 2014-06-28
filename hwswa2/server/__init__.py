@@ -137,12 +137,12 @@ class Server(object):
         """
         lfr = self.last_finished_report()
         if lfr is None:
-            logger.warning("No finished reports for %s" % self)
+            logger.debug("No finished reports for %s" % self)
             return False
         else:
             self.nw_ips = lfr.get_nw_ips(networks)
             if self.nw_ips == {}:
-                logger.warning('Found no IPs for %s' % self)
+                logger.debug('Found no IPs for %s' % self)
                 return False
             else:
                 return True
@@ -196,6 +196,10 @@ class Server(object):
                                 left: num }
         :raises: FirewallException
         """
+        if self.dontcheck:
+            raise FirewallException("Dontcheck is set for %s" % self)
+        if other.dontcheck:
+            raise FirewallException("Dontcheck is set for %s" % other)
         logger.debug("Checking connections %s <- %s" % (self, other))
         rules = self.rolecollection.collect_incoming_fw_rules(other.rolecollection)
         ports_left = reduce(lambda s, rule: s + aux.range_len(rule['ports']), rules, 0)
@@ -270,8 +274,10 @@ class Server(object):
     def collect_parameters(self):
         """Generate report
 
-        :return: generator of { parameters: parameters, progress: progress, failures: failures }
+        :return: generator of progress: number of checks done
         """
+        if self.dontcheck:
+            raise ServerException("Dontcheck is set for %s" % self)
         logger.debug("Start collecting parameters for %s" % self)
         if not self.accessible():
             self.param_check_status = "server is not accessible"
