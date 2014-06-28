@@ -2,6 +2,18 @@
 Version History
 ===============
 
+0.3  (in progress)
+    - Removed: check_reboot option. Use reboot subcommand instead
+    - Fixed: firewall does not fail if server is not accessible
+    - Added: check and checkall use the same time string for report file names of all servers
+    - Fixed: dontcheck option is ignored sometimes
+    - Fixed: check subcommand: timeout exception is not handled
+    - Removed: ability to use keyword _uses in <role>.yaml
+    - Added: --raw option for report and lastreport subcommands
+    - Added: firewall will convert ip.add.re.ss/net.add.re.ss/prefix to ip.add.re.ss/networkname
+             automatically if networks.yaml is updated, no need to rerun checks
+    - Fixed: long remote output can be truncated by exec subcommand
+
 0.2.1 (2014-06-25)
     - Added: subcommand aliases
     - Added: subcommand get
