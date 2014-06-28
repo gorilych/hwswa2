@@ -27,7 +27,6 @@ def role_factory(name, checksdir):
 
 
 class RoleException(Exception):
-
     def __init__(self, value):
         self.value = value
 
@@ -36,7 +35,6 @@ class RoleException(Exception):
 
 
 class Role(object):
-
     def __str__(self):
         return "role " + self.name
 
@@ -260,6 +258,23 @@ class Role(object):
             air.extend(r.all_included_roles())
         return air
 
+    def collect_outgoing_internet_rules(self):
+        """Collect firewall rules for outgoing TCP connections to Internet hosts
+
+        :return: dict of address->ports to check { 'address1': 'ports', 'address2': 'ports', ...}
+        """
+        rules = {}
+        for rule in self.firewall:
+            if rule['direction'] == 'outgoing' and rule['type'] == 'internet' and \
+               'tcp' in [p.lower() for p in rule['protos']] and \
+               'hosts' in rule['connect_with'] and isinstance(rule['connect_with']['hosts'], list):
+                for host in rule['connect_with']['hosts']:
+                    if host not in rules:
+                        rules[host] = rule['ports']
+                    else:
+                        rules[host] = aux.joinranges(rules[host], rule['ports'])
+        return rules
+
     def collect_incoming_fw_rules(self, other):
         """Collect firewall rules for incoming connections from other role
 
@@ -318,13 +333,12 @@ class Role(object):
             yield my_result
 
 
-
 class RoleCollection(Role):
     """Collection of roles, which can be assigned to a server"""
 
     def __init__(self, roles, checksdir):
         self.name = ''
-        self._roles= ' '.join(roles)
+        self._roles = ' '.join(roles)
         self.data = {'includes': roles}
         self._checksdir = checksdir
         self.includes = self._includes()

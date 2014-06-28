@@ -18,6 +18,7 @@ Version History
     - Added: firewall subcommand: will stop after 10 failures or 500 closed/filtered ports discovered
       (per servers pair, configurable values)
     - Added: cli option to specify network (-k, --network)
+    - Added: firewall subcommand: added checks for access to hosts on Internet
 
 0.2.1 (2014-06-25)
     - Added: subcommand aliases

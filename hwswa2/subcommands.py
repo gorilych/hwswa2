@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 def firewall():
     """Check connections between servers"""
     start_time = time.time()
+    port_timeout = config['firewall']['send_timeout']
     report_period = config['firewall']['report_period']
     max_failures = config['firewall']['max_failures']
     max_closed_ports = config['firewall']['max_closed_ports']
@@ -40,7 +41,8 @@ def firewall():
                 try:
                     for res in s.check_firewall_with(other_s,
                                                      max_closed=max_closed_ports,
-                                                     max_failures=max_failures):
+                                                     max_failures=max_failures,
+                                                     port_timeout=port_timeout):
                         results[s.name][other_s.name] = res
                         cur_time = time.time()
                         if cur_time - start_time > report_period:
@@ -53,37 +55,57 @@ def firewall():
                     logger.info("Interrupted check because: %s" % fe)
                     if other_s.name in results[s.name]:
                         results[s.name][other_s.name]['interrupted'] = fe
-    print "============== FINISHED ================"
-    print "        Below connections are OK:"
-    for sn in results:
-        for osn in results[sn]:
-            for res in results[sn][osn]['OK']:
-                print '%s <- %s %s:%s (%s)' % (sn, osn, res['proto'], res['ports'], res['network'])
-    print "        Below connections are NOT OK:"
-    for sn in results:
-        for osn in results[sn]:
-            for res in results[sn][osn]['NOK']:
-                print '%s <- %s %s:%s (%s)' % (sn, osn, res['proto'], res['ports'], res['network'])
-    print "============= INTERRUPTED =============="
-    for sn in results:
-        for osn in results[sn]:
-            if 'interrupted' in results[sn][osn]:
-                print '%s <- %s: %s' % (sn, osn, results[sn][osn]['interrupted'])
-    print "==============  TOTALS  ================"
-    tOK = 0
-    tNOK = 0
-    tFailed = 0
-    tLeft = 0
-    for sn in results:
-        for osn in results[sn]:
-            r = results[sn][osn]
-            tOK += r['OKnum']
-            tNOK += r['NOKnum']
-            tFailed += r['failed']
-            tLeft += r['left']
-    print "OK %s NOK %s Failed %s Left %s" % (tOK, tNOK, tFailed, tLeft)
+        if not results[s.name]:
+            del results[s.name]
+    logger.info("Start Internet access checks ...")
+    internet_fw_res = {}
+    for s in servers:
+        sres = s.check_internet_access(port_timeout=port_timeout)
+        if sres['OK'] or sres['NOK'] or sres['failed']:
+            internet_fw_res[s.name] = sres
+    if results:
+        print "============== FINISHED ================"
+        print "        Below connections are OK:"
+        for sn in results:
+            for osn in results[sn]:
+                for res in results[sn][osn]['OK']:
+                    print '%s <- %s %s:%s (%s)' % (sn, osn, res['proto'], res['ports'], res['network'])
+        print "        Below connections are NOT OK:"
+        for sn in results:
+            for osn in results[sn]:
+                for res in results[sn][osn]['NOK']:
+                    print '%s <- %s %s:%s (%s)' % (sn, osn, res['proto'], res['ports'], res['network'])
+        print "============= INTERRUPTED =============="
+        for sn in results:
+            for osn in results[sn]:
+                if 'interrupted' in results[sn][osn]:
+                    print '%s <- %s: %s' % (sn, osn, results[sn][osn]['interrupted'])
+        print "==============  TOTALS  ================"
+        tOK = 0
+        tNOK = 0
+        tFailed = 0
+        tLeft = 0
+        for sn in results:
+            for osn in results[sn]:
+                r = results[sn][osn]
+                tOK += r['OKnum']
+                tNOK += r['NOKnum']
+                tFailed += r['failed']
+                tLeft += r['left']
+        print "OK %s NOK %s Failed %s Left %s" % (tOK, tNOK, tFailed, tLeft)
+    if internet_fw_res:
+        print "=============  INTERNET  ==============="
+        for sname in internet_fw_res:
+            OK = internet_fw_res[sname]['OK']
+            NOK = internet_fw_res[sname]['NOK']
+            failed = internet_fw_res[sname]['failed']
+            for addr in OK:
+                print "OK: %s -> %s:%s" % (sname, addr, OK[addr])
+            for addr in NOK:
+                print "NOK: %s -> %s:%s" % (sname, addr, NOK[addr])
+            for addr in failed:
+                print "failed: %s -> %s:%s" % (sname, addr, failed[addr])
     print "========================================"
-
 
 def check():
     """Check only specified servers"""

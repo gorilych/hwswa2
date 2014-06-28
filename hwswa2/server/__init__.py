@@ -179,6 +179,30 @@ class Server(object):
         """
         raise NotImplemented
 
+    def check_internet_access(self, port_timeout=1):
+        """Check firewall for connections from server to Internet resourses
+
+        :return: { OK: {address->ports}, NOK: {..}, failed: {..} }
+        """
+        grand_result = {'OK': {}, 'NOK': {}, 'failed': {}}
+        rules = self.rolecollection.collect_outgoing_internet_rules()
+        for address in rules:
+            ports = rules[address]
+            sendcmd = 'send %s %s %s %s' % ('tcp', address, ports, port_timeout)
+            status, result = self.agent_cmd(sendcmd)
+            if not status:  # send failed
+                grand_result['failed'][address] = ports
+            else:  # send ok
+                ok, space, nok = result.partition(' ')
+                OK, colon, ok_range = ok.partition(':')
+                NOK, colon, nok_range = nok.partition(':')
+                if ok_range:
+                    grand_result['OK'][address] = ok_range
+                if nok_range:
+                    grand_result['NOK'][address] = nok_range
+        return grand_result
+
+
     def check_firewall_with(self, other,
                             concurrent_ports=100,
                             port_timeout=1,
