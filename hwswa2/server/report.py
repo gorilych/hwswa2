@@ -146,10 +146,12 @@ class Report(object):
         except (IOError, yaml.YAMLError) as e:
             raise ReportException("Error writing to file %s: %s" % (yamlfile, e))
 
-    def show(self):
+    def show(self, raw=False):
         report = self.data
         if report is None:
             print('NO REPORT')
+        elif raw:
+            print yaml.safe_dump(report)
         else:
             # print all scalars
             for key in report:

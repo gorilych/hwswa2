@@ -226,10 +226,7 @@ def exec_cmd():
         logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
     sshcmd = " ".join(config['sshcmd'])
-    if 'tty' in config:
-        get_pty = config['tty']
-    else:
-        get_pty = False
+    get_pty = config['tty']
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     if server.accessible():
         exitstatus = server.exec_cmd_i(sshcmd, get_pty=get_pty)
@@ -294,16 +291,22 @@ def get():
 
 def lastreport():
     servername = config['servername']
+    raw = config['raw']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
-    server.last_report().show()
+    report = server.last_report()
+    if report is None:
+        logger.info("%s has no reports" % server)
+    else:
+        report.show(raw=raw)
 
 
 def show_report():
     servername = config['servername']
     reportname = config['reportname']
+    raw = config['raw']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
@@ -312,7 +315,7 @@ def show_report():
     if report is None:
         logger.error("%s has no report %s" % (server, reportname))
         sys.exit(1)
-    report.show()
+    report.show(raw=raw)
 
 
 def reports():
@@ -326,8 +329,8 @@ def reports():
 
 def reportdiff():
     servername = config['servername']
-    r1name = config['report1']
-    r2name = config['report2']
+    r1name = config['oldreport']
+    r2name = config['newreport']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)

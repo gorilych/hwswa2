@@ -113,10 +113,12 @@ def read_configuration():
     subparser.set_defaults(subcommand=subcommands.firewall)
 
     subparser = subparsers.add_parser('lastreport', help='show last report for the server', aliases=('lr',))
+    subparser.add_argument('-r', '--raw', help='show raw file content', action='store_true')
     subparser.add_argument('servername', metavar='server')
     subparser.set_defaults(subcommand=subcommands.lastreport)
 
     subparser = subparsers.add_parser('report', help='show particular report for server', aliases=('r',))
+    subparser.add_argument('-r', '--raw', help='show raw file content', action='store_true')
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('reportname', metavar='report')
     subparser.set_defaults(subcommand=subcommands.show_report)
@@ -127,8 +129,8 @@ def read_configuration():
 
     subparser = subparsers.add_parser('reportdiff', help='show difference between reports', aliases=('rd',))
     subparser.add_argument('servername', metavar='server')
-    subparser.add_argument('report1')
-    subparser.add_argument('report2')
+    subparser.add_argument('oldreport')
+    subparser.add_argument('newreport')
     subparser.set_defaults(subcommand=subcommands.reportdiff)
 
     args = parser.parse_args()
