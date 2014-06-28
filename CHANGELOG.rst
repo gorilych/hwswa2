@@ -11,12 +11,13 @@ Version History
     - Removed: ability to use keyword _uses in <role>.yaml
     - Added: --raw option for report and lastreport subcommands
     - Added: firewall will convert ip.add.re.ss/net.add.re.ss/prefix to ip.add.re.ss/networkname
-             automatically if networks.yaml is updated, no need to rerun checks
+      automatically if networks.yaml is updated, no need to rerun checks
     - Fixed: long remote output can be truncated by exec subcommand
     - Added: firewall subcommand: progress is reported every 10 seconds (configurable value)
     - Added: check subcommand: progress is reported every 5 seconds (configurable value)
     - Added: firewall subcommand: will stop after 10 failures or 500 closed/filtered ports discovered
-             (per servers pair, configurable values)
+      (per servers pair, configurable values)
+    - Added: cli option to specify network (-k, --network)
 
 0.2.1 (2014-06-25)
     - Added: subcommand aliases
