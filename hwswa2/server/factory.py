@@ -91,6 +91,6 @@ def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_
             logger.debug("Finished initialization of server %s" % sname)
 
     # remove servers with empty reasons
-    _servers_to_init_later = {n: r for n, r in _servers_to_init_later.iteritems() if r}
+    _servers_to_init_later = dict([(n, r) for n, r in _servers_to_init_later.iteritems() if r])
 
     return server
