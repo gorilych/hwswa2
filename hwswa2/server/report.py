@@ -21,7 +21,7 @@ class Report(object):
         """Constructs report either from data or from yamlfile"""
         if data is None and yamlfile is None:
             raise ReportException("Report(None, None) is not allowed. Specify at least one arg")
-        self._yamlfile = yamlfile
+        self.yamlfile = yamlfile
         if data is None:
             self._read()
         else:
@@ -30,11 +30,11 @@ class Report(object):
 
     def _read(self, yamlfile=None):
         if yamlfile is None:
-            if self._yamlfile is None:
+            if self.yamlfile is None:
                 raise ReportException("No filename to read from")
-            yamlfile = self._yamlfile
+            yamlfile = self.yamlfile
         else:
-            self._yamlfile = yamlfile
+            self.yamlfile = yamlfile
         try:
             self.data = yaml.load(open(yamlfile))
         except IOError as ie:
@@ -47,7 +47,7 @@ class Report(object):
 
     def filename(self):
         """Returns file name of report file"""
-        return os.path.basename(self._yamlfile)
+        return os.path.basename(self.yamlfile)
 
     def fix_networks(self, networks):
         """Substitutes network name for network address in report
@@ -136,11 +136,11 @@ class Report(object):
         if self.data is None:
             raise ReportException("Won't save empty report")
         if yamlfile is None:
-            if self._yamlfile is None:
+            if self.yamlfile is None:
                 raise ReportException("No filename to save to")
-            yamlfile = self._yamlfile
+            yamlfile = self.yamlfile
         else:
-            self._yamlfile = yamlfile
+            self.yamlfile = yamlfile
         try:
             yaml.safe_dump(self.data, open(yamlfile, 'w'))
         except (IOError, yaml.YAMLError) as e:
