@@ -1,15 +1,13 @@
 import logging
 
 from contextlib import contextmanager
-from weakref import ref
 
 from hwswa2.server import Server
 from hwswa2.server.linux import LinuxServer
 
 logger = logging.getLogger(__name__)
 
-# We are using weak references to keep previously created servers
-# _servers = {name1: ref1, name2: ref2}
+# _servers = {name1: server1, name2: server2}
 _servers = {}
 # Some servers require postponed initialization
 # _servers_to_init_later = {name1: {reason1: req1, reason2: req2}, name2: {reason1: req3}}
@@ -18,7 +16,7 @@ _servers_to_init_later = {}
 
 def get_server(name):
     if name in _servers:
-        return _servers[name]()
+        return _servers[name]
     else:
         return None
 
@@ -51,13 +49,8 @@ def servers_context(servers_list, roles_dir, reports_dir, remote_scripts_dir):
         s.cleanup()
 
 
-
-
 def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
     global _servers, _servers_to_init_later
-    # remove stale references
-    _servers = {n: r for n, r in _servers.iteritems() if r() is not None}
-    _servers_to_init_later = {n: r for n, r in _servers_to_init_later.iteritems() if n in _servers}
 
     name = serverdict['name']
     logger.debug("Trying to init server object %s" % name)
@@ -66,7 +59,7 @@ def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_
         gwname = serverdict['gateway']
         if gwname in _servers:
             logger.debug("Already have gateway %s" % gwname)
-            serverdict['gateway'] = _servers[gwname]()
+            serverdict['gateway'] = _servers[gwname]
         else:
             logger.debug("Will postpone gateway setup, we are waiting for server %s" % gwname)
             if name not in _servers_to_init_later:
@@ -82,7 +75,7 @@ def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_
     else:
         server = Server.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
 
-    _servers[name] = ref(server)
+    _servers[name] = server
     if not name in _servers_to_init_later:
         logger.debug("Finished initialization of server %s" % name)
 
@@ -91,7 +84,7 @@ def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_
         if 'gateway' in reasons:
             if reasons['gateway'] == name:
                 logger.debug("We have found gateway %s for server %s" % (name, sname))
-                so = _servers[sname]()
+                so = _servers[sname]
                 so.gateway = server
                 del reasons['gateway']
         if not reasons:  # no more reasons?
