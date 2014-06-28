@@ -156,6 +156,14 @@ def range2list(rstr):
     return sorted(list(set(ls)))
 
 
+def range_len(rstr):
+    """Count numbers in range.
+
+    Example: 1-3,5,7-9 -> 7
+    """
+    return len(range2list(rstr))
+
+
 def list2range(ls):
     """Converts list ls to range string, f.e. [1,2,3,5,7,8,9] -> 1-3,5,7-9"""
     if len(ls) == 0:

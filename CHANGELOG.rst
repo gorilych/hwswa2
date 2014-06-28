@@ -2,6 +2,26 @@
 Version History
 ===============
 
+0.3.0 (2014-06-29)
+    - Removed: check_reboot option. Use reboot subcommand instead
+    - Fixed: firewall does not fail if server is not accessible
+    - Added: check and checkall use the same time string for report file names of all servers
+    - Fixed: dontcheck option is ignored sometimes
+    - Fixed: check subcommand: timeout exception is not handled
+    - Removed: ability to use keyword _uses in <role>.yaml
+    - Added: --raw option for report and lastreport subcommands
+    - Added: firewall will convert ip.add.re.ss/net.add.re.ss/prefix to ip.add.re.ss/networkname
+      automatically if networks.yaml is updated, no need to rerun checks
+    - Fixed: long remote output can be truncated by exec subcommand
+    - Added: firewall subcommand: progress is reported every 10 seconds (configurable value)
+    - Added: check subcommand: progress is reported every 5 seconds (configurable value)
+    - Added: firewall subcommand: will stop after 10 failures or 500 closed/filtered ports discovered
+      (per servers pair, configurable values)
+    - Added: cli option to specify network (-k, --network)
+    - Added: firewall subcommand: added checks for access to hosts on Internet
+    - Added: PACI roles
+    - Added: firewall subcommand: pre-generated reports are not required now
+
 0.2.1 (2014-06-25)
     - Added: subcommand aliases
     - Added: subcommand get
