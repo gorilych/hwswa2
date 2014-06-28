@@ -118,7 +118,7 @@ class Server(object):
         for report in self.reports:
             print(report.filename())
 
-    def report(self, name):
+    def get_report(self, name):
         return next((r for r in self.reports if name == r.filename()), None)
 
     def last_report(self):
