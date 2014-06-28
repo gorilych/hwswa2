@@ -19,6 +19,7 @@ Version History
       (per servers pair, configurable values)
     - Added: cli option to specify network (-k, --network)
     - Added: firewall subcommand: added checks for access to hosts on Internet
+    - Added: PACI roles
 
 0.2.1 (2014-06-25)
     - Added: subcommand aliases
