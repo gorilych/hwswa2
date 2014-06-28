@@ -13,10 +13,13 @@ import subprocess
 import posixpath
 
 import hwswa2.auxiliary as aux
+from hwswa2.globals import config
 import hwswa2.server
 from hwswa2.server import Server, ServerException, TunnelException, TimeoutException
 
 logger = logging.getLogger(__name__)
+paramiko.util.log_to_file(os.path.join(config['logdir'], 'paramiko.log'))
+logging.getLogger("paramiko").propagate = False
 
 # default timeout value for all operations
 TIMEOUT = hwswa2.server.TIMEOUT
@@ -87,7 +90,7 @@ class LinuxServer(Server):
         else:
             key_filename = None
         # _connect_to_gateway() will initialize self._sshtunnel used later
-        if not self._connect_to_gateway():
+        if not self._connect_to_gateway(timeout=timeout):
             return None
         client = paramiko.SSHClient()
         client.load_system_host_keys()
@@ -103,13 +106,15 @@ class LinuxServer(Server):
             self._last_connection_error = 'SSHException raised while connecting to %s: %s' % (self._address(), pe)
         except socket.error as serr:
             self._last_connection_error = 'socket.error raised while connecting to %s: %s' % (self._address(), serr)
+        except Exception as e:
+            self._last_connection_error = '%s raised while connecting to %s: %s' % (type(se), self._address(), se)
         else:
             logger.debug('Established connection with %s' % self)
             return client
-        logger.error(self._last_connection_error)
+        logger.debug(self._last_connection_error)
         return None
 
-    def _connect_to_gateway(self):
+    def _connect_to_gateway(self, timeout=TIMEOUT):
         """Asks gateway to create ssh tunnel to this server
 
         Returns true if ssh tunnel is created successfully or there is no need for it
@@ -118,12 +123,13 @@ class LinuxServer(Server):
             return True
         else:
             try:
-                self._sshtunnel = self.gateway.create_tunnel(self.name, self.address, self._port)
+                self._sshtunnel = self.gateway.create_tunnel(self.name, self.address, self._port, timeout=timeout)
             except TunnelException as te:
                 self._last_connection_error = "cannot connect via gateway %s: %s" % (self.gateway, te.value)
-                logger.error(self._last_connection_error)
+                logger.debug(self._last_connection_error)
                 return False
             else:
+                logger.debug("created tunnel via %s" % self.gateway)
                 return True
 
     def _disconnect_from_gateway(self):
@@ -131,6 +137,7 @@ class LinuxServer(Server):
             try:
                 self.gateway.destroy_tunnel(self.name)
             finally:
+                logger.debug("destroyed tunnel via %s" % self.gateway)
                 self._sshtunnel = None
 
     def _connect(self, reconnect=False, timeout=TIMEOUT):
@@ -153,8 +160,6 @@ class LinuxServer(Server):
 
     def _disconnect(self):
         if self._sshclient is not None:
-            logger.debug("Will disconnect from %s" % self)
-            self._sshclient.close()
             self._sshclient = None
             self._disconnect_from_gateway()
 
@@ -378,6 +383,7 @@ class LinuxServer(Server):
         Returns tunnel, which can be used as socket
         Raises TunnelException in case of failure
         """
+        logger.debug("%s was asked to create tunnel to %s" % (self, name))
         if name in self._sshtunnels:
             if self._sshtunnels[name]['sshclient'] is not None:
                 if self._sshtunnels[name]['tunnel'] is not None:
@@ -393,7 +399,9 @@ class LinuxServer(Server):
             self._sshtunnels[name]['sshclient'] = sshclient
             transport = sshclient.get_transport()
             try:
+                logger.debug("%s: about to create channel to %s:%s" % (self, address, port))
                 channel = transport.open_channel('direct-tcpip', (address, port), ('127.0.0.1', 0))
+                logger.debug("%s: created channel to %s:%s" % (self, address, port))
             except paramiko.ChannelException, chan_e:
                 del self._sshtunnels[name]
                 raise TunnelException("cannot create tunnel via %s: %s" % (self, chan_e))
@@ -402,6 +410,7 @@ class LinuxServer(Server):
                 return channel
 
     def destroy_tunnel(self, name):
+        logger.debug("%s was asked to destroy tunnel to %s" % (self, name))
         try:
             self._sshtunnels[name]['sshclient'].close()
         except Exception as e:
@@ -463,6 +472,8 @@ class LinuxServer(Server):
                 status = stdout.channel.recv_exit_status()
             except socket.timeout as e:
                 raise TimeoutException("Timeout during execution of %s" % cmd)
+            except paramiko.SSHException as e:
+                raise LinuxServerException("SSH exception: %s" % e)
             logger.debug("Executon results: exit status %s, stdout %s, stderr %s" %
                          (status, stdout_data, stderr_data))
             return stdout_data, stderr_data, status
