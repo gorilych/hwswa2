@@ -19,8 +19,7 @@ import hwswa2.server
 from hwswa2.server import Server, ServerException, TunnelException, TimeoutException
 
 logger = logging.getLogger(__name__)
-paramiko.util.log_to_file(os.path.join(config['logdir'], 'paramiko.log'))
-logging.getLogger("paramiko").propagate = False
+logging.getLogger("paramiko").setLevel(logging.WARNING)
 
 # default timeout value for all operations
 TIMEOUT = hwswa2.server.TIMEOUT
