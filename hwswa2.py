@@ -11,12 +11,14 @@ def init_logger():
     if not os.path.exists(os.path.dirname(config['logfile'])):
         os.makedirs(os.path.dirname(config['logfile']))
     logging.basicConfig(filename=config['logfile'], filemode='a', level=logging.INFO,
-                        format="%(asctime)s %(levelname)s [%(threadName)s:%(name)s.%(funcName)s()] %(message)s")
-    if sys.hexversion >= 0x2070000: logging.captureWarnings(True)
+                        format="%(asctime)s %(levelname)s " +
+                               "[%(threadName)s:%(name)s.%(funcName)s():%(lineno)d] " +
+                               "%(message)s")
+    if sys.hexversion >= 0x2070000:
+        logging.captureWarnings(True)
     logger = logging.getLogger("hwswa2")
     if config['debug']:
         logger.setLevel(logging.DEBUG)
-    logging.getLogger("paramiko").setLevel(logging.WARNING)
     # define a Handler which writes INFO messages or higher to the sys.stderr
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
@@ -42,4 +44,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

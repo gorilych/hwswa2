@@ -1,4 +1,5 @@
-import os, sys
+import os
+import sys
 import argparse
 import logging
 from configobj import ConfigObj
@@ -7,14 +8,14 @@ import yaml
 
 from hwswa2.globals import apppath, configspec, config
 from hwswa2.auxiliary import merge_config
+from hwswa2.server.factory import servers_context
 import hwswa2.subcommands as subcommands
-from hwswa2.ssh import cleanup
 from hwswa2.aliases import AliasedSubParsersAction
-
 
 __version__ = '0.2.1'
 
 logger = logging.getLogger(__name__)
+
 
 def read_servers():
     config['servers'] = yaml.load(open(config['serversfile']))['servers']
@@ -32,11 +33,11 @@ def read_networks():
 
 
 def run_subcommand():
-    try:
+    with servers_context(config['servers'],
+                         config['checksdir'],
+                         config['reportsdir'],
+                         config['rscriptdir']):
         config['subcommand']()
-    finally:
-        for server in config['servers']:
-            cleanup(server)
 
 
 def read_configuration():
@@ -160,8 +161,8 @@ def read_configuration():
         os.makedirs(config['reportsdir'])
 
     # set global ssh timeout
-    import hwswa2.ssh as ssh
+    import hwswa2.server.linux
 
-    ssh.ssh_timeout = config['ssh_timeout']
+    hwswa2.server.linux.TIMEOUT = config['ssh_timeout']
 
 
