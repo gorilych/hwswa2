@@ -11,6 +11,7 @@ import tty
 import time
 import subprocess
 import posixpath
+from ipcalc import Network
 
 import hwswa2.auxiliary as aux
 from hwswa2.globals import config
@@ -710,3 +711,27 @@ class LinuxServer(Server):
         self.write(scriptpath, script)
         self.exec_cmd('chmod +x %s' % scriptpath)
         return self.param_cmd(scriptpath)
+
+    def get_ips(self, networks=None):
+        """Obtain IPv4 addresses from server and save result to self.nw_ips.
+
+        :param networks: [{name: '', address: '', prefix: ''}, ... ]
+        :return: True, if any found IP matches some network from passed networks
+        """
+        cmd = "/sbin/ip -family inet -oneline address list scope global | awk '{print $4}'"
+        ips = [Network(ip) for ip in self.get_cmd_out(cmd).split()]
+        status = False
+        for ip in ips:
+            m = ip.mask
+            n_a = "%s" % ip.network()
+            ip_addr = "%s" % ip
+            network_name = None
+            if networks:
+                network_name = next((n['name'] for n in networks if n['prefix'] == m and n['address'] == n_a), None)
+            if network_name:
+                self.nw_ips[network_name] = ip_addr
+                status = True
+            else:
+                self.nw_ips[n_a + '/' + str(m)] = ip_addr
+        return status
+

@@ -26,7 +26,10 @@ def firewall():
             logger.error("Cannot find server %s in servers list" % name)
             sys.exit(1)
         elif not server.nw_ips:
-            logger.error("Cannot find IPs for server %s" % name)
+            if server.get_ips(config['networks']):
+                servers.append(server)
+            else:
+                logger.error("Cannot find IPs for server %s" % name)
         else:
             servers.append(server)
     for s in servers:

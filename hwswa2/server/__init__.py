@@ -202,7 +202,6 @@ class Server(object):
                     grand_result['NOK'][address] = nok_range
         return grand_result
 
-
     def check_firewall_with(self, other,
                             concurrent_ports=100,
                             port_timeout=1,

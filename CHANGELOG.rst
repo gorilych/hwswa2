@@ -20,6 +20,7 @@ Version History
     - Added: cli option to specify network (-k, --network)
     - Added: firewall subcommand: added checks for access to hosts on Internet
     - Added: PACI roles
+    - Added: firewall subcommand: pre-generated reports are not required now
 
 0.2.1 (2014-06-25)
     - Added: subcommand aliases
