@@ -76,11 +76,6 @@ def read_configuration():
     subparsers = parser.add_subparsers(title='Subcommands', help='Run `hwswa2 <subcommand> -h` for usage')
 
     subparser = subparsers.add_parser('check', help='check specific servers', aliases=('c',))
-    group = subparser.add_mutually_exclusive_group(required=False)
-    group.add_argument('--with-reboot', help='perform reboot check',
-                       dest='check_reboot', action='store_true', default=argparse.SUPPRESS)
-    group.add_argument('--wo-reboot', help='skip reboot check',
-                       dest='check_reboot', action='store_false', default=argparse.SUPPRESS)
     subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
     subparser.set_defaults(subcommand=subcommands.check)
 
@@ -187,5 +182,3 @@ def read_configuration():
     import hwswa2.server.linux
 
     hwswa2.server.linux.TIMEOUT = config['ssh_timeout']
-
-

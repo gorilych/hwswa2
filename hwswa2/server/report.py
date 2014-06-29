@@ -131,7 +131,6 @@ class Report(object):
                             self.data['expect'][e_key] = 'NOT OK, IP address found on ' + e_found['nic'] + \
                                                          ' but network is NOT the same: ' + e_found['nw']
 
-
     def save(self, yamlfile=None):
         if self.data is None:
             raise ReportException("Won't save empty report")
@@ -215,7 +214,6 @@ class Report(object):
                             nic_ips.append(res_str)
                         print('nics, ' + ' | '.join(nic_ips))
   
-
     @staticmethod
     def print_diff(oldr, newr):
         """Prints reports differences: oldr->newr"""

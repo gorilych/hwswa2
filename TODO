@@ -14,8 +14,6 @@
 
 * add common check for lvm lv/pg/pv
 
-* reboot: add check that server is not used as jump server
-
 * compare two most recent reports if reportsdiff is called w/o report names
 
 * add OK/NOK status to expectations and print them in separate subsections in (last)report
@@ -23,24 +21,6 @@
 * add listener/sender for manual checks
 
 * add global, per server and per connection timeouts for firewall checks
-
-* BUG: timeout exception is not processed for get_cmd_out():
-
-Exception in thread linmn:
-Traceback (most recent call last):
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 532, in __bootstrap_inner
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 484, in run
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 249, in _check
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 378, in _get_param_value
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 357, in _get_param_value
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 136, in get_cmd_out
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 128, in exec_cmd
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.file", line 143, in read
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 1212, in _read
-  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 585, in recv
-timeout
-
-* add firewall checks for type: internet
 
 * allow expect inside role description
 
@@ -61,10 +41,6 @@ server1: report2
 server2: report1
 
 * add reportsall subcommand
-
-* add --raw option to report subcommands
-
-* add internet connection checker (say, to download.pa)
 
 * add aliases for roles
 
@@ -98,13 +74,9 @@ server2: report1
 
 * replace fifos with socketpairs
 
-* add '--network name:addr/prefix' option to specify network from cmd
-
 * check behaviour in case of wrong creds
 
 * readme: make reqs the first section
-
-* add get subcommand (to download file from server)
 
 * add execall subcommand (to exec command on all servers)
 
@@ -114,13 +86,39 @@ server2: report1
 
 * command execution in serverd.py
 
-* rework _print_report to print prefix for unindentified networks
-
-* rework networks check in common.yaml not to load networks.yaml
-
 * lspartitions.sh: filter out extended partitions
 
-* rewrite to use classes (Server, f.e.)
+* WONTFIX reboot: add check that server is not used as jump server
+
+* DONE BUG: timeout exception is not processed for get_cmd_out():
+
+Exception in thread linmn:
+Traceback (most recent call last):
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 532, in __bootstrap_inner
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/threading", line 484, in run
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 249, in _check
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 378, in _get_param_value
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.subcommands", line 357, in _get_param_value
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 136, in get_cmd_out
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/hwswa2.ssh", line 128, in exec_cmd
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.file", line 143, in read
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 1212, in _read
+  File "pyinstaller/build/hwswa2/out00-PYZ.pyz/paramiko.channel", line 585, in recv
+timeout
+
+* DONE add firewall checks for type: internet
+
+* DONE add --raw option to report subcommands
+
+* DONE add '--network name:addr/prefix' option to specify network from cmd
+
+* DONE add get subcommand (to download file from server)
+
+* DONE rework _print_report to print prefix for unindentified networks
+
+* DONE rework networks check in common.yaml not to load networks.yaml
+
+* DONE rewrite to use classes (Server, f.e.)
 
 * DONE add ability to specify several servers to reboot
 
