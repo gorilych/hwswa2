@@ -18,14 +18,14 @@ Obtain the latest source:
  from bitbucket:
 
 $ #### Clone with git:
-$ git clone git@bitbucket.org:gorilych/hwswa2.git
+$ git clone https://gorilych@bitbucket.org/gorilych/hwswa2.git
 $ cd hwswa2
 $ #### Or download master
 $ wget -c https://bitbucket.org/gorilych/hwswa2/get/master.tar.gz
 $ tar zxf master.tar.gz
 $ cd gorilych-hwswa2-*/
 
- or from git.gorilych.dnsd.me:
+ or from git.gorilych.ru:
 
 $ wget -cN https://git.gorilych.ru/hwswa2.git/snapshot/HEAD.tar.gz
 $ tar zxf HEAD.tar.gz
@@ -44,7 +44,7 @@ Create distribution with pyinstaller:
 
 (env)$ pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/ \
                    --clean pyinstaller/hwswa2.spec && \
-                   \cp -af README LICENSE config/ checks/ pyinstaller/hwswa2/ && \
+                   \cp -af README LICENSE CHANGELOG.rst config/ checks/ pyinstaller/hwswa2/ && \
                    pushd pyinstaller/ && tar zcf hwswa2.tgz hwswa2 && popd
 
 Distribution archive will be stored in pyinstaller/hwswa2.tgz

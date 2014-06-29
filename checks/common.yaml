@@ -41,7 +41,7 @@ parameters:
     network_interfaces:
       _type: list
       # generator will be evaluated first, each line adds element to list
-      # then, for each new element, other fields will be evalueted with generator as dependency
+      # then, for each new element, other fields will be evaluated with generator as dependency
       # form:
       # _generator: {field_name: placeholder_name}
       _generator: {name: name}
@@ -58,10 +58,6 @@ parameters:
         _type: table
         _fields: [address, network]
         _separator: ' '
-        # _uses: {key1: placeholder1, key2: placeholder2}
-        # for each key data from config['key'] will be stored in temporary file
-        # and file name will be substitution for corresponding placeholder in script or command
-        _uses: {networks: networks_file}
         _script: |
           #!/bin/bash
           { /sbin/ip -family inet -oneline address list scope global dev %(name)s;
@@ -72,14 +68,10 @@ parameters:
                            /sbin/ip -family inet6 route list dev %(name)s; } \
                          | grep " src $ip" | awk '{print $1}' | sed 's|/[0-9]*$||' )
               if [ -z "$netaddr" ]; then
-                netname="no_route_with_this_ip_as_src"
+                  netname="no_route_with_this_ip_as_src"
               else
-                netname=$(grep --fixed-strings "address: $netaddr" "%(networks_file)s" \
-                          | grep --fixed-strings "prefix: $prefix" \
-                          | grep --only-matching --extended-regexp "name: [^ ,}]+" \
-                          | awk '{print $2}')
+                  netname="$netaddr/$prefix"
               fi
-              [ -z "$netname" ] && netname="$netaddr/$prefix"
               echo $ip $netname
           done
           exit 0

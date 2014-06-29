@@ -1,0 +1,33 @@
+description: Checks for LINPPS role, linux privacy proxy server
+includes: [ common, poa.managed.fw ]
+firewall:
+  - name: incoming_from_POA
+    description: POA MN should be able to connect to privoxy service
+    policy: allow
+    direction: incoming
+    networks: [backnet]
+    ports: 8008
+    type: infra
+    protos: [TCP]
+    connect_with:
+        roles: [linmn]
+  - name: Outgoing_to_PBA
+    description: Allow access to HTTPS on PBA
+    policy: allow
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443
+    type: infra
+    connect_with:
+      roles: [pbalinfe]
+  - name: apscatalog
+    description: "connection to (http://apscatalog.com)"
+    policy: allow
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 80
+    type: internet
+    connect_with:
+      hosts: [apscatalog.com]

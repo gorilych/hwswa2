@@ -1,6 +1,6 @@
 # -*- mode: python -*-
-a = Analysis(['hwswa2/main.py'],
-             pathex=['libs/'],
+a = Analysis(['hwswa2.py'],
+             pathex=[],
              hiddenimports=[],
              hookspath=None,
              runtime_hooks=None)

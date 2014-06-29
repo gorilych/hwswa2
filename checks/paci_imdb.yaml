@@ -1,0 +1,2 @@
+description: Checks for PACI Instance Manager Database role
+includes: [ common, poa.managed.fw, pgsql ]

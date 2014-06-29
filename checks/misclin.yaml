@@ -1,0 +1,2 @@
+description: Checks for MISCLIN role
+includes: [ common, pcs.fw ]

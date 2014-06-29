@@ -1,4 +1,24 @@
 description: Checks for PBALINFE role, linux PBA application server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ common ]
+firewall:
+  - name: Outgoing_to_LINMN
+    description: Allow access from PBA to POA API
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    protos: [TCP]
+    ports: 8440
+    type: infra
+    connect_with:
+      roles: [linmn,winmn]
+  - name: Incoming_to_PBALINOS
+    description: Allow access to Online Store
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443
+    type: internet
+    connect_with:
+      hosts: any
+
