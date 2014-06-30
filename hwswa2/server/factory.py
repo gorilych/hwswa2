@@ -2,8 +2,9 @@ import logging
 
 from contextlib import contextmanager
 
-from hwswa2.server import Server
+from hwswa2.server import Server, ServerException
 from hwswa2.server.linux import LinuxServer
+from hwswa2.server.windows import WindowsServer
 
 logger = logging.getLogger(__name__)
 
@@ -70,10 +71,16 @@ def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_
     if 'ostype' not in serverdict:
         serverdict['ostype'] = 'linux'
 
-    if serverdict['ostype'] == 'linux':
-        server = LinuxServer.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
-    else:
-        server = Server.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
+    try:
+        if serverdict['ostype'] == 'linux':
+            server = LinuxServer.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
+        elif serverdict['ostype'] == 'windows':
+            server = WindowsServer.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
+        else:
+            server = Server.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
+    except ServerException as se:
+        logger.debug("Server initialization fails for %s: %s" % (serverdict, se))
+        return None
 
     _servers[name] = server
     if not name in _servers_to_init_later:
