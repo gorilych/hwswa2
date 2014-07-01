@@ -11,6 +11,15 @@ firewall:
     type: infra
     connect_with:
       roles: [linmn,winmn]
+  - name: Outgoing_to_branding
+    description: access to hosting services
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443,21,49152-65534
+    type: infra
+    connect_with:
+      roles: [branding]
   - name: Incoming_to_PBALINOS
     description: Allow access to Online Store
     policy: allow
