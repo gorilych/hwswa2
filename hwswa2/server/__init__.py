@@ -333,6 +333,7 @@ class Server(object):
         yamlfile = os.path.join(reports_path, time.strftime(Server.time_format, rtime))
         self.report = Report(data={'check_status': self.param_check_status,
                                    'check_time': time.ctime(self.param_check_time),
+                                   'name': self.name,
                                    'role': self.role,
                                    'parameters': self.parameters,
                                    'parameters_failures': self.param_failures},

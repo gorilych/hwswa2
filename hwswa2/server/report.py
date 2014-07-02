@@ -146,13 +146,22 @@ class Report(object):
             raise ReportException("Error writing to file %s: %s" % (yamlfile, e))
 
     def show(self, raw=False):
-        report = self.data
+        report = copy.deepcopy(self.data)
         if report is None:
             print('NO REPORT')
         elif raw:
             print yaml.safe_dump(report)
         else:
-            # print all scalars
+            # trying to print in pretty order
+            for key in ['name', 'role', 'check_status', 'check_time', 'parameters_failures']:
+                if key in report:
+                    val = report[key]
+                    if key == 'role' and isinstance(val, list):
+                        print(key + ', ' + ', '.join(val))
+                    else:
+                        print(key + ', ' + str(report[key]))
+                    del report[key]
+            # print all others, scalars only
             for key in report:
                 val = report[key]
                 if isinstance(val, (type(None), str, unicode, int, float, bool)):
