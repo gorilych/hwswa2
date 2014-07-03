@@ -3,11 +3,15 @@ import threading
 import Queue
 import time
 import sys
+import glob
+import os
 
 from hwswa2.globals import config
 from hwswa2.server.factory import get_server, server_names
 from hwswa2.server import FirewallException
 from hwswa2.server.report import Report
+from hwswa2.server.role import Role
+
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +115,7 @@ def firewall():
             for addr in failed:
                 print "failed: %s -> %s:%s" % (sname, addr, failed[addr])
     print "========================================"
+
 
 def check():
     """Check only specified servers"""
@@ -375,3 +380,22 @@ def reportdiff():
         logger.error("%s has no report %s" % (server, r2name))
         sys.exit(1)
     Report.print_diff(report1, report2)
+
+
+def list_roles(roles_dir=None):
+    if roles_dir is None:
+        roles_dir = config['checksdir']
+    roles = []
+    role_names = []
+    for role_file in glob.glob(os.path.join(roles_dir, '*.yaml')):
+        role_name = os.path.basename(role_file)[:-5].lower()
+        roles.append(Role(role_name, roles_dir))
+        role_names.append(role_name)
+    aux_role_names = []
+    for role in roles:
+        new_names = [r for r in role.connects_with_roles() if r not in role_names and r not in aux_role_names]
+        aux_role_names.extend(new_names)
+    role_names.sort()
+    aux_role_names.sort()
+    print("==== Roles ====\n" + ', '.join(role_names))
+    print("==== Auxiliary roles (no yaml files, but mentioned in firewall rules) ====\n" + ', '.join(aux_role_names))
