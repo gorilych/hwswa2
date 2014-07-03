@@ -2,6 +2,14 @@
 Version History
 ===============
 
+0.4.0 (in progress)
+    - Added: subcommand list-roles
+    - Fixed: multiply roles are not printed in report
+    - Fixed: NameError: global name 'se' is not defined
+    - Added: role linwdg
+    - Added: updated firewall rules in role pbalinfe
+    - Fixed: name is missing in report
+
 0.3.0 (2014-06-29)
     - Removed: check_reboot option. Use reboot subcommand instead
     - Fixed: firewall does not fail if server is not accessible
