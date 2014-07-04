@@ -319,7 +319,7 @@ def get():
         sys.exit(1)
     logger.debug("Copying to '%s' from '%s' on %s" % (localpath, remotepath, server))
     if server.accessible():
-        server.get(localpath, remotepath)
+        server.get(remotepath, localpath)
     else:
         logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
         sys.exit(1)
