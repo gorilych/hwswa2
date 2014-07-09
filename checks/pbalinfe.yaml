@@ -1,5 +1,7 @@
 description: Checks for PBALINFE role, linux PBA application server
 includes: [ common ]
+parameters:
+  pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
 firewall:
   - name: Outgoing_to_LINMN
     description: Allow access from PBA to POA API

@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 roles = {}
 
 
-def role_factory(name, checksdir):
+def role_factory(name, roles_dir):
     """ Factory for roles
     :param name: role name
-    :param checksdir: path to directory with name.yaml
+    :param roles_dir: path to directory with name.yaml
     :return: role object
     """
     global roles
@@ -22,7 +22,7 @@ def role_factory(name, checksdir):
     if nm in roles:
         return roles[nm]
     else:
-        role = Role(nm, checksdir)
+        role = Role(nm, roles_dir)
         roles[nm] = role
         return role
 
@@ -42,12 +42,12 @@ class Role(object):
     def __repr__(self):
         return "<Role " + self.name + ">"
 
-    def __init__(self, name, checksdir):
+    def __init__(self, name, roles_dir):
         """Constructs role from checksdir/name.yaml"""
         self.name = name.lower()
-        self._checksdir = checksdir
+        self._roles_dir = roles_dir
         logger.debug("Collecting details for %s" % self)
-        f = os.path.join(checksdir, self.name + '.yaml')
+        f = os.path.join(self._roles_dir, self.name + '.yaml')
         try:
             self.data = yaml.load(open(f))
         except IOError as ie:
@@ -78,7 +78,7 @@ class Role(object):
         if 'includes' in self.data:
             for name in self.data['includes']:
                 # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
-                r = role_factory(name, self._checksdir)
+                r = role_factory(name, self._roles_dir)
                 includes.append(r)
         return includes
 
@@ -121,6 +121,17 @@ class Role(object):
                         r[key] = rg[key]
                 rules.append(r)
         return rules
+
+    def connects_with_roles(self):
+        roles = []
+        for rule in self.firewall:
+            try:
+                add_roles = [role for role in rule['connect_with']['roles'] if role not in roles]
+            except KeyError:
+                pass
+            else:
+                roles.extend(add_roles)
+        return roles
 
     def _firewall(self):
         firewall = []
@@ -344,11 +355,11 @@ class Role(object):
 class RoleCollection(Role):
     """Collection of roles, which can be assigned to a server"""
 
-    def __init__(self, roles, checksdir):
+    def __init__(self, roles, roles_dir):
         self.name = ''
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
-        self._checksdir = checksdir
+        self._roles_dir = roles_dir
         self.includes = self._includes()
         self.parameters = self._parameters()
         self.firewall = self._firewall()
@@ -359,4 +370,3 @@ class RoleCollection(Role):
 
     def __repr__(self):
         return "<RoleCollection: " + self._roles + ">"
-
