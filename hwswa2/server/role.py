@@ -18,11 +18,12 @@ def role_factory(name, checksdir):
     :return: role object
     """
     global roles
-    if name in roles:
-        return roles[name]
+    nm = name.lower()
+    if nm in roles:
+        return roles[nm]
     else:
-        role = Role(name, checksdir)
-        roles[name] = role
+        role = Role(nm, checksdir)
+        roles[nm] = role
         return role
 
 
@@ -43,10 +44,10 @@ class Role(object):
 
     def __init__(self, name, checksdir):
         """Constructs role from checksdir/name.yaml"""
-        self.name = name
+        self.name = name.lower()
         self._checksdir = checksdir
         logger.debug("Collecting details for %s" % self)
-        f = os.path.join(checksdir, name.lower() + '.yaml')
+        f = os.path.join(checksdir, self.name + '.yaml')
         try:
             self.data = yaml.load(open(f))
         except IOError as ie:
@@ -129,6 +130,13 @@ class Role(object):
             rf = copy.deepcopy(role.firewall)
             firewall.extend(rf)
         firewall = Role._unroll_fw_groups(firewall)
+        for rule in firewall:
+            try:
+                roles = rule['connect_with']['roles']
+            except KeyError:
+                pass
+            else:
+                rule['connect_with']['roles'] = [role.lower() for role in roles]
         return firewall
 
     @staticmethod
@@ -290,7 +298,7 @@ class Role(object):
         for rule in self.firewall:
             if rule['direction'] == 'incoming' and rule['type'] == 'infra':
                 for r in rule['connect_with']['roles']:
-                    if r.lower() in other_role_names:
+                    if r in other_role_names:
                         for proto in rule['protos']:
                             for network in rule['networks']:
                                 incoming_rules.append({'network': network,
@@ -300,7 +308,7 @@ class Role(object):
         for rule in other.firewall:
             if rule['direction'] == 'outgoing' and rule['type'] == 'infra':
                 for r in rule['connect_with']['roles']:
-                    if r.lower() in role_names:
+                    if r in role_names:
                         for proto in rule['protos']:
                             for network in rule['networks']:
                                 incoming_rules.append({'network': network,
