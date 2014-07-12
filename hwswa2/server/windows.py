@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 TIMEOUT = hwswa2.server.TIMEOUT
 REBOOT_TIMEOUT = hwswa2.server.REBOOT_TIMEOUT
 
+_agent_pipe_name = 'hwswa2_agent'
+
 
 class WindowsServerException(ServerException):
     pass
@@ -28,6 +30,7 @@ class WindowsServer(Server):
         self._transport = None
         self._param_cmd_prefix = None
         self._param_binpath = None
+        self._agent_pipe = None
 
     def _connect(self, reconnect=False, timeout=TIMEOUT):
         """Connect to server
@@ -36,7 +39,10 @@ class WindowsServer(Server):
         """
         if self._transport is not None:
             if reconnect:
-                self._transport.disconnect()
+                try:
+                    self._transport.disconnect()
+                except socket.error:
+                    pass
                 self._transport = None
                 logger.debug("Will reconnect to  %s" % self)
             else:
@@ -96,7 +102,7 @@ class WindowsServer(Server):
 
     def put(self, localpath, remotepath):
         """Copies local file/directory to the server"""
-        logger.logger.debug("Copying %s to %s:%s" % (localpath, self.name, remotepath))
+        logger.debug("Copying %s to %s:%s" % (localpath, self.name, remotepath))
         if not os.path.exists(localpath):
             raise Exception("Local path does not exist: %s" % localpath)
         self._connect()
@@ -114,7 +120,7 @@ class WindowsServer(Server):
 
     def mkdir(self, path):
         """Creates directory"""
-        logger.logger.debug("MKDIR %s on %s" %(path, self))
+        logger.debug("MKDIR %s on %s" %(path, self))
         self._connect()
         smbconnection = self._transport.get_smb_connection()
         share = path[0] + '$'
@@ -123,7 +129,7 @@ class WindowsServer(Server):
 
     def rmdir(self, path):
         """Removes directory"""
-        logger.logger.debug("RMDIR %s on %s" %(path, self))
+        logger.debug("RMDIR %s on %s" %(path, self))
         self._connect()
         smbconnection = self._transport.get_smb_connection()
         share = path[0] + '$'
@@ -147,19 +153,93 @@ class WindowsServer(Server):
         if self._transport is not None:
             self._transport.disconnect()
             self._transport = None
-            logger.logger.debug("Closed connection to  %s" % self)
+            logger.debug("Closed connection to  %s" % self)
 
-    def serverd_start(self):
-        """Starts serverd on server"""
-        raise NotImplementedError
+    def agent_start(self):
+        """Start remote agent on server
+        :return: True on success
+        """
+        if self._agent_pipe is not None:
+            return True
+        else:
+            try:
+                if not self._connect():
+                    return False
+                else:
+                    #TODO: add initialization of hwswa2_agent service
+                    self._agent_pipe = self.open_pipe(_agent_pipe_name)
+                    banner = self._agent_pipe.read()
+                    logger.debug("agent started, banner: %s" % banner)
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                logger.debug("agent not started, exception %s: %s" %
+                             (type(e).__name__, e.args), exc_info=True)
+                return False
+            else:
+                return True
+
+    def agent_stop(self, destroy=True):
+        """Stop remote agent on server"""
+        if self._agent_pipe is not None:
+            try:
+                if destroy:
+                    self.agent_cmd("stop", wait_result=False)
+                else:
+                    self.agent_cmd("exit", wait_result=False)
+                self._agent_pipe.close()
+            except Exception as e:
+                logger.debug("agent: error closing named pipe, exception %s: %s" %
+                             (type(e).__name__, e.args), exc_info=True)
+            self._agent_pipe = None
+
+    def agent_cmd(self, cmd, wait_result=True):
+        """Send command to remote agent and returns tuple (status, result)"""
+        if not self.agent_start():
+            return False, 'agent not started'
+        else:
+            pipe = self._agent_pipe
+            logger.debug('command: ' + cmd)
+            pipe.write(cmd + '\n')
+            reply = pipe.read().strip()
+            logger.debug('accept reply: ' + reply)
+            accepted, space, reason = reply.partition(' ')
+            if accepted == 'accepted_notok':
+                return False, 'command not accepted: ' + reason
+            elif not accepted == 'accepted_ok':
+                return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
+            else:  # accepted == 'accepted_ok'
+                if not wait_result:
+                    return True, None
+                else:
+                    logger.debug('command accepted on server %s: %s' % (self, reason))
+                    reply = pipe.read().strip()
+                    logger.debug('result reply: ' + reply)
+                    result_status, space, result = reply.partition(' ')
+                    if result_status == 'result_ok':
+                        return True, result
+                    elif result_status == 'result_notok':
+                        return False, 'command failed: ' + result
+                    else:
+                        return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
+
+    def open_pipe(self, name):
+        return NamedPipe(self._transport.get_smb_connection(), name)
 
 
-    def serverd_stop(self):
-        """Stops serverd on server"""
-        raise NotImplementedError
+class NamedPipe(object):
 
+    def __init__(self, smbconnection, name):
+        self.name = name
+        self._smbconnection = smbconnection
+        self._tid = smbconnection.connectTree('IPC$')
+        self._fid = smbconnection.openFile(self._tid, '\\' + name)
 
-    def serverd_cmd(self, cmd):
-        """Sends command to serverd and returns tuple (status_ok_or_not, result)"""
-        raise NotImplementedError
+    def write(self, data):
+        self._smbconnection.writeNamedPipe(self._tid, self._fid, data)
 
+    def read(self, bytesToRead=None):
+        return self._smbconnection.readNamedPipe(self._tid, self._fid, bytesToRead)
+
+    def close(self):
+        self._smbconnection.closeFile(self._tid, self._fid)
