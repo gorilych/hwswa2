@@ -346,6 +346,9 @@ class Server(object):
         self.report.save()
         return True
 
+    def cleanup(self):
+        return True
+
 
 class ServerException(Exception):
     """Base class for server exceptions"""
