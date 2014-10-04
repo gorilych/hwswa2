@@ -49,7 +49,7 @@ parameters:
       # _generator: {field_name: placeholder_name}
       _generator: {name: name}
       name:   /sbin/ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
-              | awk '{print $2}' | sed 's/:$//'
+              | awk '{print $2}' | sed 's/:$//' | sed 's/@[^@]*$//'
       state:  /sbin/ip --oneline link show dev %(name)s 
               | grep --only-matching --extended-regexp ' state (UP|DOWN|UNKNOWN) ' 
               | awk '{print $2}'
