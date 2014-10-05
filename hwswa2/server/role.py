@@ -180,6 +180,7 @@ class Role(object):
             if myparam['_type'] == 'dictionary':
                 val = {}
                 failures = {}
+                progress = 0
                 for p in myparam:
                     if not p.startswith('_'):
                         for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
@@ -193,7 +194,7 @@ class Role(object):
                                 curfailures = None
                             yield {'param': val, 'progress': curprogress, 'failures': curfailures}
                         progress = curprogress
-
+                yield {'param': val, 'progress': progress, 'failures': failures}
             elif myparam['_type'] == 'table':
                 val = []
                 if '_command' in myparam:
