@@ -37,6 +37,7 @@ parameters:
     _fields: [name, type, readonly, removable, rotational, size, vendor, model]
     _separator: '|'
     _command: lsblk.sh
+  virtualization: virt-what.py
   network:
     _type: dictionary 
     name_servers: awk '$1=="nameserver"{print $2}' /etc/resolv.conf | xargs
