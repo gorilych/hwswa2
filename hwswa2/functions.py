@@ -128,7 +128,9 @@ def read_configuration():
     subparser.set_defaults(subcommand=subcommands.firewall)
 
     subparser = subparsers.add_parser('show-firewall', help='show firewall requirements for servers', aliases=('sf',))
-    subparser.add_argument('-c', '--compact', help='compact output', action='store_true')
+    formatgroup = subparser.add_mutually_exclusive_group()
+    formatgroup.add_argument('-c', '--compact', help='compact output', action='store_true')
+    formatgroup.add_argument('-s', '--csv', help='csv output', action='store_true')
     subparser.add_argument('servernames', nargs='+', help='server names', metavar='server')
     subparser.set_defaults(subcommand=subcommands.show_firewall)
 

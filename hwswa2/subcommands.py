@@ -26,55 +26,59 @@ def show_firewall():
             sys.exit(1)
         else:
             servers.append(server)
-    print("=============BEGIN======================")
-    if config['compact']:
-        for s in servers:
-            for other_s in servers:
-                if not other_s.name == s.name:
-                    rules = s.rolecollection.collect_incoming_fw_rules(other_s.rolecollection)
-                    for rule in rules:
-                        print("%s -> %s %s:%s (%s)" % (other_s.name, s.name, rule['proto'], rule['ports'], rule['network']))
-    else:
-        # grand_rules = {'server1':
-        #                 {'backnet': 
-        #                   {'incoming': { 'server2': { 'proto': ports ...,
-        #                    'outgoing': ...
-        grand_rules = {}
-        for s in servers:
-            grand_rules[s.name] = {}
-        for s in servers:
-            for other_s in servers:
-                if not other_s.name == s.name:
-                    rules = s.rolecollection.collect_incoming_fw_rules(other_s.rolecollection)
-                    for rule in rules:
-                        if not rule['network'] in grand_rules[s.name]:
-                            grand_rules[s.name][rule['network']] = {'incoming': {}, 'outgoing': {}}
-                        if not rule['network'] in grand_rules[other_s.name]:
-                            grand_rules[other_s.name][rule['network']] = {'incoming': {}, 'outgoing': {}}
-                        if not other_s.name in grand_rules[s.name][rule['network']]['incoming']:
-                            grand_rules[s.name][rule['network']]['incoming'][other_s.name] = {}
-                        if not s.name in grand_rules[s.name][rule['network']]['outgoing']:
-                            grand_rules[other_s.name][rule['network']]['outgoing'][s.name] = {}
-                        grand_rules[s.name]      [rule['network']]['incoming'][other_s.name][rule['proto']] = rule['ports']
-                        grand_rules[other_s.name][rule['network']]['outgoing'][s.name]      [rule['proto']] = rule['ports']
-        for s in grand_rules:
-            for n in grand_rules[s]:
-                print("==== Server %s" % s)
-                directions = {'outgoing': 'to {server}: {ports}'.format, 'incoming': 'from {server}: {ports}'.format}
-                for d in directions:
-                    if grand_rules[s][n][d]:
-                        print("%s %s:" % (n, d))
-                        for os in grand_rules[s][n][d]:
-                            ports = ""
-                            for proto in grand_rules[s][n][d][os]:
-                                ports += "%s:%s " % (proto, grand_rules[s][n][d][os][proto])
-                            print(directions[d](server=os, ports=ports))
-    print("===== Internet access requirements =====")
+    intranet_rules = []
+    internet_rules = []
     for s in servers:
-        rules = s.rolecollection.collect_outgoing_internet_rules()
-        for address in rules:
-            print("%s -> %s:%s" % (s.name, address, rules[address]))
-    print("=============END========================")
+        for other_s in servers:
+            if not other_s.name == s.name:
+                rules = s.rolecollection.collect_incoming_fw_rules(other_s.rolecollection)
+                for rule in rules:
+                    intranet_rules.append({'source': other_s.name, 
+                                           'destination': s.name, 
+                                           'proto': rule['proto'],
+                                           'ports': rule['ports'],
+                                           'network': rule['network']})
+        inet_rules = s.rolecollection.collect_outgoing_internet_rules()
+        for address in inet_rules:
+            internet_rules.append({'source': s.name, 
+                                   'destination': address, 
+                                   'proto': '',
+                                   'ports': inet_rules[address],
+                                   'network': ''})
+    all_rules = intranet_rules + internet_rules
+    if config['csv']:
+        import csv
+        dw = csv.DictWriter(sys.stdout, all_rules[0].keys())
+        dw.writeheader()
+        dw.writerows(all_rules)
+    elif config['compact']:
+        print("=============BEGIN======================")
+        # sort intranet_rules by source to have the same order as in servers
+        for rule in (rule for s in servers for rule in intranet_rules if rule['source'] == s.name):
+            print("{source} -> {destination} {proto}:{ports} ({network})".format(**rule))
+    else:
+        print("=============BEGIN======================")
+        for s in servers:
+            # find networks:
+            networks = set([rule['network'] for rule in intranet_rules if rule['source'] == s.name or rule['destination'] == s.name])
+            if networks:
+                print("==== Server %s" % s.name)
+                for network in networks:
+                    outgoing = [rule for rule in intranet_rules if rule['source'] == s.name and rule['network'] == network]
+                    if outgoing:
+                        print("%s outgoing:" % network)
+                        for rule in outgoing:
+                            print(" to {destination} {proto}:{ports}".format(**rule))
+                    incoming = [rule for rule in intranet_rules if rule['destination'] == s.name and rule['network'] == network]
+                    if incoming:
+                        print("%s incoming:" % network)
+                        for rule in incoming:
+                            print(" from {source} {proto}:{ports}".format(**rule))
+    if not config['csv']:
+        print("===== Internet access requirements =====")
+        for rule in internet_rules:
+            print("{source} -> {destination}:{ports}".format(**rule))
+        print("=============END========================")
 
 
 def firewall():
