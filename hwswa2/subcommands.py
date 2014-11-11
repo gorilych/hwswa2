@@ -16,6 +16,67 @@ from hwswa2.server.role import Role
 logger = logging.getLogger(__name__)
 
 
+def show_firewall():
+    """Show firewall requirements"""
+    servers = []
+    for name in config['servernames']:
+        server = get_server(name)
+        if server is None:
+            logger.error("Cannot find server %s in servers list" % name)
+            sys.exit(1)
+        else:
+            servers.append(server)
+    print("=============BEGIN======================")
+    if config['compact']:
+        for s in servers:
+            for other_s in servers:
+                if not other_s.name == s.name:
+                    rules = s.rolecollection.collect_incoming_fw_rules(other_s.rolecollection)
+                    for rule in rules:
+                        print("%s -> %s %s:%s (%s)" % (other_s.name, s.name, rule['proto'], rule['ports'], rule['network']))
+    else:
+        # grand_rules = {'server1':
+        #                 {'backnet': 
+        #                   {'incoming': { 'server2': { 'proto': ports ...,
+        #                    'outgoing': ...
+        grand_rules = {}
+        for s in servers:
+            grand_rules[s.name] = {}
+        for s in servers:
+            for other_s in servers:
+                if not other_s.name == s.name:
+                    rules = s.rolecollection.collect_incoming_fw_rules(other_s.rolecollection)
+                    for rule in rules:
+                        if not rule['network'] in grand_rules[s.name]:
+                            grand_rules[s.name][rule['network']] = {'incoming': {}, 'outgoing': {}}
+                        if not rule['network'] in grand_rules[other_s.name]:
+                            grand_rules[other_s.name][rule['network']] = {'incoming': {}, 'outgoing': {}}
+                        if not other_s.name in grand_rules[s.name][rule['network']]['incoming']:
+                            grand_rules[s.name][rule['network']]['incoming'][other_s.name] = {}
+                        if not s.name in grand_rules[s.name][rule['network']]['outgoing']:
+                            grand_rules[other_s.name][rule['network']]['outgoing'][s.name] = {}
+                        grand_rules[s.name]      [rule['network']]['incoming'][other_s.name][rule['proto']] = rule['ports']
+                        grand_rules[other_s.name][rule['network']]['outgoing'][s.name]      [rule['proto']] = rule['ports']
+        for s in grand_rules:
+            for n in grand_rules[s]:
+                print("==== Server %s" % s)
+                directions = {'outgoing': 'to {server}: {ports}'.format, 'incoming': 'from {server}: {ports}'.format}
+                for d in directions:
+                    if grand_rules[s][n][d]:
+                        print("%s %s:" % (n, d))
+                        for os in grand_rules[s][n][d]:
+                            ports = ""
+                            for proto in grand_rules[s][n][d][os]:
+                                ports += "%s:%s " % (proto, grand_rules[s][n][d][os][proto])
+                            print(directions[d](server=os, ports=ports))
+    print("===== Internet access requirements =====")
+    for s in servers:
+        rules = s.rolecollection.collect_outgoing_internet_rules()
+        for address in rules:
+            print("%s -> %s:%s" % (s.name, address, rules[address]))
+    print("=============END========================")
+
+
 def firewall():
     """Check connections between servers"""
     start_time = time.time()

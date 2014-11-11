@@ -127,6 +127,11 @@ def read_configuration():
     subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
     subparser.set_defaults(subcommand=subcommands.firewall)
 
+    subparser = subparsers.add_parser('show-firewall', help='show firewall requirements for servers', aliases=('sf',))
+    subparser.add_argument('-c', '--compact', help='compact output', action='store_true')
+    subparser.add_argument('servernames', nargs='+', help='server names', metavar='server')
+    subparser.set_defaults(subcommand=subcommands.show_firewall)
+
     subparser = subparsers.add_parser('lastreport', help='show last report for the server', aliases=('lr',))
     subparser.add_argument('-r', '--raw', help='show raw file content', action='store_true')
     subparser.add_argument('servername', metavar='server')
