@@ -107,7 +107,7 @@ class LinuxServer(Server):
         except socket.error as serr:
             self._last_connection_error = 'socket.error raised while connecting to %s: %s' % (self._address(), serr)
         except Exception as e:
-            self._last_connection_error = '%s raised while connecting to %s: %s' % (type(se), self._address(), e)
+            self._last_connection_error = '%s raised while connecting to %s: %s' % (type(e), self._address(), e)
         else:
             logger.debug('Established connection with %s' % self)
             return client
