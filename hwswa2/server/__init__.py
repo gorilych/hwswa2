@@ -19,7 +19,7 @@ class Server(object):
 
     def __init__(self, name, account, address,
                  role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None,
-                 roles_dir=None, reports_dir=None, remote_scripts_dir=None):
+                 roles_dir=None, reports_dir=None, remote_scripts_dir=None, role_aliases=None):
         self.name = name
         self.ostype = ostype
         self.role = role
@@ -32,7 +32,7 @@ class Server(object):
         self.rolecollection = None
         self._roles_dir = roles_dir
         if roles_dir is not None:
-            self.init_rolecollection(roles_dir)
+            self.init_rolecollection(roles_dir, role_aliases)
         self.account = account
         self.address = address
         self.port = port
@@ -70,7 +70,7 @@ class Server(object):
         raise NotImplemented
 
     @classmethod
-    def fromserverdict(cls, serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
+    def fromserverdict(cls, serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None, role_aliases=None):
         """Instantiate from server dict which can be read from servers.yaml"""
         # these properties can be defined in servers.yaml
         properties = ['account', 'name', 'role', 'address', 'port', 'ostype', 'expect', 'dontcheck', 'gateway']
@@ -80,7 +80,7 @@ class Server(object):
                 initargs[key] = serverdict[key]
         if 'dontcheck' in initargs:
             initargs['dontcheck'] = True
-        return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, **initargs)
+        return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, role_aliases=role_aliases, **initargs)
 
     def __str__(self):
         return "server %s" % self.name
@@ -147,9 +147,9 @@ class Server(object):
             else:
                 return True
 
-    def init_rolecollection(self, roles_dir):
+    def init_rolecollection(self, roles_dir, role_aliases=None):
         if self.rolecollection is None:
-            self.rolecollection = RoleCollection(self.roles, roles_dir)
+            self.rolecollection = RoleCollection(self.roles, roles_dir, role_aliases)
 
     def agent_start(self):
         """Starts remote agent on server"""

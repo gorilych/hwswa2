@@ -10,8 +10,19 @@ logger = logging.getLogger(__name__)
 # dict of roles {name: role}
 roles = {}
 
+def _alias_to_name(alias, name_aliases):
+    for name in name_aliases:
+        # name_aliases[name] can be a list of aliases or a single alias
+        aliases = name_aliases[name]
+        if not isinstance(aliases, list):
+            aliases = [aliases]
+        for a in aliases:
+            if alias.lower() == a.lower():
+                return name.lower()
+    # not found in aliases? should be a name itself then
+    return alias.lower()
 
-def role_factory(name, roles_dir):
+def role_factory(name, roles_dir, role_aliases=None):
     """ Factory for roles
     :param name: role name
     :param roles_dir: path to directory with name.yaml
@@ -19,6 +30,9 @@ def role_factory(name, roles_dir):
     """
     global roles
     nm = name.lower()
+    # nm can be alias
+    if role_aliases:
+        nm = _alias_to_name(nm, role_aliases)
     if nm in roles:
         return roles[nm]
     else:
@@ -73,12 +87,12 @@ class Role(object):
         else:
             return None
 
-    def _includes(self):
+    def _includes(self, role_aliases=None):
         includes = []
         if 'includes' in self.data:
             for name in self.data['includes']:
                 # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
-                r = role_factory(name, self._roles_dir)
+                r = role_factory(name, self._roles_dir, role_aliases)
                 includes.append(r)
         return includes
 
@@ -356,12 +370,12 @@ class Role(object):
 class RoleCollection(Role):
     """Collection of roles, which can be assigned to a server"""
 
-    def __init__(self, roles, roles_dir):
+    def __init__(self, roles, roles_dir, role_aliases=None):
         self.name = ''
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
         self._roles_dir = roles_dir
-        self.includes = self._includes()
+        self.includes = self._includes(role_aliases)
         self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()
