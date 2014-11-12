@@ -9,10 +9,12 @@ parameters:
   ntp_service_status: service ntpd status 2>&1
   OS:                 which lsb_release >/dev/null 2>&1 
                       && lsb_release --short --id --release | xargs 
-                      || cat /etc/system-release
+                      || cat /etc/system-release 2>/dev/null || cat /etc/redhat-release
   architecture:       uname --machine
-  ram:       awk '$1=="MemTotal:" {printf("%.3fGB",$2/1024/1024)}' /proc/meminfo
-  swap:      awk '$1=="SwapTotal:"{printf("%.3fGB",$2/1024/1024)}' /proc/meminfo
+  ram(GB):  awk '$1=="MemTotal:" {printf("%.3f",$2/1024/1024)}' /proc/meminfo 
+            | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
+  swap(GB): awk '$1=="SwapTotal:"{printf("%.3f",$2/1024/1024)}' /proc/meminfo
+            | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
   selinux:   which getenforce >/dev/null && getenforce || echo no selinux
   yum_repos: which yum >/dev/null
              && echo $(yum repolist | sed '/repo id/,$ !d' 
@@ -25,16 +27,17 @@ parameters:
     _type: dictionary
     count:     grep --fixed-strings processor -c /proc/cpuinfo
     model:     grep --fixed-strings --max-count=1 'model name' /proc/cpuinfo | awk -F':' '{print $2}' | sed 's/^ //g'
-    frequency: grep --fixed-strings --max-count=1 'cpu MHz' /proc/cpuinfo 
-               | awk '{printf("%.1fGHz",$NF/1000)}'
+    frequency(GHz): grep --fixed-strings --max-count=1 'cpu MHz' /proc/cpuinfo 
+                    | awk '{printf("%.2f",$NF/1000)}' 
+                    | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
   partitions:
     _type: table
-    _fields: [device, size, mountpoint, fs_type]
+    _fields: [device, size(GB), mountpoint, fs_type]
     _separator: '|'
     _command: lspartitions.sh
   blockdevs:
     _type: table
-    _fields: [name, type, readonly, removable, rotational, size, vendor, model]
+    _fields: [name, type, readonly, removable, rotational, size(GB), vendor, model]
     _separator: '|'
     _command: lsblk.sh
   virtualization: virt-what.py
