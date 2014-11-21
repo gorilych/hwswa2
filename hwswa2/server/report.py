@@ -222,6 +222,14 @@ class Report(object):
                                 res_str += ' ' + ip['address'] + '/' + ip['network']
                             nic_ips.append(res_str)
                         print('nics, ' + ' | '.join(nic_ips))
+            if 'requirement_failures' in report:
+                print('  Requirement FAILURES')
+                for failure in report['requirement_failures']:
+                    print failure
+            if 'requirement_successes' in report:
+                print('  Requirement successes')
+                for success in report['requirement_successes']:
+                    print success
   
     @staticmethod
     def print_diff(oldr, newr):
