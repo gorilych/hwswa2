@@ -2,3 +2,15 @@ description: Checks for WSNG role, linux NG standalone webserver
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common, poa.managed.fw, ngwebserver.fw ]
+requirements:
+  OS: 'Cloud Linux 6\.'
+  virtualization: 'bare metal'
+  ram(GB): 32
+  swap(GB): 32
+  cpu-cores: 4
+  cpu-frequency: 2.2
+  /: 5
+  /var/log: 10
+  /var/www/vhosts:
+    type: disk
+    value: 500

@@ -11,3 +11,12 @@ firewall:
     rules:
       - ports: 64000,22
         connect_with: {roles: [paci_sn, paci_pcs]}
+requirements:
+  OS: 'Parallels Cloud Server 6\.'
+  ram(GB): 2
+  swap(GB): 4
+  cpu-frequency: 1.5
+  /: 12
+  /vz:
+    type: disk
+    value: 500

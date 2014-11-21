@@ -1,4 +1,4 @@
-description: Firewall checks for UI
+description: Firewall checks and requirements for UI
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
 firewall:
@@ -20,5 +20,8 @@ firewall:
     protos: [TCP]
     connect_with:
         roles: [branding]
+requirements:
+  /usr: 10
+  ram(GB): -16
 
 
