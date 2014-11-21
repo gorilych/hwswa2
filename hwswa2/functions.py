@@ -13,7 +13,7 @@ from hwswa2.server.factory import servers_context
 import hwswa2.subcommands as subcommands
 from hwswa2.aliases import AliasedSubParsersAction
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 logger = logging.getLogger(__name__)
 

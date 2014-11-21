@@ -2,7 +2,7 @@
 Version History
 ===============
 
-0.4.0 (in progress)
+0.4.0 (2014-11-22)
     - Added: requirements (ram, disk, cpu, etc) in role files
     - Added: subcommand show-firewall
     - Added: put and get subcommands allow to omit remotepath and localpath, respectively
