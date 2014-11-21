@@ -61,6 +61,8 @@ class Server(object):
         self._tmp = []
         # remote agent
         self._agent = None
+        self.requirement_failures = []
+        self.requirement_successes = []
 
     def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
@@ -314,6 +316,13 @@ class Server(object):
             self.param_failures = result['failures']
             self.param_check_time = time.time()
             yield result['progress']
+        for req in self.rolecollection.requirements:
+            if not req.istemplate():
+                (result, reason) = req.check(self.parameters)
+                if result:
+                    self.requirement_successes.append(str(req))
+                else:
+                    self.requirement_failures.append(reason)
         self.param_check_status = "finished"
 
     def prepare_and_save_report(self, networks=None, rtime=None):
@@ -336,7 +345,9 @@ class Server(object):
                                    'name': self.name,
                                    'role': self.role,
                                    'parameters': self.parameters,
-                                   'parameters_failures': self.param_failures},
+                                   'parameters_failures': self.param_failures,
+                                   'requirement_successes': self.requirement_successes,
+                                   'requirement_failures': self.requirement_failures},
                              yamlfile=yamlfile,
                              time=rtime)
         self.reports.insert(0, self.report)
