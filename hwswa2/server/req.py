@@ -228,7 +228,15 @@ class _BaseReq(object):
 
     def _convert(self, param_value):
         """Convert parameter value into comparable form"""
-        return type(self.value)(param_value)
+        try:
+            result = type(self.value)(param_value)
+        # trying to work around wrong guess that value is integer
+        except ValueError, ve:
+            if isinstance(self.value, int):
+                result = float(param_value)
+            else:
+                raise ve
+        return result
 
     def _find_parameter(self, parameters):
         keys = self.parameter.split(':')
