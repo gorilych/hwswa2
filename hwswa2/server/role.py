@@ -4,6 +4,7 @@ import os
 import copy
 
 import hwswa2.auxiliary as aux
+from hwswa2.server.req import reqs_factory
 
 logger = logging.getLogger(__name__)
 
@@ -110,16 +111,13 @@ class Role(object):
         return included_parameters
 
     def _requirements(self):
-        requirements = {}
-        if 'requirements' in self.data:
-            requirements = self.data['requirements']
-        included_requirements = {}
+        reqs_body = self.data.get('requirements', {})
+        incl_reqs = []
         for role in self.includes:
-            rq = copy.deepcopy(role.requirements)
-            rq.update(included_requirements)
-            included_requirements = rq
-        included_requirements.update(requirements)
-        return included_requirements
+            incl_reqs.extend(role.requirements)
+        reqs = reqs_factory(self.name, reqs_body, incl_reqs)
+        logger.debug("Requirements for %s: %s" % (self, map(str,[r for r in reqs if not r.istemplate()])))
+        return reqs
 
     @staticmethod
     def _unroll_fw_groups(firewall):
@@ -371,7 +369,7 @@ class RoleCollection(Role):
     """Collection of roles, which can be assigned to a server"""
 
     def __init__(self, roles, roles_dir, role_aliases=None):
-        self.name = ''
+        self.name = None
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
         self._roles_dir = roles_dir
