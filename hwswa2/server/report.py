@@ -174,7 +174,7 @@ class Report(object):
                 print('  Parameters')
                 parameters = copy.deepcopy(report['parameters'])
                 # trying to print in pretty order
-                for key in ['hostname', 'OS', 'architecture', 'processors', 'ram', 'swap',
+                for key in ['hostname', 'OS', 'architecture', 'processors', 'ram(GB)', 'swap(GB)',
                             'partitions', 'blockdevs', 'time', 'time_utc',
                             'ntp_service_status', 'uptime', 'iptables', 'selinux',
                             'yum_repos', 'umask']:
@@ -184,19 +184,19 @@ class Report(object):
                             print(key + ', ' + str(val))
                         elif key == 'processors':
                             count = val['count']
-                            frequency = val['frequency']
-                            print('processors, ' + count + 'x' + frequency)
+                            frequency = val['frequency(GHz)']
+                            print('processors, ' + count + 'x' + frequency + 'GHz')
                         elif key == 'partitions':
                             print('partitions, ' + 
                                   ' | '.join(p['device'] + ' ' +
                                              p['fs_type'] + ' ' + 
                                              p['mountpoint'] + ' ' + 
-                                             p['size'] for p in val))
+                                             p['size(GB)'] + 'GB' for p in val))
                         elif key == 'blockdevs':
                             print('blockdevs, ' + 
                                   ' | '.join(d['type'] + ' ' +
                                              d['name'] + ' ' + 
-                                             d['size'] for d in val))
+                                             d['size(GB)'] + 'GB' for d in val))
                         else:
                             logger.info('wrong type for value: %s' % key)
                         del parameters[key]
