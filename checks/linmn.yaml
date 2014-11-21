@@ -36,4 +36,4 @@ firewall:
     protos: [TCP]
     type: internet
     ports: 80,443
-    connect_with: {hosts: [pa.download.parallels.com]}
+    connect_with: {hosts: [download.pa.parallels.com]}
