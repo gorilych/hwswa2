@@ -19,7 +19,7 @@ class Server(object):
 
     def __init__(self, name, account, address,
                  role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None,
-                 roles_dir=None, reports_dir=None, remote_scripts_dir=None):
+                 roles_dir=None, reports_dir=None, remote_scripts_dir=None, role_aliases=None):
         self.name = name
         self.ostype = ostype
         self.role = role
@@ -32,7 +32,7 @@ class Server(object):
         self.rolecollection = None
         self._roles_dir = roles_dir
         if roles_dir is not None:
-            self.init_rolecollection(roles_dir)
+            self.init_rolecollection(roles_dir, role_aliases)
         self.account = account
         self.address = address
         self.port = port
@@ -61,6 +61,8 @@ class Server(object):
         self._tmp = []
         # remote agent
         self._agent = None
+        self.requirement_failures = []
+        self.requirement_successes = []
 
     def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
@@ -70,7 +72,7 @@ class Server(object):
         raise NotImplemented
 
     @classmethod
-    def fromserverdict(cls, serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
+    def fromserverdict(cls, serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None, role_aliases=None):
         """Instantiate from server dict which can be read from servers.yaml"""
         # these properties can be defined in servers.yaml
         properties = ['account', 'name', 'role', 'address', 'port', 'ostype', 'expect', 'dontcheck', 'gateway']
@@ -80,7 +82,7 @@ class Server(object):
                 initargs[key] = serverdict[key]
         if 'dontcheck' in initargs:
             initargs['dontcheck'] = True
-        return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, **initargs)
+        return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, role_aliases=role_aliases, **initargs)
 
     def __str__(self):
         return "server %s" % self.name
@@ -147,9 +149,9 @@ class Server(object):
             else:
                 return True
 
-    def init_rolecollection(self, roles_dir):
+    def init_rolecollection(self, roles_dir, role_aliases=None):
         if self.rolecollection is None:
-            self.rolecollection = RoleCollection(self.roles, roles_dir)
+            self.rolecollection = RoleCollection(self.roles, roles_dir, role_aliases)
 
     def agent_start(self):
         """Starts remote agent on server"""
@@ -314,6 +316,13 @@ class Server(object):
             self.param_failures = result['failures']
             self.param_check_time = time.time()
             yield result['progress']
+        for req in self.rolecollection.requirements:
+            if not req.istemplate():
+                (result, reason) = req.check(self.parameters)
+                if result:
+                    self.requirement_successes.append(str(req))
+                else:
+                    self.requirement_failures.append(reason)
         self.param_check_status = "finished"
 
     def prepare_and_save_report(self, networks=None, rtime=None):
@@ -333,9 +342,12 @@ class Server(object):
         yamlfile = os.path.join(reports_path, time.strftime(Server.time_format, rtime))
         self.report = Report(data={'check_status': self.param_check_status,
                                    'check_time': time.ctime(self.param_check_time),
+                                   'name': self.name,
                                    'role': self.role,
                                    'parameters': self.parameters,
-                                   'parameters_failures': self.param_failures},
+                                   'parameters_failures': self.param_failures,
+                                   'requirement_successes': self.requirement_successes,
+                                   'requirement_failures': self.requirement_failures},
                              yamlfile=yamlfile,
                              time=rtime)
         self.reports.insert(0, self.report)
@@ -343,6 +355,9 @@ class Server(object):
             self.report.fix_networks(networks)
             self.report.check_expect(self.expect)
         self.report.save()
+        return True
+
+    def cleanup(self):
         return True
 
 

@@ -1,5 +1,7 @@
 description: Checks for PBALINFE role, linux PBA application server
 includes: [ common ]
+parameters:
+  pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
 firewall:
   - name: Outgoing_to_LINMN
     description: Allow access from PBA to POA API
@@ -11,6 +13,15 @@ firewall:
     type: infra
     connect_with:
       roles: [linmn,winmn]
+  - name: Outgoing_to_branding
+    description: access to hosting services
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443,21,49152-65534
+    type: infra
+    connect_with:
+      roles: [branding]
   - name: Incoming_to_PBALINOS
     description: Allow access to Online Store
     policy: allow

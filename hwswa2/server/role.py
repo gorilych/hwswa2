@@ -4,25 +4,41 @@ import os
 import copy
 
 import hwswa2.auxiliary as aux
+from hwswa2.server.req import reqs_factory
 
 logger = logging.getLogger(__name__)
 
 # dict of roles {name: role}
 roles = {}
 
+def _alias_to_name(alias, name_aliases):
+    for name in name_aliases:
+        # name_aliases[name] can be a list of aliases or a single alias
+        aliases = name_aliases[name]
+        if not isinstance(aliases, list):
+            aliases = [aliases]
+        for a in aliases:
+            if alias.lower() == a.lower():
+                return name.lower()
+    # not found in aliases? should be a name itself then
+    return alias.lower()
 
-def role_factory(name, checksdir):
+def role_factory(name, roles_dir, role_aliases=None):
     """ Factory for roles
     :param name: role name
-    :param checksdir: path to directory with name.yaml
+    :param roles_dir: path to directory with name.yaml
     :return: role object
     """
     global roles
-    if name in roles:
-        return roles[name]
+    nm = name.lower()
+    # nm can be alias
+    if role_aliases:
+        nm = _alias_to_name(nm, role_aliases)
+    if nm in roles:
+        return roles[nm]
     else:
-        role = Role(name, checksdir)
-        roles[name] = role
+        role = Role(nm, roles_dir)
+        roles[nm] = role
         return role
 
 
@@ -41,12 +57,12 @@ class Role(object):
     def __repr__(self):
         return "<Role " + self.name + ">"
 
-    def __init__(self, name, checksdir):
+    def __init__(self, name, roles_dir):
         """Constructs role from checksdir/name.yaml"""
-        self.name = name
-        self._checksdir = checksdir
+        self.name = name.lower()
+        self._roles_dir = roles_dir
         logger.debug("Collecting details for %s" % self)
-        f = os.path.join(checksdir, name.lower() + '.yaml')
+        f = os.path.join(self._roles_dir, self.name + '.yaml')
         try:
             self.data = yaml.load(open(f))
         except IOError as ie:
@@ -72,12 +88,12 @@ class Role(object):
         else:
             return None
 
-    def _includes(self):
+    def _includes(self, role_aliases=None):
         includes = []
         if 'includes' in self.data:
             for name in self.data['includes']:
                 # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
-                r = role_factory(name, self._checksdir)
+                r = role_factory(name, self._roles_dir, role_aliases)
                 includes.append(r)
         return includes
 
@@ -95,16 +111,13 @@ class Role(object):
         return included_parameters
 
     def _requirements(self):
-        requirements = {}
-        if 'requirements' in self.data:
-            requirements = self.data['requirements']
-        included_requirements = {}
+        reqs_body = self.data.get('requirements', {})
+        incl_reqs = []
         for role in self.includes:
-            rq = copy.deepcopy(role.requirements)
-            rq.update(included_requirements)
-            included_requirements = rq
-        included_requirements.update(requirements)
-        return included_requirements
+            incl_reqs.extend(role.requirements)
+        reqs = reqs_factory(self.name, reqs_body, incl_reqs)
+        logger.debug("Requirements for %s: %s" % (self, map(str,[r for r in reqs if not r.istemplate()])))
+        return reqs
 
     @staticmethod
     def _unroll_fw_groups(firewall):
@@ -121,6 +134,17 @@ class Role(object):
                 rules.append(r)
         return rules
 
+    def connects_with_roles(self):
+        roles = []
+        for rule in self.firewall:
+            try:
+                add_roles = [role for role in rule['connect_with']['roles'] if role not in roles]
+            except KeyError:
+                pass
+            else:
+                roles.extend(add_roles)
+        return roles
+
     def _firewall(self):
         firewall = []
         if 'firewall' in self.data:
@@ -129,6 +153,13 @@ class Role(object):
             rf = copy.deepcopy(role.firewall)
             firewall.extend(rf)
         firewall = Role._unroll_fw_groups(firewall)
+        for rule in firewall:
+            try:
+                roles = rule['connect_with']['roles']
+            except KeyError:
+                pass
+            else:
+                rule['connect_with']['roles'] = [role.lower() for role in roles]
         return firewall
 
     @staticmethod
@@ -161,6 +192,7 @@ class Role(object):
             if myparam['_type'] == 'dictionary':
                 val = {}
                 failures = {}
+                progress = 0
                 for p in myparam:
                     if not p.startswith('_'):
                         for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
@@ -174,7 +206,7 @@ class Role(object):
                                 curfailures = None
                             yield {'param': val, 'progress': curprogress, 'failures': curfailures}
                         progress = curprogress
-
+                yield {'param': val, 'progress': progress, 'failures': failures}
             elif myparam['_type'] == 'table':
                 val = []
                 if '_command' in myparam:
@@ -290,7 +322,7 @@ class Role(object):
         for rule in self.firewall:
             if rule['direction'] == 'incoming' and rule['type'] == 'infra':
                 for r in rule['connect_with']['roles']:
-                    if r.lower() in other_role_names:
+                    if r in other_role_names:
                         for proto in rule['protos']:
                             for network in rule['networks']:
                                 incoming_rules.append({'network': network,
@@ -300,7 +332,7 @@ class Role(object):
         for rule in other.firewall:
             if rule['direction'] == 'outgoing' and rule['type'] == 'infra':
                 for r in rule['connect_with']['roles']:
-                    if r.lower() in role_names:
+                    if r in role_names:
                         for proto in rule['protos']:
                             for network in rule['networks']:
                                 incoming_rules.append({'network': network,
@@ -336,12 +368,12 @@ class Role(object):
 class RoleCollection(Role):
     """Collection of roles, which can be assigned to a server"""
 
-    def __init__(self, roles, checksdir):
-        self.name = ''
+    def __init__(self, roles, roles_dir, role_aliases=None):
+        self.name = None
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
-        self._checksdir = checksdir
-        self.includes = self._includes()
+        self._roles_dir = roles_dir
+        self.includes = self._includes(role_aliases)
         self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()
@@ -351,4 +383,3 @@ class RoleCollection(Role):
 
     def __repr__(self):
         return "<RoleCollection: " + self._roles + ">"
-

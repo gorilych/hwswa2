@@ -131,7 +131,6 @@ class Report(object):
                             self.data['expect'][e_key] = 'NOT OK, IP address found on ' + e_found['nic'] + \
                                                          ' but network is NOT the same: ' + e_found['nw']
 
-
     def save(self, yamlfile=None):
         if self.data is None:
             raise ReportException("Won't save empty report")
@@ -147,13 +146,22 @@ class Report(object):
             raise ReportException("Error writing to file %s: %s" % (yamlfile, e))
 
     def show(self, raw=False):
-        report = self.data
+        report = copy.deepcopy(self.data)
         if report is None:
             print('NO REPORT')
         elif raw:
             print yaml.safe_dump(report)
         else:
-            # print all scalars
+            # trying to print in pretty order
+            for key in ['name', 'role', 'check_status', 'check_time', 'parameters_failures']:
+                if key in report:
+                    val = report[key]
+                    if key == 'role' and isinstance(val, list):
+                        print(key + ', ' + ', '.join(val))
+                    else:
+                        print(key + ', ' + str(report[key]))
+                    del report[key]
+            # print all others, scalars only
             for key in report:
                 val = report[key]
                 if isinstance(val, (type(None), str, unicode, int, float, bool)):
@@ -166,7 +174,7 @@ class Report(object):
                 print('  Parameters')
                 parameters = copy.deepcopy(report['parameters'])
                 # trying to print in pretty order
-                for key in ['hostname', 'OS', 'architecture', 'processors', 'ram', 'swap',
+                for key in ['hostname', 'OS', 'architecture', 'processors', 'ram(GB)', 'swap(GB)',
                             'partitions', 'blockdevs', 'time', 'time_utc',
                             'ntp_service_status', 'uptime', 'iptables', 'selinux',
                             'yum_repos', 'umask']:
@@ -176,19 +184,19 @@ class Report(object):
                             print(key + ', ' + str(val))
                         elif key == 'processors':
                             count = val['count']
-                            frequency = val['frequency']
-                            print('processors, ' + count + 'x' + frequency)
+                            frequency = val['frequency(GHz)']
+                            print('processors, ' + count + 'x' + frequency + 'GHz')
                         elif key == 'partitions':
                             print('partitions, ' + 
                                   ' | '.join(p['device'] + ' ' +
                                              p['fs_type'] + ' ' + 
                                              p['mountpoint'] + ' ' + 
-                                             p['size'] for p in val))
+                                             p['size(GB)'] + 'GB' for p in val))
                         elif key == 'blockdevs':
                             print('blockdevs, ' + 
                                   ' | '.join(d['type'] + ' ' +
                                              d['name'] + ' ' + 
-                                             d['size'] for d in val))
+                                             d['size(GB)'] + 'GB' for d in val))
                         else:
                             logger.info('wrong type for value: %s' % key)
                         del parameters[key]
@@ -214,8 +222,15 @@ class Report(object):
                                 res_str += ' ' + ip['address'] + '/' + ip['network']
                             nic_ips.append(res_str)
                         print('nics, ' + ' | '.join(nic_ips))
+            if 'requirement_failures' in report:
+                print('  Requirement FAILURES')
+                for failure in report['requirement_failures']:
+                    print failure
+            if 'requirement_successes' in report:
+                print('  Requirement successes')
+                for success in report['requirement_successes']:
+                    print success
   
-
     @staticmethod
     def print_diff(oldr, newr):
         """Prints reports differences: oldr->newr"""

@@ -3,13 +3,82 @@ import threading
 import Queue
 import time
 import sys
+import glob
+import os
 
 from hwswa2.globals import config
 from hwswa2.server.factory import get_server, server_names
 from hwswa2.server import FirewallException
 from hwswa2.server.report import Report
+from hwswa2.server.role import Role
+
 
 logger = logging.getLogger(__name__)
+
+
+def show_firewall():
+    """Show firewall requirements"""
+    servers = []
+    for name in config['servernames']:
+        server = get_server(name)
+        if server is None:
+            logger.error("Cannot find server %s in servers list" % name)
+            sys.exit(1)
+        else:
+            servers.append(server)
+    intranet_rules = []
+    internet_rules = []
+    for s in servers:
+        for other_s in servers:
+            if not other_s.name == s.name:
+                rules = s.rolecollection.collect_incoming_fw_rules(other_s.rolecollection)
+                for rule in rules:
+                    intranet_rules.append({'source': other_s.name, 
+                                           'destination': s.name, 
+                                           'proto': rule['proto'],
+                                           'ports': rule['ports'],
+                                           'network': rule['network']})
+        inet_rules = s.rolecollection.collect_outgoing_internet_rules()
+        for address in inet_rules:
+            internet_rules.append({'source': s.name, 
+                                   'destination': address, 
+                                   'proto': '',
+                                   'ports': inet_rules[address],
+                                   'network': ''})
+    all_rules = intranet_rules + internet_rules
+    if config['csv']:
+        import csv
+        dw = csv.DictWriter(sys.stdout, all_rules[0].keys())
+        dw.writeheader()
+        dw.writerows(all_rules)
+    elif config['compact']:
+        print("=============BEGIN======================")
+        # sort intranet_rules by source to have the same order as in servers
+        for rule in (rule for s in servers for rule in intranet_rules if rule['source'] == s.name):
+            print("{source} -> {destination} {proto}:{ports} ({network})".format(**rule))
+    else:
+        print("=============BEGIN======================")
+        for s in servers:
+            # find networks:
+            networks = set([rule['network'] for rule in intranet_rules if rule['source'] == s.name or rule['destination'] == s.name])
+            if networks:
+                print("==== Server %s" % s.name)
+                for network in networks:
+                    outgoing = [rule for rule in intranet_rules if rule['source'] == s.name and rule['network'] == network]
+                    if outgoing:
+                        print("%s outgoing:" % network)
+                        for rule in outgoing:
+                            print(" to {destination} {proto}:{ports}".format(**rule))
+                    incoming = [rule for rule in intranet_rules if rule['destination'] == s.name and rule['network'] == network]
+                    if incoming:
+                        print("%s incoming:" % network)
+                        for rule in incoming:
+                            print(" from {source} {proto}:{ports}".format(**rule))
+    if not config['csv']:
+        print("===== Internet access requirements =====")
+        for rule in internet_rules:
+            print("{source} -> {destination}:{ports}".format(**rule))
+        print("=============END========================")
 
 
 def firewall():
@@ -111,6 +180,7 @@ def firewall():
             for addr in failed:
                 print "failed: %s -> %s:%s" % (sname, addr, failed[addr])
     print "========================================"
+
 
 def check():
     """Check only specified servers"""
@@ -314,7 +384,7 @@ def get():
         sys.exit(1)
     logger.debug("Copying to '%s' from '%s' on %s" % (localpath, remotepath, server))
     if server.accessible():
-        server.get(localpath, remotepath)
+        server.get(remotepath, localpath)
     else:
         logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
         sys.exit(1)
@@ -375,3 +445,22 @@ def reportdiff():
         logger.error("%s has no report %s" % (server, r2name))
         sys.exit(1)
     Report.print_diff(report1, report2)
+
+
+def list_roles(roles_dir=None):
+    if roles_dir is None:
+        roles_dir = config['checksdir']
+    roles = []
+    role_names = []
+    for role_file in glob.glob(os.path.join(roles_dir, '*.yaml')):
+        role_name = os.path.basename(role_file)[:-5].lower()
+        roles.append(Role(role_name, roles_dir))
+        role_names.append(role_name)
+    aux_role_names = []
+    for role in roles:
+        new_names = [r for r in role.connects_with_roles() if r not in role_names and r not in aux_role_names]
+        aux_role_names.extend(new_names)
+    role_names.sort()
+    aux_role_names.sort()
+    print("==== Roles ====\n" + ', '.join(role_names))
+    print("==== Auxiliary roles (no yaml files, but mentioned in firewall rules) ====\n" + ', '.join(aux_role_names))

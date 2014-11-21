@@ -45,6 +45,7 @@ config['firewall'] = {
     'max_failures': 10,
     'max_closed_ports': 500,
     }
+config['role-aliases'] = {}
 
 exitcode = 0 
 

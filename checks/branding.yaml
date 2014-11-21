@@ -21,7 +21,7 @@ firewall:
     rules:
       - name: to_file_manager 
         ports: 1299
-        connect_with: {roles: [fileman]}
+        connect_with: {roles: [filemanager]}
       - name: to_phppgadm
         ports: 9114
         connect_with: {roles: [phppgadm]}

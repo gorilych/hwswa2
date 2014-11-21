@@ -3,13 +3,17 @@ description: Checks for PVCLIN role
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common ]
 parameters:
-  vz_partition: mount | grep vz 
+  vz_partition: mount | grep --silent '[[:space:]]/vz[[:space:]]' 
+                && echo OK 
+                || echo NOK, no /vz mountpoint 
 requirements:
-  vz_partition_check:
-    _type: not # possible types: not, and, or, match, equal, greater, empty, zero 
-    _check:
-      _type: empty
-      _values: {vz_partition: vzp}
-      _arguments:
-        string: "%(vzp)s"
-    
+  vz_partition: OK
+  /: 5
+  /vz:
+    type: disk
+    value: 100
+  OS: '((CentOS|RedHat).* (5|6)\.)'
+  cpu-cores: 2
+  ram(GB): 2
+  swap(GB): 8
+  

@@ -107,7 +107,7 @@ class LinuxServer(Server):
         except socket.error as serr:
             self._last_connection_error = 'socket.error raised while connecting to %s: %s' % (self._address(), serr)
         except Exception as e:
-            self._last_connection_error = '%s raised while connecting to %s: %s' % (type(se), self._address(), se)
+            self._last_connection_error = '%s raised while connecting to %s: %s' % (type(e), self._address(), e)
         else:
             logger.debug('Established connection with %s' % self)
             return client
@@ -268,15 +268,15 @@ class LinuxServer(Server):
                 self.mkdir(rname)
                 self._put_dir_content(lname, rname)
 
-    def _get_dir_content(self, localdir, remotedir):
+    def _get_dir_content(self, remotedir, localdir):
         for f in self._listdir(remotedir):
             lname = os.path.join(localdir, f)
             rname = os.path.join(remotedir, f)
             if self._isfile(rname):
-                self.get(lname, rname)
+                self.get(rname, lname)
             if self._isdir(rname):
                 os.makedirs(lname)
-                self._get_dir_content(lname, rname)
+                self._get_dir_content(rname, lname)
 
     def _remove(self, path, privileged=True):
         self.exec_cmd("rm -rf %s" % path, privileged=privileged)
@@ -492,7 +492,9 @@ class LinuxServer(Server):
         self._tmp.append(tmp)
         return tmp
 
-    def put(self, localpath, remotepath):
+    def put(self, localpath, remotepath=None):
+        if remotepath is None or remotepath == '':
+            remotepath = '.'
         logger.debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), self, remotepath.decode('utf-8')))
         if not os.path.exists(localpath):
             raise LinuxServerException("Local path does not exist: %s" % localpath.decode('utf-8'))
@@ -517,7 +519,9 @@ class LinuxServer(Server):
                     self.mkdir(remotepath)
                     self._put_dir_content(localpath, remotepath)
 
-    def get(self, localpath, remotepath):
+    def get(self, remotepath, localpath=None):
+        if localpath is None or localpath == '':
+            localpath = '.'
         logger.debug("Copying to %s from %s:%s" % (localpath.decode('utf-8'), self, remotepath.decode('utf-8')))
         if self._connect():
             sftp = self._sshclient.open_sftp()
@@ -527,10 +531,10 @@ class LinuxServer(Server):
                 if os.path.exists(localpath):
                     lname = os.path.join(localpath, os.path.basename(remotepath))
                     os.makedirs(lname)
-                    self._get_dir_content(lname, remotepath)
+                    self._get_dir_content(remotepath, lname)
                 else:
                     os.makedirs(localpath)
-                    self._get_dir_content(localpath, remotepath)
+                    self._get_dir_content(remotepath, localpath)
             elif self._isfile(remotepath):
                 attrs = sftp.stat(remotepath)
                 if os.path.exists(localpath):

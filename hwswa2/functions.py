@@ -13,7 +13,7 @@ from hwswa2.server.factory import servers_context
 import hwswa2.subcommands as subcommands
 from hwswa2.aliases import AliasedSubParsersAction
 
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,8 @@ def run_subcommand():
     with servers_context(config['servers'],
                          config['checksdir'],
                          config['reportsdir'],
-                         config['rscriptdir']):
+                         config['rscriptdir'],
+                         config['role-aliases']):
         config['subcommand']()
 
 
@@ -75,12 +76,10 @@ def read_configuration():
 
     subparsers = parser.add_subparsers(title='Subcommands', help='Run `hwswa2 <subcommand> -h` for usage')
 
+    subparser = subparsers.add_parser('list-roles', help='show available roles')
+    subparser.set_defaults(subcommand=subcommands.list_roles)
+
     subparser = subparsers.add_parser('check', help='check specific servers', aliases=('c',))
-    group = subparser.add_mutually_exclusive_group(required=False)
-    group.add_argument('--with-reboot', help='perform reboot check',
-                       dest='check_reboot', action='store_true', default=argparse.SUPPRESS)
-    group.add_argument('--wo-reboot', help='skip reboot check',
-                       dest='check_reboot', action='store_false', default=argparse.SUPPRESS)
     subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
     subparser.set_defaults(subcommand=subcommands.check)
 
@@ -116,18 +115,25 @@ def read_configuration():
     subparser = subparsers.add_parser('put', help='copy file to server', aliases=('p',))
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('localpath')
-    subparser.add_argument('remotepath')
+    subparser.add_argument('remotepath', nargs='?', default=None)
     subparser.set_defaults(subcommand=subcommands.put)
 
     subparser = subparsers.add_parser('get', help='copy file from server', aliases=('g',))
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('remotepath')
-    subparser.add_argument('localpath')
+    subparser.add_argument('localpath', nargs='?', default=None)
     subparser.set_defaults(subcommand=subcommands.get)
 
     subparser = subparsers.add_parser('firewall', help='check connections between servers', aliases=('f',))
     subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
     subparser.set_defaults(subcommand=subcommands.firewall)
+
+    subparser = subparsers.add_parser('show-firewall', help='show firewall requirements for servers', aliases=('sf',))
+    formatgroup = subparser.add_mutually_exclusive_group()
+    formatgroup.add_argument('-c', '--compact', help='compact output', action='store_true')
+    formatgroup.add_argument('-s', '--csv', help='csv output', action='store_true')
+    subparser.add_argument('servernames', nargs='+', help='server names', metavar='server')
+    subparser.set_defaults(subcommand=subcommands.show_firewall)
 
     subparser = subparsers.add_parser('lastreport', help='show last report for the server', aliases=('lr',))
     subparser.add_argument('-r', '--raw', help='show raw file content', action='store_true')
@@ -187,5 +193,3 @@ def read_configuration():
     import hwswa2.server.linux
 
     hwswa2.server.linux.TIMEOUT = config['ssh_timeout']
-
-
