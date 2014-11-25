@@ -206,6 +206,8 @@ class Role(object):
                                 curfailures = None
                             yield {'param': val, 'progress': curprogress, 'failures': curfailures}
                         progress = curprogress
+                if not failures:
+                    failures = None
                 yield {'param': val, 'progress': progress, 'failures': failures}
             elif myparam['_type'] == 'table':
                 val = []
