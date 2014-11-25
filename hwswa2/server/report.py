@@ -2,6 +2,7 @@ import logging
 import yaml
 import copy
 import os
+from ipcalc import Network
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +66,13 @@ class Report(object):
             for nic in nics:
                 ips = nic['ip']
                 for ip in ips:
-                    nw = ip['network']
-                    nwname = next((n['name'] for n in networks if nw == n['address'] + '/' + str(n['prefix'])), None)
-                    if nwname is not None:
-                        ip['network'] = nwname
+                    ip_a = ip['address']
+                    ip_p = ip['prefix']
+                    n_a = "%s" % Network(ip_a + '/' + ip_p).network()
+                    ip['network'] = next((n['name'] for n in networks 
+                                          if "%s" % n['prefix'] == ip_p 
+                                          and n['address'] == n_a),
+                                         n_a + '/' + ip_p)
 
     def get_nw_ips(self, networks=None):
         """Obtains network -> ip dict from report"""
