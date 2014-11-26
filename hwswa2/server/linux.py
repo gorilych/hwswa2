@@ -111,7 +111,7 @@ class LinuxServer(Server):
         else:
             logger.debug('Established connection with %s' % self)
             return client
-        logger.debug(self._last_connection_error)
+        logger.error(self._last_connection_error)
         return None
 
     def _connect_to_gateway(self, timeout=TIMEOUT):
@@ -126,7 +126,7 @@ class LinuxServer(Server):
                 self._sshtunnel = self.gateway.create_tunnel(self.name, self.address, self._port, timeout=timeout)
             except TunnelException as te:
                 self._last_connection_error = "cannot connect via gateway %s: %s" % (self.gateway, te.value)
-                logger.debug(self._last_connection_error)
+                logger.error(self._last_connection_error)
                 return False
             else:
                 logger.debug("created tunnel via %s" % self.gateway)
@@ -305,7 +305,7 @@ class LinuxServer(Server):
             except select.error:
                 continue
             except Exception, e:
-                logger.debug("select.select() raised exception %s: %s"
+                logger.error("select.select() raised exception %s: %s"
                              % (type(e).__name__, e.args))
                 raise e
             if sys.stdin in r:
@@ -414,13 +414,13 @@ class LinuxServer(Server):
         try:
             self._sshtunnels[name]['sshclient'].close()
         except Exception as e:
-            logger.debug("trying to remove tunnel %s (sshclient.close()): exception %s: %s"
+            logger.error("trying to remove tunnel %s (sshclient.close()): exception %s: %s"
                          % (name, type(e).__name__, e.args))
             pass
         try:
             del self._sshtunnels[name]
         except Exception as e:
-            logger.debug("trying to remove tunnel %s (del key): exception %s: %s"
+            logger.error("trying to remove tunnel %s (del key): exception %s: %s"
                          % (name, type(e).__name__, e.args))
             pass
 
@@ -632,7 +632,7 @@ class LinuxServer(Server):
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            logger.debug("agent not started, exception %s: %s"
+            logger.error("agent not started, exception %s: %s"
                          % (type(e).__name__, e.args), exc_info=True)
             return False
 
@@ -643,7 +643,7 @@ class LinuxServer(Server):
                 self.agent_cmd('exit')
                 self._agent['stdin'].close()
             except Exception as e:
-                logger.debug("could not stop agent, exception %s: %s"
+                logger.error("could not stop agent, exception %s: %s"
                              % (type(e).__name__, e.args))
             finally:
                 self._agent = None

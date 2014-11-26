@@ -26,8 +26,8 @@ def init_logger():
     formatter = logging.Formatter('%(message)s')
     # tell the handler to use this format
     console.setFormatter(formatter)
-    # add the handler to the root logger
-    logger.addHandler(console)
+    # add the handler to the subcommands logger
+    logging.getLogger("hwswa2.subcommands").addHandler(console)
     return logger
 
 

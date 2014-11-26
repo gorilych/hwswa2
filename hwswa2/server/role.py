@@ -66,7 +66,7 @@ class Role(object):
         try:
             self.data = yaml.load(open(f))
         except IOError as ie:
-            logger.debug("Error opening role file %s, assuming it is empty role. Exception: %s" % (f, ie))
+            logger.error("Error opening role file %s, assuming it is empty role. Exception: %s" % (f, ie))
             self.data = {}
             self._empty = True
         except yaml.YAMLError as ye:

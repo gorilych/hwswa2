@@ -111,9 +111,9 @@ class Server(object):
                         filetime = time.mktime(time.strptime(filename, timeformat))
                         reports.append(Report(yamlfile=filepath, time=filetime))
                     except ValueError as ve:
-                        logger.debug("File name %s is not in format %s: %s" % (filename, timeformat, ve))
+                        logger.error("File name %s is not in format %s: %s" % (filename, timeformat, ve))
                     except ReportException as re:
-                        logger.debug("Error reading report from file %s: %s" % (filename, re))
+                        logger.error("Error reading report from file %s: %s" % (filename, re))
             self.reports = sorted(reports, key=lambda report: report.time, reverse=True)
 
     def list_reports(self):
@@ -139,12 +139,12 @@ class Server(object):
         """
         lfr = self.last_finished_report()
         if lfr is None:
-            logger.debug("No finished reports for %s" % self)
+            logger.info("No finished reports for %s" % self)
             return False
         else:
             self.nw_ips = lfr.get_nw_ips(networks)
             if self.nw_ips == {}:
-                logger.debug('Found no IPs for %s' % self)
+                logger.info('Found no IPs for %s' % self)
                 return False
             else:
                 return True
