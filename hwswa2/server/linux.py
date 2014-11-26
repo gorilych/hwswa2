@@ -556,14 +556,7 @@ class LinuxServer(Server):
             return self.check_reboot_result
         logger.debug("Trying to reboot %s" % self)
         starttime = time.time()
-        try:  # reboot will most probably fail with socket.timeout exception
-            self.exec_cmd('reboot', timeout=3)
-        except KeyboardInterrupt:
-            raise
-        except Exception as e:
-            logger.debug("self.exec_cmd('reboot', timeout=3) caused exception %s: %s"
-                         % (type(e).__name__, e.args))
-            pass
+        self.exec_cmd('nohup shutdown -r now', timeout=3)
         logger.debug("reboot command is sent, now wait till server is down")
         # wait till shutdown:
         if aux.wait_for_not(self.accessible, [True], timeout):
