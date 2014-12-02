@@ -9,7 +9,7 @@ Role files
 ==========
 
 HWSWA2 uses roles to determine what parameters it should obtain for the server
-asdfasf and what requirements it should satisfy.
+and what requirements it should satisfy.
 
 Role files are stored in *checks/* directory.
 
@@ -19,35 +19,35 @@ Role files structure
 
 Role file should have `YAML <http://www.yaml.org/>`_ format and *yaml*
 extension. When HWSWA2 reads role file it interprets it as a dictionary with
-specifics keys which describe the role. While HWSWA2 accepts any key inside a
-role, only few have the meaning. Let's call them sections.
+specific keys which describe the role. Let's call them sections. While HWSWA2
+accepts any key inside a role, only few have the meaning
 
-**description**
+description
   This section is ignored by HWSWA2 and used for readability. Example from 
   pvclin.yaml::
 
     description: Checks for PVCLIN role
 
-**includes**
+includes
   The value specified in this section should be a sequence of included roles,
   from more specific to less specific. HWSWA2 will read included roles and merge
-  their key values accordingly. Example from pvclin.yaml::
+  their sections accordingly. Example from pvclin.yaml::
 
     includes: [ common ]
 
-**parameters** 
+parameters
   This section represents mapping between parameter names and the commands
   (sometime in a complex manner) HWSWA2 should execute on the server to obtain
   parameter value.
 
-**firewall**
-  This section contains all firewall requirements for the role. This section is
-  used to check or print out firewall requirements between servers with
-  different roles.
+firewall
+  This section (represented as a list) contains all firewall requirements for 
+  the role. It is used to check or print out firewall requirements 
+  between servers with different roles.
   
-**requirements**
+requirements
   In this section you can specify CPU/RAM/disk requirements for the role. It is
-  possible to add requirement for some specific parameter.
+  possible to add requirement for arbitrary parameter as well.
 
 We will cover **parameters**, **firewall** and **requirements** sections in more
 details below.
@@ -59,8 +59,8 @@ Parameters
 String parameter
 ----------------
 
-Simple parameter is mapped to a command which should be executed on a remote
-server. Example from common.yaml::
+String parameter is simply mapped to a command which should be executed on a
+remote server. Example from common.yaml::
 
   parameters:
     hostname:           hostname -f 2>/dev/null || hostname
@@ -86,8 +86,8 @@ In a server report it will look like this::
 Complex parameters
 ------------------
 
-Sometimes a parameter should be represented not by a single string but by a more
-complex structure like a set of contained parameters or by a table.
+Sometimes a parameter should be represented by a more complex structure like a
+set of contained parameters or by a table.
 
 For this purpose you need to describe parameter as a dictionary and put some
 specific keys inside it, which should start with underscore.
@@ -122,6 +122,8 @@ In a report::
 
   processors: {count: '1', frequency(GHz): '0.8', model: AMD Athlon(tm) II Neo K125 Processor}
 
+.. note::
+   Subparameter names should not start with underscore!
 
 Table parameter
 +++++++++++++++
@@ -153,11 +155,12 @@ Value of list parameter is a sequence of dictionaries with subparameters.
 There is a specific subparameter called generator. It is evaluated first and its
 value is used as a replacement for a placeholder inside commands for other subparameters.
 
-List parameter should have additional specific key ``_generator``. It should
-have form ``{field: placeholder}`` where ``field`` says which subparameter will
-be used as a generator and ``placeholder`` says which placeholder to replace in
-other subparameters' commands. Replacement is done with python operation % (see
-`Format String Syntax <https://docs.python.org/2/library/string.html#format-string-syntax>`_).
+List parameter should have additional specific key ``_generator`` with value of
+form ``{field: placeholder}`` where ``field`` says which subparameter will be
+used as a generator and ``placeholder`` says which placeholder to replace with
+generator value in other subparameters' commands. Replacement is done with
+python operation % (see `Format String Syntax
+<https://docs.python.org/2/library/string.html#format-string-syntax>`_).
 
 First HWSWA2 finds generator which should be a simple string parameter and
 executes its command. HWSWA2 expects multiline output from this command.
@@ -193,9 +196,9 @@ interfaces. Generator is a subparameter **name**. Each other subparameter has a
 placeholder **%(name)s** in its command.
 
 HWSWA2 will execute first command of **name** subparameter which will produce
-lines with nic names ('eth0', 'eth1', etc) and then for each name will find nic
-properties by executing commands of other subparameters preliminary replacing
-**%(name)s** with 'eth0', 'eth1' and so on.
+lines with nic names ('eth0', 'eth1', etc) and then for each name it will find
+nic properties by executing commands of other subparameters preliminary
+replacing **%(name)s** with 'eth0', 'eth1' and so on.
 
 In a report it will look like this::
 
@@ -213,43 +216,165 @@ In a report it will look like this::
       gateway: ''
       state: DOWN
 
+.. note::
+   Subparameter names should not start with underscore!
 
 Firewall
 ========
 
-Firewall section contains a list of rules with below properties:
+Firewall section contains a list of rules (or rule groups) with below properties:
 
 name
   name of the rule
 
+description
+  rule description
 
+policy
+  rule policy, can be *allow* or *deny*
 
-Example of simple rule::
+direction
+  direction of connections affected by this rule, can be *incoming* or *outgoing*
 
+networks
+  list of network names in which this rule is effective
+
+protos
+  list of network protocols, can contain *TCP* and *UDP*
+
+ports
+  range of ports, comma separated. Continuos range can be specified with a dash
+  as start-end
+
+type
+  can be *infra* (for connections between servers with particular roles) or
+  *internet* (for connections from/to server and some outer host)
+
+connect_with
+  Dictionary that determines the *other* side of the connection. Can contain:
+    roles
+      list of roles (for **type** = *infra*)
+    hosts
+      list of outer hosts (for **type** = *internet*)
+    
+group
+  *yes* or *no*. Rule group combines different rules with the same properties,
+  for example all *incoming* rules can be joined into one rule group with
+  **direction** set to *incoming*. Specific properties for each rule are 
+  described in additional property **rules**
+
+rules
+  sequence of rules for rule group
+
+Example of a simple rule::
 
   - name: Incoming_from_LinMN
     description: Allow SSH access and connections to pleskd from POA LinMN
-    # policy: allow/deny
     policy: allow
-    # direction: incoming/outgoing
     direction: incoming
     networks: [backnet]
-    # proto: TCP/UDP/ICMP
     protos: [TCP]
-    # ports: 22,53,80,443,2000-2100 - comma-separated, no spaces
     ports: 22,8352-8439,8441-8500
-    # type: infra/internet
     type: infra
     connect_with:
-      # roles are for type = infra
       roles: [linmn]
-      # hosts are for type = internet, host can be IP/FQDN, like 8.8.8.8 or ya.ru
-      hosts: []
-      # smtprelay, dnsresolver, hwswa_host: yes/no, no by default
-      #smtprelay: no
-      #dnsresolver: no
-      #hwswa_host: no
+
+Example of rule group (all rules have the same **policy**, **direction**,
+**networks**, **type** and **protos**)::
+
+  firewall:
+    - name: from_branding
+      policy: allow
+      group: yes
+      direction: outgoing
+      networks: [frontnet]
+      type: infra
+      protos: [TCP]
+      rules:
+        - name: to_file_manager
+          ports: 1299
+          connect_with: {roles: [filemanager]}
+        - name: to_phppgadm
+          ports: 9114
+          connect_with: {roles: [phppgadm]}
+        - name: to_webmail_sslpr_pba
+          ports: 443
+          connect_with: {roles: [atmail, impwebmail, winsslpr, pbalinfe, pbawinfe]}
+        - name: to_awstats_mssqladm
+          ports: 80
+          connect_with: {roles: [awstats, mssqldataadm]}
 
 
 Requirements
 ============
+
+This section contains requirements which should be satisfied by the server
+holding this role.
+
+As with **parameters**, this section is a mapping between requirement **name** and
+requirement properties.
+
+Requirement properties are:
+
+parameter
+  Specifies which parameter from **parameters** is a subject to this requirement
+  If parameter is not specified, HWSWA2 assumes it equals to requirement **name**
+  Subparameter can be specified with a colon: ``param:subparam``.
+
+value
+  value to compare with. If value is not specified, this requirement is treated
+  by HWSWA2 as a requirement template which can be used in roles which include
+  this one (see short notation below).
+
+type
+  Determines how requiement value is compared against parameter value. Type can 
+  be *eq* (equal), *neq* (not equal), *regex* (matches pattern), *lt* (less 
+  than), *le* (less or equal), *gt* (greater than), *ge* (greater or equal), or
+  *disk* (parameter name is a path and requirement value is a minimum disk space
+  in GB). Default: *eq*. Also HWSWA2 can guess **type**: for parameters which
+  start with '/' it will set **type** = *disk*
+
+join-rule
+  Roles including this role can specify its own requirements with the same name.
+  In this case HWSWA2 will merge current role requirement with included 
+  requirements using **join-rule**. It can be *override* (current requirement
+  remains only), *and* (both current and included requirements should be
+  satisfied), *or* (either current or included), sum (resulting requirement
+  value equals to sum of current and included values), *mul* (multiplication of 
+  values), *avg* (average), *min*, *max*. Default: *override*. For **type**
+  *disk* **join-rule** is always *sum*.
+
+Example::
+
+  requirements:
+    OS:
+      type: regex
+      value: '(CentOS|RedHat).* 6\.'
+      join-rule: and
+    ram(GB):
+      type: ge
+      value: 0.5
+      join-rule: sum
+    swap(GB):
+      type: ge
+      value: 1
+      join-rule: sum
+    cpu-cores:
+      parameter: processors:count
+      type: ge
+      value: 1
+      join-rule: max
+
+Also HWSWA2 allows short notation for requirements, like this::
+
+  requirements:
+    OS: '(CentOS|RedHat).* 6\.'
+    architecture: x86_64
+    ram(GB): 0.5
+    swap(GB): 1
+    cpu-cores: 2
+    cpu-frequency: 2
+    /: 10
+
+In this case only value is specified and other properties are taken from
+included requirement templates (or defaults are taken, or guessed).
