@@ -19,13 +19,22 @@ logger = logging.getLogger(__name__)
 
 
 def read_servers():
-    config['servers'] = yaml.load(open(config['serversfile']))['servers']
-    logger.debug("Read info from servers file: %s" % config['servers'])
-    # check for dups
-    names = [elem['name'] for elem in config['servers']]
-    if len(names) != len(set(names)):
-        logger.error("Found duplicates in servers file! Exiting ...")
+    try:
+        config['servers'] = yaml.load(open(config['serversfile']))['servers']
+    except KeyError:
+        msg = "Cannot find section servers in " + config['serversfile']
+        logger.error(msg)
+        print(msg)
         sys.exit(1)
+    else:
+        logger.debug("Read info from servers file: %s" % config['servers'])
+        # check for dups
+        names = [elem['name'] for elem in config['servers']]
+        if len(names) != len(set(names)):
+            msg = "Found duplicates in servers file! Exiting ..."
+            logger.error(msg)
+            print(msg)
+            sys.exit(1)
 
 
 def read_networks():
