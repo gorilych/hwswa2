@@ -47,12 +47,15 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
 
    .. code:: shell
 
+      (env)$ which rst2pdf >/dev/null && \
+             { for d in README.rst CHANGELOG.rst docs/*rst;
+                 do rst2pdf $d; done; }
       (env)$ pyinstaller --distpath=pyinstaller/hwswa2/ \
                          --workpath=pyinstaller/build/ \
                          --clean pyinstaller/hwswa2.spec && \
-                         \cp -af README LICENSE CHANGELOG.rst config/ checks/ \
-                                 pyinstaller/hwswa2/ && \
-                         pushd pyinstaller/ && tar zcf hwswa2.tgz hwswa2 && popd
+             \cp -af README* LICENSE CHANGELOG* config/ checks/ docs/ \
+                     pyinstaller/hwswa2/ && \
+             pushd pyinstaller/ && tar zcf hwswa2.tgz hwswa2 && popd
 
 Distribution archive will be stored in pyinstaller/hwswa2.tgz
 
