@@ -1,6 +1,16 @@
 #!/usr/bin/env python
-import os, sys, socket, select, traceback, Queue, threading, time
-
+import os
+import sys
+import socket
+import select
+import traceback
+import Queue
+import threading
+import time
+import base64
+import pty
+import shlex
+import tty
 
 class Unbuffered:
     def __init__(self, stream):
@@ -154,6 +164,66 @@ def packports(ports):
     return result
 
 
+STDIN_FILENO = 0
+STDOUT_FILENO = 1
+STDERR_FILENO = 2
+CHILD = 0
+
+def spawn(cmd):
+    """Create new process with pty attached
+    Return pty
+    """
+    argv = shlex.split(cmd)
+    pid, fd = pty.fork()
+    if pid == CHILD:
+        os.execlp(argv[0], *argv)
+    else:
+        return fd
+
+
+def wait_and_send(fd, expect, send=None):
+    """Wait for a expected line and send a string"""
+    buf=""
+    while True:
+        #FIXME: wait for fd to be ready (use select)
+        data = os.read(fd, 1024)
+        if not data: # reached EOF
+            print("result_notok: %s not found" % expect)
+            return False
+        buf += data
+        if buf.find(expect) > -1:
+            if send:
+                write(fd, send)
+            #os.fsync(fd)
+            return True
+
+
+def wait_and_interact(fd, expect):
+    """Wait for a expected line and interact with pty"""
+    wait_and_send(fd, expect)
+    fds = [fd, STDIN_FILENO]
+    while True:
+        rfds, wfds, xfds = select.select(fds, [], [])
+        if fd in rfds:
+            data = os.read(fd, 1024)
+            if not data:  # Reached EOF.
+                fds.remove(fd)
+            else:
+                os.write(STDOUT_FILENO, data)
+        if STDIN_FILENO in rfds:
+            data = os.read(STDIN_FILENO, 1024)
+            if not data:
+                fds.remove(STDIN_FILENO)
+            else:
+                write(fd, data)
+
+
+def write(fd, data):
+    while data != '':
+        n = os.write(fd, data)
+        data = data[n:]
+
+
 ############### Commands
 ## each command name should start with 'cmd_' prefix
 
@@ -253,6 +323,70 @@ def cmd_send(proto, address, ports, timeout=1):
         portsNOK.append(portsNOKQ.get())
 
     return "OK:%s NOK:%s" % (packports(portsOK), packports(portsNOK))
+
+
+def cmd_elevate(cmd_fmt, expect=None, send=None):
+    """Elevate privileges.
+
+    Usage: elevate <command format> [<expect> <send>]. 
+    All arguments should be encoded with 64base.encodestring(), to allow special characters.
+    {serverd} in <command format> is replaced by path to serverd.py.
+    Example (with decoded strings): elevate 'sudo -u admin -p prmpt {serverd}s' 'prmpt' 'secret'
+    """
+    serverd_path = os.path.realpath(__file__)
+    cmd = base64.decodestring(cmd_fmt).format(**{'serverd': serverd_path})
+    child_pty = spawn(cmd)
+    try:
+        mode = tty.tcgetattr(STDIN_FILENO)
+        tty.setraw(STDIN_FILENO)
+        restore = 1
+    except tty.error:
+        restore = 0
+
+    try:
+        if expect is not None:
+            expect = base64.decodestring(expect)
+            send = base64.decodestring(send)
+            wait_and_send(child_pty, expect, send)
+        sys.stdout.write('result_ok elevated')
+        wait_and_interact(child_pty, 'started_ok')
+    except (IOError, OSError):
+        if restore:
+            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
+
+    # child finished, exiting...
+    os.close(child_pty)
+    close_all()
+    sys.exit()
+
+
+def cmd_elevate_su(password):
+    """Elevate root privileges with su.
+
+    Usage: elevate_su <password>.
+    Password should be encoded with 64base.encodestring(), to allow special characters.
+    """
+    cmd_fmt = base64.encodestring("su --login root --shell {serverd}")
+    expect = base64.encodestring(":")
+    send = base64.encodestring(base64.decodestring(password) + "\n")
+    cmd_elevate(cmd_fmt, expect, send)
+
+
+def cmd_elevate_sudo(password=None):
+    """Elevate root privileges with sudo.
+
+    Usage: elevate_sudo [<password>].
+    Password should be encoded with 64base.encodestring(), to allow special characters.
+    """
+    if password is None:
+        cmd_fmt = base64.encodestring("sudo {serverd}")
+        cmd_elevate(cmd_fmt)
+    else:
+        cmd_fmt = base64.encodestring("sudo --reset-timestamp --prompt=password: {serverd}")
+        expect = base64.encodestring("password:")
+        send = base64.encodestring(base64.decodestring(password) + "\n")
+        cmd_elevate(cmd_fmt, expect, send)
+
 
 ############### MAIN
 if __name__ == '__main__':
