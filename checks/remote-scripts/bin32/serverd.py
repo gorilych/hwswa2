@@ -181,11 +181,14 @@ def spawn(cmd):
         return fd
 
 
-def wait_and_send(fd, expect, send=None):
+def wait_and_send(fd, expect, send=None, timeout=5):
     """Wait for a expected line and send a string"""
     buf=""
     while True:
-        #FIXME: wait for fd to be ready (use select)
+        rfds, wfds, xfds = select.select([fd], [], [], timeout)
+        if not rfds:
+            print("result_notok: %s not found" % expect)
+            return False
         data = os.read(fd, 1024)
         if not data: # reached EOF
             print("result_notok: %s not found" % expect)
@@ -198,9 +201,8 @@ def wait_and_send(fd, expect, send=None):
             return True
 
 
-def wait_and_interact(fd, expect):
-    """Wait for a expected line and interact with pty"""
-    wait_and_send(fd, expect)
+def interact(fd):
+    """Interact with pty"""
     fds = [fd, STDIN_FILENO]
     while True:
         rfds, wfds, xfds = select.select(fds, [], [])
@@ -347,17 +349,24 @@ def cmd_elevate(cmd_fmt, expect=None, send=None):
         if expect is not None:
             expect = base64.decodestring(expect)
             send = base64.decodestring(send)
-            wait_and_send(child_pty, expect, send)
-        sys.stdout.write('result_ok elevated')
-        wait_and_interact(child_pty, 'started_ok')
+            if not wait_and_send(child_pty, expect, send):
+                print("result_notok failed wait '%s' and send '%s'" % (expect, send))
+                return
+        if wait_and_send(child_pty, 'started_ok'):
+            sys.stdout.write('result_ok elevated')
+            interact(child_pty)
+        else:
+            print("result_notok failed wait '%s'" % 'started_ok')
     except (IOError, OSError):
         if restore:
             tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
-
-    # child finished, exiting...
-    os.close(child_pty)
-    close_all()
-    sys.exit()
+    finally:
+        # child finished, exiting...
+        if restore:
+            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
+        os.close(child_pty)
+        close_all()
+        sys.exit()
 
 
 def cmd_elevate_su(password):
