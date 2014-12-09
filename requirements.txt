@@ -2,7 +2,7 @@ PyInstaller==2.1
 PyYAML==3.11
 argparse==1.2.1
 configobj==5.0.4
-paramiko==1.13.0
+paramiko
 pexpect==3.2
 ipcalc
 validate
