@@ -11,6 +11,7 @@ import base64
 import pty
 import shlex
 import tty
+import signal
 
 class Unbuffered:
     def __init__(self, stream):
@@ -178,7 +179,7 @@ def spawn(cmd):
     if pid == CHILD:
         os.execlp(argv[0], *argv)
     else:
-        return fd
+        return pid, fd
 
 
 def wait_and_send(fd, expect, send=None, timeout=5):
@@ -203,19 +204,22 @@ def wait_and_send(fd, expect, send=None, timeout=5):
 
 def interact(fd):
     """Interact with pty"""
-    fds = [fd, STDIN_FILENO]
+    my_tty = STDOUT_FILENO
+    fds = [fd, my_tty]
     while True:
+        if not fds:
+            break
         rfds, wfds, xfds = select.select(fds, [], [])
         if fd in rfds:
             data = os.read(fd, 1024)
             if not data:  # Reached EOF.
                 fds.remove(fd)
             else:
-                os.write(STDOUT_FILENO, data)
-        if STDIN_FILENO in rfds:
-            data = os.read(STDIN_FILENO, 1024)
+                os.write(my_tty, data)
+        if my_tty in rfds:
+            data = os.read(my_tty, 1024)
             if not data:
-                fds.remove(STDIN_FILENO)
+                fds.remove(my_tty)
             else:
                 write(fd, data)
 
@@ -225,6 +229,63 @@ def write(fd, data):
         n = os.write(fd, data)
         data = data[n:]
 
+def spawn_expect_send_interact_exit(cmd, expect_send=None, before_interact=None):
+    """Spawn cmd with pty and interact 
+
+    expect_send = [('expect1', 'send1'), ('expect2', 'send2') ...]
+    """
+    status = 0
+    if not expect_send:
+        expect_send = []
+    child_pid, child_pty = spawn(cmd)
+    try:
+        mode = tty.tcgetattr(STDIN_FILENO)
+        tty.setraw(STDIN_FILENO)
+        restore = 1
+    except tty.error:
+        restore = 0
+    try:
+        for e_s in expect_send:
+            expect, send = e_s
+            if not wait_and_send(child_pty, expect, send):
+                print("result_notok failed wait '%s' and send '%s'" % (expect, send))
+                return
+        if before_interact:
+            sys.stdout.write(before_interact)
+        interact(child_pty)
+    except (IOError, OSError):
+        if restore:
+            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
+    finally:
+        # child finished, exiting...
+        if restore:
+            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
+        os.close(child_pty)
+        close_all()
+        sys.exit(status)
+
+        
+def elevate(cmd_fmt, expect=None, send=None):
+    """Elevate privileges with cmd_fmt.
+
+    {serverd} in <command format> is replaced by path to serverd.py.
+    Example elevate('sudo -u admin -p prmpt {serverd}s', 'prmpt', 'secret')
+    """
+    global BANNER
+    serverd_path = os.path.realpath(__file__)
+    cmd = cmd_fmt.format(**{'serverd': serverd_path})
+    expect_send = [(expect, send), (BANNER + '\r\n', None)]
+    spawn_expect_send_interact_exit(cmd, expect_send, "result_ok elevated\r\n")
+
+
+def shell(sh=None):
+    if not sh:
+        sh='/bin/bash'
+    spawn_expect_send_interact_exit(sh)
+
+
+def exec_i(cmd):
+    spawn_expect_send_interact_exit(cmd)
 
 ############### Commands
 ## each command name should start with 'cmd_' prefix
@@ -335,38 +396,11 @@ def cmd_elevate(cmd_fmt, expect=None, send=None):
     {serverd} in <command format> is replaced by path to serverd.py.
     Example (with decoded strings): elevate 'sudo -u admin -p prmpt {serverd}s' 'prmpt' 'secret'
     """
-    serverd_path = os.path.realpath(__file__)
-    cmd = base64.decodestring(cmd_fmt).format(**{'serverd': serverd_path})
-    child_pty = spawn(cmd)
-    try:
-        mode = tty.tcgetattr(STDIN_FILENO)
-        tty.setraw(STDIN_FILENO)
-        restore = 1
-    except tty.error:
-        restore = 0
-
-    try:
-        if expect is not None:
-            expect = base64.decodestring(expect)
-            send = base64.decodestring(send)
-            if not wait_and_send(child_pty, expect, send):
-                print("result_notok failed wait '%s' and send '%s'" % (expect, send))
-                return
-        if wait_and_send(child_pty, 'started_ok'):
-            sys.stdout.write('result_ok elevated')
-            interact(child_pty)
-        else:
-            print("result_notok failed wait '%s'" % 'started_ok')
-    except (IOError, OSError):
-        if restore:
-            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
-    finally:
-        # child finished, exiting...
-        if restore:
-            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
-        os.close(child_pty)
-        close_all()
-        sys.exit()
+    cmd_fmt = base64.decodestring(cmd_fmt)
+    if expect is not None:
+        expect = base64.decodestring(expect)
+        send = base64.decodestring(send)
+    elevate(cmd_fmt, expect, send)
 
 
 def cmd_elevate_su(password):
@@ -375,10 +409,10 @@ def cmd_elevate_su(password):
     Usage: elevate_su <password>.
     Password should be encoded with 64base.encodestring(), to allow special characters.
     """
-    cmd_fmt = base64.encodestring("su --login root --shell {serverd}")
-    expect = base64.encodestring(":")
-    send = base64.encodestring(base64.decodestring(password) + "\n")
-    cmd_elevate(cmd_fmt, expect, send)
+    cmd_fmt = "su --login root --shell {serverd}"
+    expect = ":"
+    send = base64.decodestring(password) + "\n"
+    elevate(cmd_fmt, expect, send)
 
 
 def cmd_elevate_sudo(password=None):
@@ -388,20 +422,32 @@ def cmd_elevate_sudo(password=None):
     Password should be encoded with 64base.encodestring(), to allow special characters.
     """
     if password is None:
-        cmd_fmt = base64.encodestring("sudo {serverd}")
-        cmd_elevate(cmd_fmt)
+        elevate("sudo {serverd}")
     else:
-        cmd_fmt = base64.encodestring("sudo --reset-timestamp --prompt=password: {serverd}")
-        expect = base64.encodestring("password:")
-        send = base64.encodestring(base64.decodestring(password) + "\n")
-        cmd_elevate(cmd_fmt, expect, send)
+        cmd_fmt = "sudo --reset-timestamp --prompt=password: {serverd}"
+        expect = "password:"
+        send = base64.decodestring(password) + "\n"
+        elevate(cmd_fmt, expect, send)
 
+
+def cmd_shell(sh=None):
+    """Run shell. Usage: shell [sh/bash/zsh/whatever]"""
+    shell(sh)
+
+
+def cmd_exec_i(cmd):
+    """Execute command interactively and exit. Usage: exec_i cmd
+    
+    cmd should be base64 encoded.
+    """
+    exec_i(base64.decodestring(cmd))
 
 ############### MAIN
+
 if __name__ == '__main__':
     commands = dict((k[4:], globals()[k]) for k in globals() if k.startswith('cmd_'))
-    print 'started_ok possible commands: %s' % ', '.join(commands.keys())
-
+    BANNER = 'started_ok possible commands: %s' % ', '.join(commands.keys())
+    print(BANNER)
     line = ' '
     while (line):
         line = sys.stdin.readline()
