@@ -12,6 +12,11 @@ import pty
 import shlex
 import tty
 import signal
+import struct
+import fcntl
+import termios
+import errno
+from subprocess import Popen, PIPE
 
 class Unbuffered:
     def __init__(self, stream):
@@ -165,18 +170,13 @@ def packports(ports):
     return result
 
 
-STDIN_FILENO = 0
-STDOUT_FILENO = 1
-STDERR_FILENO = 2
-CHILD = 0
-
 def spawn(cmd):
     """Create new process with pty attached
-    Return pty
+    Return child pid and pty
     """
     argv = shlex.split(cmd)
     pid, fd = pty.fork()
-    if pid == CHILD:
+    if pid == 0: # child
         os.execlp(argv[0], *argv)
     else:
         return pid, fd
@@ -204,24 +204,50 @@ def wait_and_send(fd, expect, send=None, timeout=5):
 
 def interact(fd):
     """Interact with pty"""
-    my_tty = STDOUT_FILENO
-    fds = [fd, my_tty]
-    while True:
-        if not fds:
-            break
-        rfds, wfds, xfds = select.select(fds, [], [])
-        if fd in rfds:
-            data = os.read(fd, 1024)
-            if not data:  # Reached EOF.
-                fds.remove(fd)
-            else:
-                os.write(my_tty, data)
-        if my_tty in rfds:
-            data = os.read(my_tty, 1024)
-            if not data:
-                fds.remove(my_tty)
-            else:
-                write(fd, data)
+    ## window size change handler
+    def change_winsz(signum, frame):
+        winsz_fmt = "HHHH"
+        winsz_arg = " " * struct.calcsize(winsz_fmt)
+        fcntl.ioctl(sys.stdout, termios.TIOCGWINSZ, winsz_arg)
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, winsz_arg)
+    old_handler = signal.signal(signal.SIGWINCH, change_winsz)
+    try:
+        mode = tty.tcgetattr(sys.stdin)
+        tty.setraw(sys.stdin)
+        restore = 1
+    except tty.error:
+        restore = 0
+    fds = [fd, sys.stdin]
+    try:
+        while True:
+            if not fds:
+                break
+            try:
+                rfds, wfds, xfds = select.select(fds, [], [])
+            except select.error as se:
+                if se[0] == errno.EINTR:
+                    continue # Interrupted system call
+                else:
+                    raise
+            if fd in rfds:
+                data = os.read(fd, 1024)
+                if not data:  # Reached EOF.
+                    fds.remove(fd)
+                else:
+                    os.write(sys.stdout.fileno(), data)
+            if sys.stdin in rfds:
+                data = os.read(sys.stdin.fileno(), 1024)
+                if not data:
+                    fds.remove(sys.stdin)
+                else:
+                    write(fd, data)
+    except (IOError, OSError):
+        pass
+    finally:
+        if restore:
+            tty.tcsetattr(sys.stdin, tty.TCSAFLUSH, mode)
+        signal.signal(signal.SIGWINCH, old_handler)
+        os.close(fd)
 
 
 def write(fd, data):
@@ -229,7 +255,7 @@ def write(fd, data):
         n = os.write(fd, data)
         data = data[n:]
 
-def spawn_expect_send_interact_exit(cmd, expect_send=None, before_interact=None):
+def spawn_expect_send_interact_exit(cmd, expect_send=None):
     """Spawn cmd with pty and interact 
 
     expect_send = [('expect1', 'send1'), ('expect2', 'send2') ...]
@@ -238,31 +264,15 @@ def spawn_expect_send_interact_exit(cmd, expect_send=None, before_interact=None)
     if not expect_send:
         expect_send = []
     child_pid, child_pty = spawn(cmd)
-    try:
-        mode = tty.tcgetattr(STDIN_FILENO)
-        tty.setraw(STDIN_FILENO)
-        restore = 1
-    except tty.error:
-        restore = 0
-    try:
-        for e_s in expect_send:
-            expect, send = e_s
-            if not wait_and_send(child_pty, expect, send):
-                print("result_notok failed wait '%s' and send '%s'" % (expect, send))
-                return
-        if before_interact:
-            sys.stdout.write(before_interact)
-        interact(child_pty)
-    except (IOError, OSError):
-        if restore:
-            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
-    finally:
-        # child finished, exiting...
-        if restore:
-            tty.tcsetattr(STDIN_FILENO, tty.TCSAFLUSH, mode)
-        os.close(child_pty)
-        close_all()
-        sys.exit(status)
+    for e_s in expect_send:
+        expect, send = e_s
+        if not wait_and_send(child_pty, expect, send):
+            print("result_notok failed wait '%s' and send '%s'" % (expect, send))
+            return
+    print("result_ok spawned")
+    interact(child_pty)
+    status = os.waitpid(child_pid,0) # returns (pid, exit_status << 8 + signal)
+    sys.exit(status[1] >> 8)
 
         
 def elevate(cmd_fmt, expect=None, send=None):
@@ -275,17 +285,19 @@ def elevate(cmd_fmt, expect=None, send=None):
     serverd_path = os.path.realpath(__file__)
     cmd = cmd_fmt.format(**{'serverd': serverd_path})
     expect_send = [(expect, send), (BANNER + '\r\n', None)]
-    spawn_expect_send_interact_exit(cmd, expect_send, "result_ok elevated\r\n")
+    spawn_expect_send_interact_exit(cmd, expect_send)
 
 
 def shell(sh=None):
     if not sh:
         sh='/bin/bash'
-    spawn_expect_send_interact_exit(sh)
+    exec_i(sh)
 
 
 def exec_i(cmd):
-    spawn_expect_send_interact_exit(cmd)
+    p = Popen(shlex.split(cmd), shell=False, stdin=None, stdout=None, stderr=None, close_fds=False)
+    sys.exit(p.wait())
+
 
 ############### Commands
 ## each command name should start with 'cmd_' prefix
@@ -442,9 +454,11 @@ def cmd_exec_i(cmd):
     """
     exec_i(base64.decodestring(cmd))
 
+
 ############### MAIN
 
 if __name__ == '__main__':
+    returncode = 0
     commands = dict((k[4:], globals()[k]) for k in globals() if k.startswith('cmd_'))
     BANNER = 'started_ok possible commands: %s' % ', '.join(commands.keys())
     print(BANNER)
@@ -465,7 +479,8 @@ if __name__ == '__main__':
             try:
                 result = commands[command](*args)
                 print 'result_ok %s' % result
-            except SystemExit:
+            except SystemExit as e:
+                returncode = e.args[0]
                 close_all()
                 break
             except Exception, e:
@@ -476,3 +491,4 @@ if __name__ == '__main__':
         else:
             print 'accepted_notok no such command %s' % command
     close_all()
+    os._exit(returncode)
