@@ -413,14 +413,9 @@ def cmd_elevate(cmd_fmt, expect=None, send=None):
     """Elevate privileges.
 
     Usage: elevate <command format> [<expect> <send>]. 
-    All arguments should be encoded with 64base.encodestring(), to allow special characters.
     {serverd} in <command format> is replaced by path to serverd.py.
-    Example (with decoded strings): elevate 'sudo -u admin -p prmpt {serverd}s' 'prmpt' 'secret'
+    Example: elevate 'sudo -u admin -p prmpt {serverd}' 'prmpt' 'secret'
     """
-    cmd_fmt = base64.decodestring(cmd_fmt)
-    if expect is not None:
-        expect = base64.decodestring(expect)
-        send = base64.decodestring(send)
     elevate(cmd_fmt, expect, send)
 
 
@@ -428,11 +423,10 @@ def cmd_elevate_su(password):
     """Elevate root privileges with su.
 
     Usage: elevate_su <password>.
-    Password should be encoded with 64base.encodestring(), to allow special characters.
     """
     cmd_fmt = "su --login root --shell {serverd}"
     expect = ":"
-    send = base64.decodestring(password) + "\n"
+    send = password + "\n"
     elevate(cmd_fmt, expect, send)
 
 
@@ -440,14 +434,13 @@ def cmd_elevate_sudo(password=None):
     """Elevate root privileges with sudo.
 
     Usage: elevate_sudo [<password>].
-    Password should be encoded with 64base.encodestring(), to allow special characters.
     """
     if password is None:
         elevate("sudo {serverd}")
     else:
         cmd_fmt = "sudo --reset-timestamp --prompt=password: {serverd}"
         expect = "password:"
-        send = base64.decodestring(password) + "\n"
+        send = password + "\n"
         elevate(cmd_fmt, expect, send)
 
 
