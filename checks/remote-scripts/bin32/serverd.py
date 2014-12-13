@@ -302,7 +302,9 @@ def shell(sh=None):
 
 
 def exec_i(cmd):
-    p = Popen(shlex.split(cmd), shell=False, stdin=None, stdout=None, stderr=None, close_fds=False)
+    if not isinstance(cmd, tuple):
+        cmd = shlex.split(cmd)
+    p = Popen(cmd, shell=False, stdin=None, stdout=None, stderr=None, close_fds=False)
     sys.exit(p.wait())
 
 
@@ -454,12 +456,12 @@ def cmd_shell(sh=None):
     shell(sh)
 
 
-def cmd_exec_i(cmd):
+def cmd_exec_i(*cmd):
     """Execute command interactively and exit. Usage: exec_i cmd
     
-    cmd should be base64 encoded.
+    Usage: exec_i cmd arg1 arg2 ..
     """
-    exec_i(base64.decodestring(cmd))
+    exec_i(cmd)
 
 
 ############### MAIN
