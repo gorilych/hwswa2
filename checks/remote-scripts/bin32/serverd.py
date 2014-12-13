@@ -469,20 +469,20 @@ def cmd_exec_i(*cmd):
 if __name__ == '__main__':
     returncode = 0
     commands = dict((k[4:], globals()[k]) for k in globals() if k.startswith('cmd_'))
-    BANNER = 'started_ok possible commands: %s' % ', '.join(commands.keys())
+    BANNER = 'started_ok possible commands: %s' % ', '.join(sorted(commands.keys()))
     print(BANNER)
     line = ' '
     while (line):
         line = sys.stdin.readline()
-        commandline = line.strip()
-        if commandline.find(' ') == -1:  # no args
-            command = commandline
-            rest = ''
-        else:
-            command, rest = line.strip().split(None, 1)
-        if (command == ''):
+        try:
+            argv = shlex.split(line)
+        except ValueError as e:
+            print 'accepted_notok cannot parse line: %s' % e.message
             continue
-        args = rest.split()
+        if not argv: # empty line
+            continue
+        command = argv[0]
+        args = argv[1:]
         if command in commands:
             print 'accepted_ok command %s with args %s' % (command, args)
             try:
