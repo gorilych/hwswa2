@@ -35,6 +35,13 @@ sys.stdout = Unbuffered(sys.stdout)
 # array of dicts {socket: socketobject, proto:tcp/udp, address: IP/hostname, port: port number}
 sockets = []
 
+def count_alive_threads(name):
+    c = 0
+    for th in threading.enumerate():
+        if name == th.name and th.is_alive():
+            c += 1
+    return c
+
 
 def check(address, ports):
     """Checks if address:port is listened"""
@@ -380,12 +387,12 @@ def cmd_send(proto, address, ports, timeout=1):
             portsNOKQ.put(port)
 
     for port in portrange(ports):
-        th = threading.Thread(target=thread_send, args=(proto, address, port, portsOKQ, portsNOKQ))
+        th = threading.Thread(target=thread_send, name="send", args=(proto, address, port, portsOKQ, portsNOKQ))
         th.start()
 
     portsOK = []
     portsNOK = []
-    while threading.activeCount() > 1:
+    while count_alive_threads("send") > 0:
         while not portsOKQ.empty():
             portsOK.append(portsOKQ.get())
         while not portsNOKQ.empty():
