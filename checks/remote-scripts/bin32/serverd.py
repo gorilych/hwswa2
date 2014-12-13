@@ -308,6 +308,182 @@ def exec_i(cmd):
     sys.exit(p.wait())
 
 
+##### Machinery for parallel cmd execution
+# commands dict, mapping cmd id to CMD object
+cmds = {}
+
+def exec_cmd(cmd, input_data, timeout):
+    c = CMD(cmd, input_data, timeout)
+    c.start()
+    return c.wait()
+
+
+def schedule_cmd(cmd, input_data, timeout):
+    """Schedule cmd for execution
+
+    Return cmd_id
+    """
+    global cmds
+    # generate cmd_id
+    if not hasattr(schedule_cmd, "cmd_id"):
+        schedule_cmd.cmd_id = 0  # it doesn't exist yet, so initialize it
+    schedule_cmd.cmd_id += 1
+    cmd_id = schedule_cmd.cmd_id
+    c = CMD(cmd, input_data, timeout)
+    c.start()
+    cmds[cmd_id] = c
+    return cmd_id
+
+
+def get_cmd_state(cmd_id):
+    global cmds
+    if not cmd_id in cmds:
+        return None
+    return cmds[cmd_id].state
+
+
+def get_cmd_result(cmd_id):
+    global cmds
+    if not cmd_id in cmds:
+        return None
+    return cmds[cmd_id].wait()
+
+
+def cancel_cmd(cmd_id):
+    global cmds
+    if not cmd_id in cmds:
+        return None
+    cmds[cmd_id].cancel()
+    return 'cancelled'
+
+
+class CMD(object):
+
+    def __init__(self, cmd, input_data=None, timeout=None): # timeout=0 means no timeout
+        self._cmd = cmd
+        self._input_data = input_data
+        self._timeout = timeout or 30
+        self._timed_out = False
+        self._exec_th = None # thread which controls execution
+        self._to_th = None # timeout thread
+        self.state = 'inited'
+        self.cancelled = False
+        self.succeeded = None
+        self.returncode = None
+        self.stdout = ''
+        self.stderr = ''
+        self.reason = None
+
+    def __del__(self):
+        try:
+            self.cancel()
+        except:
+            pass
+
+    def _exec_th_func(self):
+        self.state = 'running'
+        # start process
+        try:
+            p = Popen(shlex.split(self._cmd), shell=False,
+                      stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            self.reason = "Exception in Popen %s: %s" % \
+                (traceback.format_exception_only(exc_type, exc_obj)[0],
+                       traceback.format_tb(exc_tb))
+            self.succeeded = False
+        else:
+            self._process = p
+            input_data = self._input_data
+            rlist = [p.stdout, p.stderr]
+            wlist = [p.stdin]
+            # loop input,read until process finishes or time goes out or cancelled
+            while True:
+                if self.cancelled:
+                    self.succeeded = False
+                    # terminate process
+                    try:
+                        p.terminate() # give it a chance to stop gracefully
+                        time.sleep(0.1) # give it some time to terminate
+                        p.kill() # kill, just in case it ignored SIGTERM
+                    except OSError: # can raise if process already exited
+                        pass
+                    break
+                if not input_data:
+                    p.stdin.close()
+                    wlist = []
+                #  read or write
+                rfds, wfds, xfds = select.select(rlist, wlist, [], 0.01)
+                if p.stdin in wfds:
+                    n = os.write(p.stdin.fileno(), input_data)
+                    input_data = input_data[n:]
+                if p.stdout in rfds:
+                    self.stdout += os.read(p.stdout.fileno(), 1024)
+                if p.stderr in rfds:
+                    self.stderr += os.read(p.stderr.fileno(), 1024)
+                if p.poll() is not None: # process has finished
+                    self.succeeded = True
+                    break
+            #read buffered stdout/stderr
+            rfds, wfds, xfds = select.select(rlist, [], [], 0.01)
+            if p.stdout in rfds:
+                self.stdout += p.stdout.read()
+            if p.stderr in rfds:
+                self.stderr += p.stderr.read()
+            p.stdin.close(); p.stdout.close(); p.stderr.close()
+            self.returncode = p.poll()
+        finally:
+            # stop timeout thread
+            if self._to_th and self._to_th.is_alive():
+                self._to_th.cancel()
+            self.state = 'finished'
+
+    def _to_th_func(self):
+        self.reason = 'timeout'
+        self._timed_out = True
+        self.cancel()
+
+    def start(self):
+        # start execution thread
+        self._exec_th = threading.Thread(target=self._exec_th_func, name="cmd_exec")
+        self._exec_th.start()
+        # start timer thread
+        if self._timeout > 0:
+            self._to_th = threading.Timer(self._timeout, self._to_th_func)
+            self._to_th.start()
+
+    def cancel(self):
+        # stop timeout thread
+        if self._to_th and self._to_th.is_alive():
+            self._to_th.cancel()
+        if self.reason is None:
+            self.reason = 'cancelled'
+        self.cancelled = True
+        # wait for execution thread
+        if self._exec_th:
+            self._exec_th.join()
+
+    def finished(self):
+        return self.state == 'finished'
+
+    def wait(self, check_interval=0.01):
+        """Block till execution is is finished"""
+        if self.state == 'inited':
+            raise CMDException("not started")
+        while not self.finished():
+            time.sleep(check_interval)
+        return self.succeeded, self.reason, self.returncode, self.stdout, self.stderr
+
+
+class CMDException(Exception):
+    """Base class for CMD exceptions"""
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return repr(self.value)
+
+
 ############### Commands
 ## each command name should start with 'cmd_' prefix
 
@@ -456,6 +632,97 @@ def cmd_exec_i(*cmd):
     """
     exec_i(cmd)
 
+
+def cmd_cmd_exec(cmd, input_data=None, timeout=None):
+    """Execute command with timeout
+
+    Usage: cmd_exec 'cmd arg1 arg2 ...' [<base64 encoded input> [<timeout in seconds>]]
+    Return "[reason:<reason of failure>] returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
+    """
+    if input_data:
+        i = base64.b64decode(input_data)
+    else:
+        i = None
+    if timeout is not None:
+        timeout = float(timeout)
+    status, reason, retcode, stdout, stderr = exec_cmd(cmd, i, timeout)
+    if status:
+        return True, "returncode:{c} stdout:{o} stderr:{e}".format(
+        s=status, r=base64.b64encode(reason),
+        c=retcode, o=base64.b64encode(stdout),
+        e=base64.b64encode(stderr))
+    else:
+        return False, "reason:{r} returncode:{c} stdout:{o} stderr:{e}".format(
+        s=status, r=base64.b64encode(reason),
+        c=retcode, o=base64.b64encode(stdout),
+        e=base64.b64encode(stderr))
+
+
+def cmd_cmd_schedule(cmd, input_data=None, timeout=None):
+    """Schedule command execution
+
+    Usage: cmd_schedule 'cmd arg1 arg2 ...' [<base64 encoded input> [<timeout in seconds>]]
+    Return "cmd_id:<num>"
+    """
+    if input_data:
+        i = base64.b64decode(input_data)
+    else:
+        i = None
+    if timeout:
+        timeout = float(timeout)
+    return True, "cmd_id:%s" % schedule_cmd(cmd, i, timeout)
+
+
+def cmd_cmd_state(cmd_id):
+    """Get state of scheduled command
+
+    Usage: cmd_state <id>
+    Return state
+    Or return "no such command"
+    """
+    state = get_cmd_state(int(cmd_id))
+    if state is None:
+        return False, 'no such command'
+    else:
+        return True, state
+
+
+def cmd_cmd_result(cmd_id):
+    """Get result of scheduled command execution
+
+    Usage: cmd_result <id>
+    Return "status:True|False reason:<reason of failure> returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
+    Or return "no such command"
+    """
+    result = get_cmd_result(int(cmd_id))
+    if result is None:
+        return False, 'no such command'
+    else:
+        status, reason, retcode, stdout, stderr = result
+        if status:
+            return True, "returncode:{c} stdout:{o} stderr:{e}".format(
+                s=status, r=base64.b64encode(reason),
+                c=retcode, o=base64.b64encode(stdout),
+                e=base64.b64encode(stderr))
+        else:
+            return False, "reason:{r} returncode:{c} stdout:{o} stderr:{e}".format(
+                s=status, r=base64.b64encode(reason),
+                c=retcode, o=base64.b64encode(stdout),
+                e=base64.b64encode(stderr))
+        return True, result
+
+
+def cmd_cmd_cancel(cmd_id):
+    """Cancel scheduled command
+
+    Usage: cmd_cancel <id>
+    Can return "no such command"
+    """
+    state = cancel_cmd(int(cmd_id))
+    if state is None:
+        return False, 'no such command'
+    else:
+        return True, state
 
 ############### MAIN
 
