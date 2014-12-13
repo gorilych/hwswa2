@@ -185,13 +185,13 @@ class LinuxServer(Server):
             return None
         if cmd == 'shell':  # pass window size instead of fifos
             stdout_fifo, stderr_fifo = aux.getTerminalSize()
-        return 'python %s %s "%s" %s %s "%s" %s' % (su_py,
-                                                    sutype,
-                                                    aux.shell_escape(password),
-                                                    stderr_fifo,
-                                                    stdout_fifo,
-                                                    aux.shell_escape(cmd),
-                                                    timeout)
+        return 'python %s %s %s %s %s %s %s' % (su_py,
+                                                sutype,
+                                                aux.shell_escape(password),
+                                                stderr_fifo,
+                                                stdout_fifo,
+                                                aux.shell_escape(cmd),
+                                                timeout)
 
     def _prepare_su(self):
         """Copies su.py to remote server and returns path to containing directory"""

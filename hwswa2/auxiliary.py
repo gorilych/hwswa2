@@ -77,18 +77,16 @@ def threaded(f, daemon=False):
 
 def shell_escape(string):
     """
-    Escape double quotes, backticks and dollar signs in given ``string``.
+    Return string so it can be passed as argument in shell
 
     For example::
 
-        >>> _shell_escape('abc$')
-        'abc\\\\$'
-        >>> _shell_escape('"')
-        '\\\\"'
+        >>> print shell_escape('abc$')
+        'abc$'
+        >>> print shell_escape('I don\'t know')
+        'I don'"'"'t know'
     """
-    for char in ('"', '$', '`'):
-        string = string.replace(char, '\%s' % char)
-    return string
+    return "'" + string.replace("'", "'\"'\"'") + "'"
 
 
 def getTerminalSize():
