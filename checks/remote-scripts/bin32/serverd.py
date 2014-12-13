@@ -313,20 +313,20 @@ def exec_i(cmd):
 
 def cmd_check(address, ports):
     """checks if there are services listening on ports. usage: check address ports"""
-    return 'ports:' + packports(check(address, portrange(ports)))
+    return True, 'ports:' + packports(check(address, portrange(ports)))
 
 
 def cmd_close(proto, address, ports):
     """closes listening sockets. usage: close proto address ports"""
     for p in portrange(ports):
         close(proto, address, p)
-    return 'socket(s) closed'
+    return True, 'socket(s) closed'
 
 
 def cmd_closeall():
     """closeall: close all listening sockets"""
     close_all()
-    return 'sockets are closed'
+    return True, 'sockets are closed'
 
 
 def cmd_exit():
@@ -339,7 +339,7 @@ def cmd_listen(proto, address, ports):
     """usage: listen proto address ports. Ports arg example 1050,1100-1200,2024,2040-2056"""
     for p in portrange(ports):
         listen(proto, address, p)
-    return "sockets are ready"
+    return True, "sockets are ready"
 
 
 def cmd_receive(proto, address, ports):
@@ -365,15 +365,15 @@ def cmd_receive(proto, address, ports):
             result = result + '%s:%s:%s:%s ' % (s.getsockname()[1], message, address[0], address[1])
     if result == '':
         result = 'no messages'
-    return result
+    return True, result
 
 
 def cmd_help(command=None):
     """usage: help command"""
-    if not (command is None):
-        return commands[command].__doc__
+    if command:
+        return True, commands[command].__doc__
     else:
-        return 'use: help command. possible commands: %s' % ', '.join(commands.keys())
+        return True, 'use: help command. possible commands: %s' % ', '.join(commands.keys())
 
 
 def cmd_send(proto, address, ports, timeout=1):
@@ -406,7 +406,7 @@ def cmd_send(proto, address, ports, timeout=1):
     while not portsNOKQ.empty():
         portsNOK.append(portsNOKQ.get())
 
-    return "OK:%s NOK:%s" % (packports(portsOK), packports(portsNOK))
+    return True, "OK:%s NOK:%s" % (packports(portsOK), packports(portsNOK))
 
 
 def cmd_elevate(cmd_fmt, expect=None, send=None):
@@ -486,8 +486,11 @@ if __name__ == '__main__':
         if command in commands:
             print 'accepted_ok command %s with args %s' % (command, args)
             try:
-                result = commands[command](*args)
-                print 'result_ok %s' % result
+                status, result = commands[command](*args)
+                if status:
+                    print 'result_ok %s' % result
+                else:
+                    print 'result_nok %s' % result
             except SystemExit as e:
                 returncode = e.args[0]
                 close_all()
