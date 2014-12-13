@@ -38,7 +38,7 @@ sockets = []
 def count_alive_threads(name):
     c = 0
     for th in threading.enumerate():
-        if name == th.name and th.is_alive():
+        if name == th.name and th.isAlive():
             c += 1
     return c
 
@@ -226,30 +226,31 @@ def interact(fd):
         restore = 0
     fds = [fd, sys.stdin]
     try:
-        while True:
-            if not fds:
-                break
-            try:
-                rfds, wfds, xfds = select.select(fds, [], [])
-            except select.error as se:
-                if se[0] == errno.EINTR:
-                    continue # Interrupted system call
-                else:
-                    raise
-            if fd in rfds:
-                data = os.read(fd, 1024)
-                if not data:  # Reached EOF.
-                    fds.remove(fd)
-                else:
-                    os.write(sys.stdout.fileno(), data)
-            if sys.stdin in rfds:
-                data = os.read(sys.stdin.fileno(), 1024)
-                if not data:
-                    fds.remove(sys.stdin)
-                else:
-                    write(fd, data)
-    except (IOError, OSError):
-        pass
+        try:
+            while True:
+                if not fds:
+                    break
+                try:
+                    rfds, wfds, xfds = select.select(fds, [], [])
+                except select.error, se:
+                    if se[0] == errno.EINTR:
+                        continue # Interrupted system call
+                    else:
+                        raise se
+                if fd in rfds:
+                    data = os.read(fd, 1024)
+                    if not data:  # Reached EOF.
+                        fds.remove(fd)
+                    else:
+                        os.write(sys.stdout.fileno(), data)
+                if sys.stdin in rfds:
+                    data = os.read(sys.stdin.fileno(), 1024)
+                    if not data:
+                        fds.remove(sys.stdin)
+                    else:
+                        write(fd, data)
+        except (IOError, OSError):
+            pass
     finally:
         if restore:
             tty.tcsetattr(sys.stdin, tty.TCSAFLUSH, mode)
@@ -290,7 +291,7 @@ def elevate(cmd_fmt, expect=None, send=None):
     """
     global BANNER
     serverd_path = os.path.realpath(__file__)
-    cmd = cmd_fmt.format(**{'serverd': serverd_path})
+    cmd = cmd_fmt.replace('{serverd}', serverd_path)
     expect_send = [(expect, send), (BANNER + '\r\n', None)]
     spawn_expect_send_interact_exit(cmd, expect_send)
 
@@ -384,57 +385,58 @@ class CMD(object):
         self.state = 'running'
         # start process
         try:
-            p = Popen(shlex.split(self._cmd), shell=False,
-                      stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            self.reason = "Exception in Popen %s: %s" % \
-                (traceback.format_exception_only(exc_type, exc_obj)[0],
-                       traceback.format_tb(exc_tb))
-            self.succeeded = False
-        else:
-            self._process = p
-            input_data = self._input_data
-            rlist = [p.stdout, p.stderr]
-            wlist = [p.stdin]
-            # loop input,read until process finishes or time goes out or cancelled
-            while True:
-                if self.cancelled:
-                    self.succeeded = False
-                    # terminate process
-                    try:
-                        p.terminate() # give it a chance to stop gracefully
-                        time.sleep(0.1) # give it some time to terminate
-                        p.kill() # kill, just in case it ignored SIGTERM
-                    except OSError: # can raise if process already exited
-                        pass
-                    break
-                if not input_data:
-                    p.stdin.close()
-                    wlist = []
-                #  read or write
-                rfds, wfds, xfds = select.select(rlist, wlist, [], 0.01)
-                if p.stdin in wfds:
-                    n = os.write(p.stdin.fileno(), input_data)
-                    input_data = input_data[n:]
+            try:
+                p = Popen(shlex.split(self._cmd), shell=False,
+                          stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
+            except Exception, e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                self.reason = "Exception in Popen %s: %s" % \
+                    (traceback.format_exception_only(exc_type, exc_obj)[0],
+                           traceback.format_tb(exc_tb))
+                self.succeeded = False
+            else:
+                self._process = p
+                input_data = self._input_data
+                rlist = [p.stdout, p.stderr]
+                wlist = [p.stdin]
+                # loop input,read until process finishes or time goes out or cancelled
+                while True:
+                    if self.cancelled:
+                        self.succeeded = False
+                        # terminate process
+                        try:
+                            p.terminate() # give it a chance to stop gracefully
+                            time.sleep(0.1) # give it some time to terminate
+                            p.kill() # kill, just in case it ignored SIGTERM
+                        except OSError: # can raise if process already exited
+                            pass
+                        break
+                    if not input_data:
+                        p.stdin.close()
+                        wlist = []
+                        #  read or write
+                    rfds, wfds, xfds = select.select(rlist, wlist, [], 0.01)
+                    if p.stdin in wfds:
+                        n = os.write(p.stdin.fileno(), input_data)
+                        input_data = input_data[n:]
+                    if p.stdout in rfds:
+                        self.stdout += os.read(p.stdout.fileno(), 1024)
+                    if p.stderr in rfds:
+                        self.stderr += os.read(p.stderr.fileno(), 1024)
+                    if p.poll() is not None: # process has finished
+                        self.succeeded = True
+                        break
+                #read buffered stdout/stderr
+                rfds, wfds, xfds = select.select(rlist, [], [], 0.01)
                 if p.stdout in rfds:
-                    self.stdout += os.read(p.stdout.fileno(), 1024)
+                    self.stdout += p.stdout.read()
                 if p.stderr in rfds:
-                    self.stderr += os.read(p.stderr.fileno(), 1024)
-                if p.poll() is not None: # process has finished
-                    self.succeeded = True
-                    break
-            #read buffered stdout/stderr
-            rfds, wfds, xfds = select.select(rlist, [], [], 0.01)
-            if p.stdout in rfds:
-                self.stdout += p.stdout.read()
-            if p.stderr in rfds:
-                self.stderr += p.stderr.read()
-            p.stdin.close(); p.stdout.close(); p.stderr.close()
-            self.returncode = p.poll()
+                    self.stderr += p.stderr.read()
+                p.stdin.close(); p.stdout.close(); p.stderr.close()
+                self.returncode = p.poll()
         finally:
             # stop timeout thread
-            if self._to_th and self._to_th.is_alive():
+            if self._to_th and self._to_th.isAlive():
                 self._to_th.cancel()
             self.state = 'finished'
 
@@ -454,7 +456,7 @@ class CMD(object):
 
     def cancel(self):
         # stop timeout thread
-        if self._to_th and self._to_th.is_alive():
+        if self._to_th and self._to_th.isAlive():
             self._to_th.cancel()
         if self.reason is None:
             self.reason = 'cancelled'
@@ -647,15 +649,12 @@ def cmd_cmd_exec(cmd, input_data=None, timeout=None):
         timeout = float(timeout)
     status, reason, retcode, stdout, stderr = exec_cmd(cmd, i, timeout)
     if status:
-        return True, "returncode:{c} stdout:{o} stderr:{e}".format(
-        s=status, r=base64.b64encode(reason),
-        c=retcode, o=base64.b64encode(stdout),
-        e=base64.b64encode(stderr))
+        return True, "returncode:%s stdout:%s stderr:%s" % (
+            retcode, base64.b64encode(stdout), base64.b64encode(stderr))
     else:
-        return False, "reason:{r} returncode:{c} stdout:{o} stderr:{e}".format(
-        s=status, r=base64.b64encode(reason),
-        c=retcode, o=base64.b64encode(stdout),
-        e=base64.b64encode(stderr))
+        return False, "reason:%s returncode:%s stdout:%s stderr:%s" % (
+            base64.b64encode(reason), retcode, base64.b64encode(stdout),
+            base64.b64encode(stderr))
 
 
 def cmd_cmd_schedule(cmd, input_data=None, timeout=None):
@@ -700,16 +699,12 @@ def cmd_cmd_result(cmd_id):
     else:
         status, reason, retcode, stdout, stderr = result
         if status:
-            return True, "returncode:{c} stdout:{o} stderr:{e}".format(
-                s=status, r=base64.b64encode(reason),
-                c=retcode, o=base64.b64encode(stdout),
-                e=base64.b64encode(stderr))
+            return True, "returncode:%s stdout:%s stderr:%s" % (
+                retcode, base64.b64encode(stdout), base64.b64encode(stderr))
         else:
-            return False, "reason:{r} returncode:{c} stdout:{o} stderr:{e}".format(
-                s=status, r=base64.b64encode(reason),
-                c=retcode, o=base64.b64encode(stdout),
-                e=base64.b64encode(stderr))
-        return True, result
+            return False, "reason:%s returncode:%s stdout:%s stderr:%s" % (
+                base64.b64encode(reason), retcode, base64.b64encode(stdout),
+                base64.b64encode(stderr))
 
 
 def cmd_cmd_cancel(cmd_id):
@@ -736,7 +731,7 @@ if __name__ == '__main__':
         line = sys.stdin.readline()
         try:
             argv = shlex.split(line)
-        except ValueError as e:
+        except ValueError, e:
             print 'accepted_notok cannot parse line: %s' % e.message
             continue
         if not argv: # empty line
@@ -751,8 +746,9 @@ if __name__ == '__main__':
                     print 'result_ok %s' % result
                 else:
                     print 'result_nok %s' % result
-            except SystemExit as e:
-                returncode = e.args[0]
+            except SystemExit, e:
+                if e.args:
+                    returncode = e.args[0]
                 close_all()
                 break
             except Exception, e:
