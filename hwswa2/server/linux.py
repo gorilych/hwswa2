@@ -86,7 +86,7 @@ class LinuxServer(Server):
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            client.connect(hostname=self.address, port=self.port, username=username, password=password,
+            client.connect(hostname=self.address, port=self.port or 22, username=username, password=password,
                            key_filename=key_filename, timeout=timeout, sock=self._sshtunnel)
         except paramiko.BadHostKeyException:
             self._last_connection_error = 'BadHostKeyException raised while connecting to %s' % self._address()
