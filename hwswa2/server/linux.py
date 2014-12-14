@@ -452,24 +452,28 @@ class LinuxServer(Server):
         """Executes command and returns tuple of stdout, stderr and status"""
         logger.debug("Executing on %s: %s" % (self, cmd))
         if self._connect():
-            if privileged and ('su' in self.account or 'sudo' in self.account):
-                cmd = self._prepare_su_cmd(cmd, timeout)
-                logger.debug("Privileged command: %s" % cmd)
-            try:
-                stdin, stdout, stderr = self._sshclient.exec_command(cmd, timeout=timeout, get_pty=False)
+            if self.agent_start():
                 if input_data:
-                    stdin.write(input_data)
-                    stdin.flush()
-                stdout_data = stdout.read().splitlines()
-                stderr_data = stderr.read().splitlines()
-                status = stdout.channel.recv_exit_status()
-            except socket.timeout as e:
-                raise TimeoutException("Timeout during execution of %s" % cmd)
-            except paramiko.SSHException as e:
-                raise LinuxServerException("SSH exception: %s" % e)
-            logger.debug("Executon results: exit status %s, stdout %s, stderr %s" %
-                         (status, stdout_data, stderr_data))
-            return stdout_data, stderr_data, status
+                    i_d = base64.b64encode(input_data)
+                else:
+                    i_d = "''"
+                acmd = 'cmd_exec ' + aux.shell_escape(cmd) + ' ' + i_d + ' ' + str(timeout)
+                status, result = self.agent_cmd(acmd)
+                # result is "[reason:<reason of failure>] \
+                # returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
+                result = dict([r.split(':') for r in result.split(' ')])
+                if status:
+                    return (base64.b64decode(result['stdout']),
+                            base64.b64decode(result['stderr']), int(result['returncode']))
+                else:
+                    reason = base64.b64decode(result.get('reason'))
+                    if reason == 'timeout':
+                        raise TimeoutException("Timeout during execution of %s" % cmd,
+                                               output=base64.b64decode(result['stdout']),
+                                               stderr=base64.b64decode(result['stderr']),
+                                               retcode=int(result['returncode']))
+                    else:
+                        raise LinuxServerException("Execution of %s failed: %s" % (cmd, reason))
 
     def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
         stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout, privileged=privileged)
