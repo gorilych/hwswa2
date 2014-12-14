@@ -745,7 +745,7 @@ if __name__ == '__main__':
                 if status:
                     print 'result_ok %s' % result
                 else:
-                    print 'result_nok %s' % result
+                    print 'result_notok %s' % result
             except SystemExit, e:
                 if e.args:
                     returncode = e.args[0]
