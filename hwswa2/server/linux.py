@@ -672,7 +672,7 @@ class LinuxServer(Server):
                 if result_status == 'result_ok':
                     return True, result
                 elif result_status == 'result_notok':
-                    return False, 'command failed: ' + result
+                    return False, result
                 else:
                     return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
 
