@@ -11,6 +11,10 @@ import tty
 import time
 import subprocess
 import posixpath
+import base64
+import random
+import string
+import fnmatch
 from ipcalc import Network
 
 import hwswa2.auxiliary as aux
@@ -468,13 +472,25 @@ class LinuxServer(Server):
 
     def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp'):
         """Creates directory/file using mktemp and returns its name"""
-        cmd = 'mktemp '
-        if ftype == 'd':
-            cmd += '-d '
-        cmd += '-p %s %s' % (path, template)
-        tmp = self.get_cmd_out(cmd, privileged=False)
-        self._tmp.append(tmp)
-        return tmp
+        #generate name
+        prefix = template.rstrip('X')
+        suffix_len = len(template) - len(prefix)
+        pattern = prefix + '*'
+        existing_names = fnmatch.filter(self._listdir(path), pattern)
+        # try to generate random filename
+        name = None
+        while True:
+            suffix = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(suffix_len))
+            name = prefix + suffix
+            if not name in existing_names:  # name is unique
+                break
+        full_name = path + '/' + name
+        if ftype == 'd':  # directory
+            self.mkdir(full_name)
+        else:  # file
+            self.write(full_name, '')
+        self._tmp.append(full_name)
+        return full_name
 
     def put(self, localpath, remotepath=None):
         if remotepath is None or remotepath == '':
