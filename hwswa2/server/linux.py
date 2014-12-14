@@ -39,10 +39,6 @@ class LinuxServer(Server):
         self._sshtunnel = None
         # tunnels for other servers. 'name': {'sshclient': sshclient, 'tunnel': tunnel}
         self._sshtunnels = {}
-        if self.port is None:
-            self._port = 22
-        else:
-            self._port = self.port
         self._supath = None
         self._param_cmd_prefix = None
         self._param_binpath = None
@@ -96,7 +92,7 @@ class LinuxServer(Server):
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            client.connect(hostname=self.address, port=self._port, username=username, password=password,
+            client.connect(hostname=self.address, port=self.port, username=username, password=password,
                            key_filename=key_filename, timeout=timeout, sock=self._sshtunnel)
         except paramiko.BadHostKeyException:
             self._last_connection_error = 'BadHostKeyException raised while connecting to %s' % self._address()
@@ -123,7 +119,7 @@ class LinuxServer(Server):
             return True
         else:
             try:
-                self._sshtunnel = self.gateway.create_tunnel(self.name, self.address, self._port, timeout=timeout)
+                self._sshtunnel = self.gateway.create_tunnel(self.name, self.address, self.port or 22, timeout=timeout)
             except TunnelException as te:
                 self._last_connection_error = "cannot connect via gateway %s: %s" % (self.gateway, te.value)
                 logger.error(self._last_connection_error)
