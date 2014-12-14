@@ -271,8 +271,15 @@ class LinuxServer(Server):
                 os.makedirs(lname)
                 self._get_dir_content(rname, lname)
 
-    def _remove(self, path, privileged=True):
-        self.exec_cmd("rm -rf %s" % path, privileged=privileged)
+    def _remove(self, path, privileged=True, sftp=None):
+        if self._connect():
+            sftp = sftp or self._sshclient.open_sftp()
+            if self._isdir(path):
+                for name in sftp.listdir(path):
+                    self._remove(path + '/' + name, sftp=sftp)
+                sftp.rmdir(path)
+            elif self._isfile(path):
+                sftp.remove(path)
 
     def _bootid(self):
         return self.get_cmd_out('cat /proc/sys/kernel/random/boot_id')
