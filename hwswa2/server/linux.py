@@ -77,14 +77,8 @@ class LinuxServer(Server):
         """
         logger.debug("Trying to connect to %s" % self)
         username = self.account['login']
-        if 'password' in self.account:
-            password = self.account['password']
-        else:
-            password = None
-        if 'key' in self.account:
-            key_filename = self.account['key']
-        else:
-            key_filename = None
+        password = self.account.get('password')
+        key_filename = self.account.get('key')
         # _connect_to_gateway() will initialize self._sshtunnel used later
         if not self._connect_to_gateway(timeout=timeout):
             return None
@@ -147,12 +141,8 @@ class LinuxServer(Server):
             if reconnect:
                 self._disconnect()
                 logger.debug("Will reconnect to %s" % self)
-            client = self._new_sshclient(timeout)
-            if client is None:
-                return False
-            else:
-                self._sshclient = client
-                return True
+            self._sshclient = self._new_sshclient(timeout)
+        return self._is_connected()
 
     def _disconnect(self):
         if self._sshclient is not None:
@@ -232,8 +222,6 @@ class LinuxServer(Server):
             try:
                 sftp.stat(path)
                 return True
-            except KeyboardInterrupt:
-                raise
             except IOError as ie:
                 return False
 
@@ -478,7 +466,7 @@ class LinuxServer(Server):
         stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout, privileged=privileged)
         return '\n'.join(stdout_data)
 
-    def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
+    def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp'):
         """Creates directory/file using mktemp and returns its name"""
         cmd = 'mktemp '
         if ftype == 'd':
@@ -684,9 +672,7 @@ class LinuxServer(Server):
         try:
             output = self.get_cmd_out(prefixed_cmd)
         except TimeoutException as te:
-            output = None
-            if 'output' in te.details:
-                output = te.details['output']
+            output = te.details.get('output')
             return False, output, "Timeout exception: %s" % te
         else:
             return True, output, None
