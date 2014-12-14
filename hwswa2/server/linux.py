@@ -46,6 +46,11 @@ class LinuxServer(Server):
         self._supath = None
         self._param_cmd_prefix = None
         self._param_binpath = None
+        for k in ['su', 'sudo']:
+            if k in self.account:
+                self.account['sutype'] = k
+                self.account['supassword'] = self.account[k]
+                break
 
     def cleanup(self):
         # remove ssh tunnel connections
@@ -609,28 +614,22 @@ class LinuxServer(Server):
                 # remote path
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
                 self.put(serverd_py, r_serverd_py)
-                if 'su' in self.account or 'sudo' in self.account:
-                    r_serverd_py_cmd = self._prepare_su_cmd('stty -echo; ' + r_serverd_py)
-                    r_serverd_py_privileged = True
-                    get_pty = True
-                else:
-                    r_serverd_py_cmd = r_serverd_py
-                    r_serverd_py_privileged = False
-                    get_pty = False
-                stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py_cmd, get_pty=get_pty)
+                stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py, get_pty=True)
                 banner = stdout.readline()
                 if not banner.startswith('started_ok'):
                     banner = stdout.readline()
                 logger.debug('remote agent started on %s: %s' % (self, banner))
-                self._agent = {'r_serverd_py': r_serverd_py,
-                               'privileged': r_serverd_py_privileged,
-                               'pty': get_pty,
-                               'stdin': stdin,
+                self._agent = {'stdin': stdin,
                                'stdout': stdout,
                                'stderr': stderr}
+                sutype = self.account.get('sutype')
+                if sutype:
+                    supassword = self.account.get('supassword')
+                    cmd = 'elevate_' + sutype
+                    if supassword:
+                        cmd += ' ' + aux.shell_escape(supassword)
+                    self.agent_cmd(cmd)
                 return True
-        except KeyboardInterrupt:
-            raise
         except Exception as e:
             logger.error("agent not started, exception %s: %s"
                          % (type(e).__name__, e.args), exc_info=True)
@@ -658,6 +657,8 @@ class LinuxServer(Server):
             logger.debug('command: ' + cmd)
             stdin.write(cmd + '\n')
             reply = stdout.readline().strip()
+            if reply == cmd:  # our input echoed, need to read again
+                reply = stdout.readline().strip()
             logger.debug('accept reply: ' + reply)
             accepted, space, reason = reply.partition(' ')
             if accepted == 'accepted_notok':
