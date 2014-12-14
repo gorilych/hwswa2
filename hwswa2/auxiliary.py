@@ -15,26 +15,24 @@ def get_server(servername):
 def wait_for(condition_fn, args, timeout=60):
     """Waits for condition or timeout
 
-    Returns True if condition is met within timeout period
+    Return True if condition is met within timeout period
     """
     starttime = time.time()
     while not condition_fn(*args):
         if time.time() - starttime > timeout:
             return False
+        time.sleep(1)
     return True
 
 
 def wait_for_not(condition_fn, args, timeout=60):
-    """Waits while condition became false or timeout
+    """Waits till condition became false or timeout
 
-    Returns True if condition become False within timeout period
+    Return True if condition become False within timeout period
     """
-    starttime = time.time()
-    while condition_fn(*args):
-        if time.time() - starttime > timeout:
-            return False
-        time.sleep(5)
-    return True
+    def not_condition():
+        return not condition_fn(*args)
+    return wait_for(not_condition, tuple(), timeout)
 
 
 # decorator to make arguments to be passed by value
