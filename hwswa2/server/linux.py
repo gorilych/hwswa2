@@ -468,6 +468,7 @@ class LinuxServer(Server):
                 status, result = self.agent_cmd(acmd)
                 # result is "[reason:<reason of failure>] \
                 # returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
+                logger.debug("exec_cmd result %s" % result)
                 result = dict([r.split(':') for r in result.split(' ')])
                 if status:
                     return (base64.b64decode(result['stdout']),
@@ -668,8 +669,10 @@ class LinuxServer(Server):
             logger.debug('command: ' + cmd)
             stdin.write(cmd + '\n')
             reply = stdout.readline().strip()
+            logger.debug("reply1: %s" % reply)
             if reply == cmd:  # our input echoed, need to read again
                 reply = stdout.readline().strip()
+                logger.debug("reply2: %s" % reply)
             logger.debug('accept reply: ' + reply)
             accepted, space, reason = reply.partition(' ')
             if accepted == 'accepted_notok':
