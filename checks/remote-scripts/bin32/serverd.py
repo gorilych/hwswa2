@@ -355,7 +355,12 @@ def elevate(cmd_fmt, expect=None, send=None):
     global BANNER
     serverd_path = os.path.realpath(__file__)
     cmd = cmd_fmt.replace('{serverd}', serverd_path)
-    expect_send = [(expect, send), (BANNER + '\r\n', None)]
+    if expect:
+        expect_send = [(expect, send), (BANNER + '\r\n', None)]
+    else:
+        expect_send = [(BANNER + '\r\n', None)]
+    debug("cmd: %s" % cmd)
+    debug("expect_send: %s" % expect_send)
     spawn_expect_send_interact_exit(cmd, expect_send)
 
 
