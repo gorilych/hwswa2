@@ -200,39 +200,63 @@ def packports(ports):
 
 def spawn(cmd):
     """Create new process with pty attached
-    Return child pid and pty
+    Return child pid, pty and stderr
     """
-    argv = shlex.split(cmd)
+    debug("cmd: %s" % cmd)
+    if not isinstance(cmd, tuple) and not isinstance(cmd, list):
+        argv = shlex.split(cmd)
+    else:
+        argv = cmd
+    stderrout, stderrin = os.pipe()
     pid, fd = pty.fork()
     if pid == 0: # child
+        os.close(stderrout)
+        os.dup2(stderrin, 2)
+        if stderrin > 2:
+            os.close(stderrin)
         os.execlp(argv[0], *argv)
     else:
-        return pid, fd
+        os.close(stderrin)
+        return pid, fd, stderrout
 
 
-def wait_and_send(fd, expect, send=None, timeout=5):
+def wait_and_send(fd, expect, send=None, timeout=5, stderr=None):
     """Wait for a expected line and send a string"""
     buf=""
+    fds = [fd]
+    buf = {fd: ''}
+    if stderr:
+        fds.append(stderr)
+        buf[stderr] = ''
     while True:
-        rfds, wfds, xfds = select.select([fd], [], [], timeout)
+        if not fds:
+            debug("did not find %s" % expect)
+            return False
+        rfds, wfds, xfds = select.select(fds, [], [], timeout)
         if not rfds:
-            print("result_notok: %s not found" % expect)
+            debug("timeout, did not find %s" % expect)
             return False
-        data = os.read(fd, 1024)
-        if not data: # reached EOF
-            print("result_notok: %s not found" % expect)
-            return False
-        buf += data
-        if buf.find(expect) > -1:
-            if send:
-                write(fd, send)
-            #os.fsync(fd)
-            return True
+        for d in rfds:
+            data = os.read(d, 1024)
+            if not data: # reached EOF
+                fds.remove(d)
+            else:
+                buf[d] += data
+                debug("read from %s: %s" % (d, data))
+                if buf[d].find(expect) > -1:
+                    debug("found %s" % expect)
+                    if send:
+                        debug("will send: %s" % send)
+                        write(fd, send)
+                        debug("just sent: %s" % send)
+                    #os.fsync(fd)
+                    return True
 
 
-def interact(fd):
+def interact(fd, stderr=None):
     """Interact with pty"""
     ## window size change handler
+    debug("started")
     def change_winsz(signum, frame):
         winsz_fmt = "HHHH"
         winsz_arg = " " * struct.calcsize(winsz_fmt)
@@ -240,12 +264,18 @@ def interact(fd):
         fcntl.ioctl(fd, termios.TIOCSWINSZ, winsz_arg)
     old_handler = signal.signal(signal.SIGWINCH, change_winsz)
     try:
-        mode = tty.tcgetattr(sys.stdin)
-        tty.setraw(sys.stdin)
+        mode = termios.tcgetattr(sys.stdin)
+        tty.setraw(sys.stdin, termios.TCSANOW)
         restore = 1
     except tty.error:
         restore = 0
-    fds = [fd, sys.stdin]
+    debug("stdin: %s" % sys.stdin.fileno())
+    debug("child tty: %s" % fd)
+    fds = [fd, sys.stdin.fileno()]
+    if stderr:
+        fds.append(stderr)
+        debug("child stderr: %s" % stderr)
+    debug("before loop")
     try:
         try:
             while True:
@@ -258,21 +288,22 @@ def interact(fd):
                         continue # Interrupted system call
                     else:
                         raise se
-                if fd in rfds:
-                    data = os.read(fd, 1024)
-                    if not data:  # Reached EOF.
-                        fds.remove(fd)
-                    else:
-                        os.write(sys.stdout.fileno(), data)
-                if sys.stdin in rfds:
-                    data = os.read(sys.stdin.fileno(), 1024)
-                    if not data:
-                        fds.remove(sys.stdin)
-                    else:
-                        write(fd, data)
+                for i, o in [[fd, sys.stdout.fileno()],
+                             [stderr, sys.stderr.fileno()],
+                             [sys.stdin.fileno(), fd]]:
+                    if i in rfds:
+                        data = os.read(i, 1024)
+                        if not data:  # Reached EOF.
+                            fds.remove(i)
+                            debug('EOF %s' % i)
+                        else:
+                            debug('read from %s: %s' % (i, data))
+                            os.write(o, data)
         except (IOError, OSError):
+            debug("IOError/OSError")
             pass
     finally:
+        debug("finished")
         if restore:
             tty.tcsetattr(sys.stdin, tty.TCSAFLUSH, mode)
         signal.signal(signal.SIGWINCH, old_handler)
@@ -290,16 +321,27 @@ def spawn_expect_send_interact_exit(cmd, expect_send=None):
     expect_send = [('expect1', 'send1'), ('expect2', 'send2') ...]
     """
     status = 0
+    if not isinstance(cmd, tuple):
+        cmd = shlex.split(cmd)
     if not expect_send:
         expect_send = []
-    child_pid, child_pty = spawn(cmd)
+    child_pid, child_pty, child_stderr = spawn(cmd)
     for e_s in expect_send:
         expect, send = e_s
-        if not wait_and_send(child_pty, expect, send):
-            print("result_notok failed wait '%s' and send '%s'" % (expect, send))
+        if not wait_and_send(child_pty, expect, send, stderr=child_stderr):
+            #TODO kill child_pid, if needed
+            msg = "result_notok failed wait '%s' and send '%s'" % (expect, send)
+            print(msg)
+            debug("sent: %s" % msg)
             return
-    print("result_ok spawned")
-    interact(child_pty)
+    # disable echo to prevent double echo from master pty and child pty
+    modenoecho = termios.tcgetattr(sys.stdin)
+    modenoecho[3] = modenoecho[3] &  ~termios.ECHO
+    termios.tcsetattr(sys.stdin, termios.TCSANOW, modenoecho)
+    msg = "result_ok spawned"
+    print(msg)
+    debug("sent: %s" % msg)
+    interact(child_pty, child_stderr)
     status = os.waitpid(child_pid,0) # returns (pid, exit_status << 8 + signal)
     sys.exit(status[1] >> 8)
 
