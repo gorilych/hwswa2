@@ -679,7 +679,8 @@ def cmd_elevate_sudo(password=None):
     if password is None:
         elevate("sudo {serverd}")
     else:
-        cmd_fmt = "sudo --reset-timestamp --prompt=password: {serverd}"
+        #cmd_fmt = "sudo --reset-timestamp --prompt=password: {serverd}"
+        cmd_fmt = "sudo -k -p password: {serverd}"
         expect = "password:"
         send = password + "\n"
         elevate(cmd_fmt, expect, send)
