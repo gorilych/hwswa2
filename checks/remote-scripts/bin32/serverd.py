@@ -467,6 +467,9 @@ class CMD(object):
                 input_data = self._input_data
                 rlist = [p.stdout, p.stderr]
                 wlist = [p.stdin]
+                if not input_data:
+                    p.stdin.close()
+                    wlist = []
                 # loop input,read until process finishes or time goes out or cancelled
                 while True:
                     if self.cancelled:
@@ -479,18 +482,29 @@ class CMD(object):
                         except OSError: # can raise if process already exited
                             pass
                         break
-                    if not input_data:
-                        p.stdin.close()
-                        wlist = []
-                        #  read or write
-                    rfds, wfds, xfds = select.select(rlist, wlist, [], 0.01)
-                    if p.stdin in wfds:
-                        n = os.write(p.stdin.fileno(), input_data)
-                        input_data = input_data[n:]
-                    if p.stdout in rfds:
-                        self.stdout += os.read(p.stdout.fileno(), 1024)
-                    if p.stderr in rfds:
-                        self.stderr += os.read(p.stderr.fileno(), 1024)
+                    #  read or write
+                    if rlist or wlist:
+                        rfds, wfds, xfds = select.select(rlist, wlist, [], 0.01)
+                        if p.stdin in wfds:
+                            n = os.write(p.stdin.fileno(), input_data)
+                            input_data = input_data[n:]
+                            if not input_data: # finished
+                                wlist.remove(p.stdin)
+                                p.stdin.close()
+                        if p.stdout in rfds:
+                            data = os.read(p.stdout.fileno(), 1024)
+                            if data:
+                                self.stdout += data
+                            else:  # EOF
+                                rlist.remove(p.stdout)
+                                p.stdout.close()
+                        if p.stderr in rfds:
+                            data = os.read(p.stderr.fileno(), 1024)
+                            if data:
+                                self.stderr += data
+                            else:  # EOF
+                                rlist.remove(p.stderr)
+                                p.stderr.close()
                     if p.poll() is not None: # process has finished
                         self.succeeded = True
                         break
