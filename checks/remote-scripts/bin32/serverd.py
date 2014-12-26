@@ -18,6 +18,27 @@ import termios
 import errno
 from subprocess import Popen, PIPE
 
+
+# Debugging routines
+DEBUG=False
+
+def debug(msg):
+    global DEBUG
+    global DEBUGFILE
+    if DEBUG:
+        stack = traceback.extract_stack()
+        del stack[-1]
+        stackstr = ''
+        for s in stack:
+            stackstr += s[2] + '(%s):' % s[1]
+        os.write(DEBUGFILE, stackstr + ' ' + str(msg) + '\n')
+
+
+if DEBUG:
+    DEBUGFILE = os.open('/tmp/serverd.' + str(os.getpid()) + '.log', os.O_RDWR | os.O_CREAT)
+    debug('started')
+
+
 class Unbuffered:
     def __init__(self, stream):
         self.stream = stream
@@ -726,26 +747,36 @@ if __name__ == '__main__':
     commands = dict((k[4:], globals()[k]) for k in globals() if k.startswith('cmd_'))
     BANNER = 'started_ok possible commands: %s' % ', '.join(sorted(commands.keys()))
     print(BANNER)
+    debug(BANNER)
     line = ' '
     while (line):
         line = sys.stdin.readline()
+        debug("read: %s" % line)
         try:
             argv = shlex.split(line)
         except ValueError, e:
-            print 'accepted_notok cannot parse line: %s' % e.message
+            msg = 'accepted_notok cannot parse line: %s' % e.message
+            print msg
+            debug('sent: %s' % msg)
             continue
         if not argv: # empty line
             continue
         command = argv[0]
         args = argv[1:]
         if command in commands:
-            print 'accepted_ok command %s with args %s' % (command, args)
+            msg = 'accepted_ok command %s with args %s' % (command, args)
+            print msg
+            debug('sent: %s' % msg)
             try:
                 status, result = commands[command](*args)
                 if status:
-                    print 'result_ok %s' % result
+                    msg = 'result_ok %s' % result
+                    print msg
+                    debug('sent: %s' % msg)
                 else:
-                    print 'result_notok %s' % result
+                    msg = 'result_notok %s' % result
+                    print msg
+                    debug('sent: %s' % msg)
             except SystemExit, e:
                 if e.args:
                     returncode = e.args[0]
@@ -753,10 +784,15 @@ if __name__ == '__main__':
                 break
             except Exception, e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
-                print "result_notok Exception %s: %s" % \
+                msg = "result_notok Exception %s: %s" % \
                       (traceback.format_exception_only(exc_type, exc_obj)[0],
                        traceback.format_tb(exc_tb))
+                print msg
+                debug('sent: %s' % msg)
         else:
-            print 'accepted_notok no such command %s' % command
+            msg = 'accepted_notok no such command %s' % command
+            print msg
+            debug('sent: %s' % msg)
     close_all()
+    debug("will exit with %s" % returncode)
     os._exit(returncode)
