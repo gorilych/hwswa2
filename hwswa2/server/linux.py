@@ -640,7 +640,12 @@ class LinuxServer(Server):
                     cmd = 'elevate_' + sutype
                     if supassword:
                         cmd += ' ' + aux.shell_escape(supassword)
-                    self.agent_cmd(cmd)
+                    elevated, reason = self.agent_cmd(cmd)
+                    if elevated:
+                        return True
+                    else:
+                        logger.error("Failed to elevate priviliges: %s" % reason)
+                        return False
                 return True
         except Exception as e:
             logger.error("agent not started, exception %s: %s"
