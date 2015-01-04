@@ -310,26 +310,32 @@ class LinuxServer(Server):
                 raise e
             if sys.stdin in r:
                 x = os.read(sys.stdin.fileno(), 1)
+                logger.debug("stdin: %s" % repr(x))
                 if len(x) == 0:
                     channel.shutdown_write()
                 channel.send(x)
             if channel in r:
                 if channel.recv_ready():
                     x = channel.recv(1024)
+                    logger.debug("stdout: %s" % repr(x))
                     sys.stdout.write(x)
                     sys.stdout.flush()
                 if channel.recv_stderr_ready():
                     x = channel.recv_stderr(1024)
+                    logger.debug("stderr: %s" % repr(x))
                     sys.stderr.write(x)
                     sys.stderr.flush()
             if channel.exit_status_ready():
+                logger.debug("channel exited")
                 break
         while channel.recv_ready():
             x = channel.recv(1024)
+            logger.debug("stdout: %s" % repr(x))
             sys.stdout.write(x)
             sys.stdout.flush()
         while channel.recv_stderr_ready():
             x = channel.recv_stderr(1024)
+            logger.debug("stderr: %s" % repr(x))
             sys.stderr.write(x)
             sys.stderr.flush()
 
@@ -436,24 +442,15 @@ class LinuxServer(Server):
             sftp = self._sshclient.open_sftp()
             sftp.mkdir(path)
 
-    def exec_cmd_i(self, cmd, privileged=True, timeout=TIMEOUT, get_pty=False):
+    def exec_cmd_i(self, cmd, get_pty=False):
         """Executes command interactively"""
         if self._connect():
-            if privileged and ('su' in self.account or 'sudo' in self.account):
-                cmd = self._prepare_su_cmd(cmd, timeout)
-            if get_pty and sys.stdin.isatty():
-                channel = self._sshclient.get_transport().open_session()
-                height, width = aux.term_winsz()
-                channel.get_pty(term=aux.term_type(), width=width, height=height)
-                channel.exec_command(cmd)
-                LinuxServer._interactive_shell(channel)
-                status = channel.recv_exit_status()
-                channel.close()
+            status, result = self.agent_exec_i('exec_i ' + cmd)
+            if status:
+                return result
             else:
-                stdin, stdout, stderr = self._sshclient.exec_command(cmd, timeout=0.0, get_pty=False)
-                LinuxServer._pipe_to_channel(stdout.channel)
-                status = stdout.channel.recv_exit_status()
-            return status
+                logger.error("Execution of %s failed: %s" % (cmd, result))
+                return 1
 
     def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
         """Executes command and returns tuple of stdout, stderr and status"""
@@ -695,6 +692,44 @@ class LinuxServer(Server):
                     return False, result
                 else:
                     return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
+
+    def agent_exec_i(self, cmd):
+        """Execute command interactively via agent.
+
+        Create new agent process for this.
+        Return tuple (status, result)
+        """
+        if not self.agent_start():
+            return False, 'agent not started'
+        else:
+            stdin = self._agent['stdin']
+            stdout = self._agent['stdout']
+            logger.debug('command: ' + cmd)
+            channel = stdin.channel
+            #if get_pty and sys.stdin.isatty():
+            #    height, width = aux.term_winsz()
+            #    channel.get_pty(term=aux.term_type(), width=width, height=height)
+            stdin.write(cmd + '\n')
+            reply = stdout.readline().strip()
+            logger.debug("reply1: %s" % reply)
+            if reply == cmd:  # our input echoed, need to read again
+                reply = stdout.readline().strip()
+                logger.debug("reply2: %s" % reply)
+            logger.debug('accept reply: ' + reply)
+            accepted, space, reason = reply.partition(' ')
+            if accepted == 'accepted_notok':
+                return False, 'command not accepted: ' + reason
+            elif not accepted == 'accepted_ok':
+                return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
+            else:  # accepted == 'accepted_ok'
+                logger.debug('command accepted on server %s: %s' % (self, reason))
+                LinuxServer._interactive_shell(channel)
+                status = channel.recv_exit_status()
+                logger.info("exit code: %s" % status)
+                channel.close()
+                self._agent = None
+                return True, status
+
 
     def param_cmd(self, cmd):
         """Execute cmd in prepared environment to obtain some server parameter

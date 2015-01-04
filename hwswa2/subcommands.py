@@ -331,10 +331,10 @@ def exec_cmd():
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     if server.accessible():
         exitstatus = server.exec_cmd_i(sshcmd, get_pty=get_pty)
-        logger.debug("exitstatus = %s" % exitstatus)
+        sys.exit(exitstatus)
     else:
         logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
-        sys.exit(1)
+        sys.exit(255)
 
 
 def ni_exec_cmd():
@@ -348,8 +348,8 @@ def ni_exec_cmd():
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     if server.accessible():
         stdout, stderr, exitstatus = server.exec_cmd(sshcmd)
-        print("stdout = %s" % stdout)
-        print("stderr = %s" % stderr)
+        print(" = stdout = \n%s" % stdout)
+        print(" = stderr = \n%s" % stderr)
         print("exitstatus = %s" % exitstatus)
     else:
         logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
