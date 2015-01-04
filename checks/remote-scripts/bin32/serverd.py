@@ -264,10 +264,9 @@ def interact(fd, stderr=None):
     ## window size change handler
     debug("started")
     def change_winsz(signum, frame):
-        winsz_fmt = "HHHH"
-        winsz_arg = " " * struct.calcsize(winsz_fmt)
-        fcntl.ioctl(sys.stdout, termios.TIOCGWINSZ, winsz_arg)
-        fcntl.ioctl(fd, termios.TIOCSWINSZ, winsz_arg)
+        winsz_arg = struct.pack("HHHH", 0, 0, 0, 0)
+        fcntl.ioctl(fd, termios.TIOCSWINSZ,
+                    fcntl.ioctl(sys.stdout, termios.TIOCGWINSZ, winsz_arg))
     old_handler = signal.signal(signal.SIGWINCH, change_winsz)
     try:
         mode = termios.tcgetattr(sys.stdin)
