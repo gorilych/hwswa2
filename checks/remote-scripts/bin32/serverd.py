@@ -52,6 +52,7 @@ class Unbuffered:
 
 
 sys.stdout = Unbuffered(sys.stdout)
+sys.stderr = Unbuffered(sys.stderr)
 
 # array of dicts {socket: socketobject, proto:tcp/udp, address: IP/hostname, port: port number}
 sockets = []
@@ -198,7 +199,7 @@ def packports(ports):
     return result
 
 
-def spawn(cmd):
+def spawn(cmd, separate_stderr=False):
     """Create new process with pty attached
     Return child pid, pty and stderr
     """
@@ -207,17 +208,22 @@ def spawn(cmd):
         argv = shlex.split(cmd)
     else:
         argv = cmd
-    stderrout, stderrin = os.pipe()
+    if separate_stderr:
+        stderrout, stderrin = os.pipe()
     pid, fd = pty.fork()
     if pid == 0: # child
-        os.close(stderrout)
-        os.dup2(stderrin, 2)
-        if stderrin > 2:
-            os.close(stderrin)
+        if separate_stderr:
+            os.close(stderrout)
+            os.dup2(stderrin, 2)
+            if stderrin > 2:
+                os.close(stderrin)
         os.execlp(argv[0], *argv)
     else:
-        os.close(stderrin)
-        return pid, fd, stderrout
+        if separate_stderr:
+            os.close(stderrin)
+            return pid, fd, stderrout
+        else:
+            return pid, fd, None
 
 
 def wait_and_send(fd, expect, send=None, timeout=5, stderr=None):
@@ -230,11 +236,11 @@ def wait_and_send(fd, expect, send=None, timeout=5, stderr=None):
         buf[stderr] = ''
     while True:
         if not fds:
-            debug("did not find %s" % expect)
+            debug("did not find %s" % repr(expect))
             return False
         rfds, wfds, xfds = select.select(fds, [], [], timeout)
         if not rfds:
-            debug("timeout, did not find %s" % expect)
+            debug("timeout, did not find %s" % repr(expect))
             return False
         for d in rfds:
             data = os.read(d, 1024)
@@ -242,13 +248,13 @@ def wait_and_send(fd, expect, send=None, timeout=5, stderr=None):
                 fds.remove(d)
             else:
                 buf[d] += data
-                debug("read from %s: %s" % (d, data))
+                debug("read from %s: %s" % (d, repr(data)))
                 if buf[d].find(expect) > -1:
-                    debug("found %s" % expect)
+                    debug("found %s" % repr(expect))
                     if send:
-                        debug("will send: %s" % send)
+                        debug("will send: %s" % repr(send))
                         write(fd, send)
-                        debug("just sent: %s" % send)
+                        debug("just sent: %s" % repr(send))
                     #os.fsync(fd)
                     return True
 
@@ -292,15 +298,18 @@ def interact(fd, stderr=None):
                              [stderr, sys.stderr.fileno()],
                              [sys.stdin.fileno(), fd]]:
                     if i in rfds:
+                        debug("about to read from %s" % i)
                         data = os.read(i, 1024)
                         if not data:  # Reached EOF.
                             fds.remove(i)
                             debug('EOF %s' % i)
                         else:
-                            debug('read from %s: %s' % (i, data))
-                            os.write(o, data)
-        except (IOError, OSError):
-            debug("IOError/OSError")
+                            debug('read from %s: %s' % (i, repr(data)))
+                            write(o, data)
+        except (IOError, OSError), e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            debug("IOError/OSError %s: %s" % (traceback.format_exception_only(exc_type, exc_obj)[0],
+                                              traceback.format_tb(exc_tb)))
             pass
     finally:
         debug("finished")
@@ -308,6 +317,8 @@ def interact(fd, stderr=None):
             tty.tcsetattr(sys.stdin, tty.TCSAFLUSH, mode)
         signal.signal(signal.SIGWINCH, old_handler)
         os.close(fd)
+        if stderr:
+            os.close(stderr)
 
 
 def write(fd, data):
