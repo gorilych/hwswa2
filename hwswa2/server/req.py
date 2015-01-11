@@ -354,7 +354,7 @@ class DiskReq(_BaseReq):
         # parameters['partitions'] is table with fields [device, size(GB), mountpoint, fs_type]
         # we need to return dict{mountpoint->size}
         parts = parameters['partitions']
-        mount_size = dict([(part['mountpoint'], part['size(GB)']) for part in parts])
+        mount_size = dict([(part['mountpoint'], float(part['size(GB)'])) for part in parts])
         return mount_size
 
     def _convert(self, param_value):

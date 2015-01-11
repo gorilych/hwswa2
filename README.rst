@@ -216,3 +216,7 @@ logs/hwswa2.log
 logs/reports/
   directory to store reports to
 
+KNOWN ISSUES
+------------
+
+- Interactive execution combines stdout and stderr

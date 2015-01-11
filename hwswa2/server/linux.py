@@ -11,9 +11,14 @@ import tty
 import time
 import subprocess
 import posixpath
+import base64
+import random
+import string
+import fnmatch
 from ipcalc import Network
 
 import hwswa2.auxiliary as aux
+from hwswa2.globals import config
 
 import hwswa2.server
 from hwswa2.server import Server, ServerException, TunnelException, TimeoutException
@@ -39,13 +44,14 @@ class LinuxServer(Server):
         self._sshtunnel = None
         # tunnels for other servers. 'name': {'sshclient': sshclient, 'tunnel': tunnel}
         self._sshtunnels = {}
-        if self.port is None:
-            self._port = 22
-        else:
-            self._port = self.port
         self._supath = None
         self._param_cmd_prefix = None
         self._param_binpath = None
+        for k in ['su', 'sudo']:
+            if k in self.account:
+                self.account['sutype'] = k
+                self.account['supassword'] = self.account[k]
+                break
 
     def cleanup(self):
         # remove ssh tunnel connections
@@ -59,7 +65,7 @@ class LinuxServer(Server):
         if self._is_connected():
             self.agent_stop()
             for tmp in self._tmp:
-                self._remove(tmp, privileged=False)
+                self._remove(tmp)
             self._disconnect()
 
     ########## Internal methods
@@ -81,14 +87,8 @@ class LinuxServer(Server):
         """
         logger.debug("Trying to connect to %s" % self)
         username = self.account['login']
-        if 'password' in self.account:
-            password = self.account['password']
-        else:
-            password = None
-        if 'key' in self.account:
-            key_filename = self.account['key']
-        else:
-            key_filename = None
+        password = self.account.get('password')
+        key_filename = self.account.get('key')
         # _connect_to_gateway() will initialize self._sshtunnel used later
         if not self._connect_to_gateway(timeout=timeout):
             return None
@@ -96,7 +96,7 @@ class LinuxServer(Server):
         client.load_system_host_keys()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
-            client.connect(hostname=self.address, port=self._port, username=username, password=password,
+            client.connect(hostname=self.address, port=self.port or 22, username=username, password=password,
                            key_filename=key_filename, timeout=timeout, sock=self._sshtunnel)
         except paramiko.BadHostKeyException:
             self._last_connection_error = 'BadHostKeyException raised while connecting to %s' % self._address()
@@ -123,7 +123,7 @@ class LinuxServer(Server):
             return True
         else:
             try:
-                self._sshtunnel = self.gateway.create_tunnel(self.name, self.address, self._port, timeout=timeout)
+                self._sshtunnel = self.gateway.create_tunnel(self.name, self.address, self.port or 22, timeout=timeout)
             except TunnelException as te:
                 self._last_connection_error = "cannot connect via gateway %s: %s" % (self.gateway, te.value)
                 logger.error(self._last_connection_error)
@@ -151,60 +151,13 @@ class LinuxServer(Server):
             if reconnect:
                 self._disconnect()
                 logger.debug("Will reconnect to %s" % self)
-            client = self._new_sshclient(timeout)
-            if client is None:
-                return False
-            else:
-                self._sshclient = client
-                return True
+            self._sshclient = self._new_sshclient(timeout)
+        return self._is_connected()
 
     def _disconnect(self):
         if self._sshclient is not None:
             self._sshclient = None
             self._disconnect_from_gateway()
-
-    def _prepare_su_cmd(self, cmd, timeout=TIMEOUT):
-        if not ('su' in self.account or 'sudo' in self.account):
-            return cmd
-        if self._supath is None:
-            self._prepare_su()
-        supath = self._supath
-        su_py = os.path.join(supath, 'su.py')
-        stdout_fifo = os.path.join(supath, 'stdout')
-        stderr_fifo = os.path.join(supath, 'stderr')
-        if 'sudo' in self.account:
-            sutype = 'sudo'
-            password = self.account['sudo']
-            if password is None:
-                password = ''
-        elif 'su' in self.account:
-            sutype = 'su'
-            password = self.account['su']
-        else:
-            logger.error("BUG: _prepare_su_cmd() call for %s, while it does not have account with su/sudo", self)
-            return None
-        if cmd == 'shell':  # pass window size instead of fifos
-            stdout_fifo, stderr_fifo = aux.getTerminalSize()
-        return 'python %s %s "%s" %s %s "%s" %s' % (su_py,
-                                                    sutype,
-                                                    aux.shell_escape(password),
-                                                    stderr_fifo,
-                                                    stdout_fifo,
-                                                    aux.shell_escape(cmd),
-                                                    timeout)
-
-    def _prepare_su(self):
-        """Copies su.py to remote server and returns path to containing directory"""
-        su_py = os.path.join(self._remote_scripts_dir, 'bin32', 'su.py')
-        pexpect_py = os.path.join(self._remote_scripts_dir, 'bin32', 'pexpect.py')
-        # create directory
-        supath = self.mktemp(template='su.XXXX', path='/tmp')
-        self.put(pexpect_py, supath)
-        self.put(su_py, supath)
-        # prepare stdout and stderr fifos:
-        self.exec_cmd("mkfifo %s" % os.path.join(supath, 'stdout'), privileged=False)
-        self.exec_cmd("mkfifo %s" % os.path.join(supath, 'stderr'), privileged=False)
-        self._supath = supath
 
     def _prepare_param_scripts(self):
         """Copy remote scripts to server, configure cmd prefix
@@ -214,7 +167,7 @@ class LinuxServer(Server):
         if self._param_cmd_prefix is not None:
             return True
         try:
-            arch = self.get_cmd_out('uname --machine', privileged=False)
+            arch = self.get_cmd_out('uname --machine')
             if arch.endswith('64'):
                 rscriptdir = os.path.join(self._remote_scripts_dir,'bin64')
             else:
@@ -236,8 +189,6 @@ class LinuxServer(Server):
             try:
                 sftp.stat(path)
                 return True
-            except KeyboardInterrupt:
-                raise
             except IOError as ie:
                 return False
 
@@ -278,8 +229,15 @@ class LinuxServer(Server):
                 os.makedirs(lname)
                 self._get_dir_content(rname, lname)
 
-    def _remove(self, path, privileged=True):
-        self.exec_cmd("rm -rf %s" % path, privileged=privileged)
+    def _remove(self, path, sftp=None):
+        if self._connect():
+            sftp = sftp or self._sshclient.open_sftp()
+            if self._isdir(path):
+                for name in sftp.listdir(path):
+                    self._remove(path + '/' + name, sftp=sftp)
+                sftp.rmdir(path)
+            elif self._isfile(path):
+                sftp.remove(path)
 
     def _bootid(self):
         return self.get_cmd_out('cat /proc/sys/kernel/random/boot_id')
@@ -301,7 +259,7 @@ class LinuxServer(Server):
         """redirects sys.stdin,out,err to/from channel"""
         while True:
             try:
-                r, w, e = select.select([sys.stdin, channel], [], [])
+                r, w, e = select.select([sys.stdin, channel], [], [], 0.1)
             except select.error:
                 continue
             except Exception, e:
@@ -310,26 +268,35 @@ class LinuxServer(Server):
                 raise e
             if sys.stdin in r:
                 x = os.read(sys.stdin.fileno(), 1)
+                logger.debug("stdin: %s" % repr(x))
                 if len(x) == 0:
                     channel.shutdown_write()
-                channel.send(x)
+                try:
+                    channel.send(x)
+                except socket.error:
+                    pass
             if channel in r:
                 if channel.recv_ready():
                     x = channel.recv(1024)
+                    logger.debug("stdout: %s" % repr(x))
                     sys.stdout.write(x)
                     sys.stdout.flush()
                 if channel.recv_stderr_ready():
                     x = channel.recv_stderr(1024)
+                    logger.debug("stderr: %s" % repr(x))
                     sys.stderr.write(x)
                     sys.stderr.flush()
             if channel.exit_status_ready():
+                logger.debug("channel exited")
                 break
         while channel.recv_ready():
             x = channel.recv(1024)
+            logger.debug("stdout: %s" % repr(x))
             sys.stdout.write(x)
             sys.stdout.flush()
         while channel.recv_stderr_ready():
             x = channel.recv_stderr(1024)
+            logger.debug("stderr: %s" % repr(x))
             sys.stderr.write(x)
             sys.stderr.flush()
 
@@ -436,61 +403,72 @@ class LinuxServer(Server):
             sftp = self._sshclient.open_sftp()
             sftp.mkdir(path)
 
-    def exec_cmd_i(self, cmd, privileged=True, timeout=TIMEOUT, get_pty=False):
+    def exec_cmd_i(self, cmd, get_pty=False):
         """Executes command interactively"""
         if self._connect():
-            if privileged and ('su' in self.account or 'sudo' in self.account):
-                cmd = self._prepare_su_cmd(cmd, timeout)
-            if get_pty and sys.stdin.isatty():
-                channel = self._sshclient.get_transport().open_session()
-                height, width = aux.term_winsz()
-                channel.get_pty(term=aux.term_type(), width=width, height=height)
-                channel.exec_command(cmd)
-                LinuxServer._interactive_shell(channel)
-                status = channel.recv_exit_status()
-                channel.close()
+            status, result = self.agent_cmd('exec_i ' + cmd, interactively=True)
+            if status:
+                return result
             else:
-                stdin, stdout, stderr = self._sshclient.exec_command(cmd, timeout=0.0, get_pty=False)
-                LinuxServer._pipe_to_channel(stdout.channel)
-                status = stdout.channel.recv_exit_status()
-            return status
+                logger.error("Execution of %s failed: %s" % (cmd, result))
+                return 1
 
-    def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
+    def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT):
         """Executes command and returns tuple of stdout, stderr and status"""
         logger.debug("Executing on %s: %s" % (self, cmd))
         if self._connect():
-            if privileged and ('su' in self.account or 'sudo' in self.account):
-                cmd = self._prepare_su_cmd(cmd, timeout)
-                logger.debug("Privileged command: %s" % cmd)
-            try:
-                stdin, stdout, stderr = self._sshclient.exec_command(cmd, timeout=timeout, get_pty=False)
+            if self.agent_start():
                 if input_data:
-                    stdin.write(input_data)
-                    stdin.flush()
-                stdout_data = stdout.read().splitlines()
-                stderr_data = stderr.read().splitlines()
-                status = stdout.channel.recv_exit_status()
-            except socket.timeout as e:
-                raise TimeoutException("Timeout during execution of %s" % cmd)
-            except paramiko.SSHException as e:
-                raise LinuxServerException("SSH exception: %s" % e)
-            logger.debug("Executon results: exit status %s, stdout %s, stderr %s" %
-                         (status, stdout_data, stderr_data))
-            return stdout_data, stderr_data, status
+                    i_d = base64.b64encode(input_data)
+                else:
+                    i_d = "''"
+                acmd = 'cmd_exec ' + aux.shell_escape(cmd) + ' ' + i_d + ' ' + str(timeout)
+                status, result = self.agent_cmd(acmd)
+                # result is "[reason:<reason of failure>] \
+                # returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
+                logger.debug("exec_cmd result %s" % result)
+                result = dict([r.split(':') for r in result.split(' ')])
+                if status:
+                    return (base64.b64decode(result['stdout']),
+                            base64.b64decode(result['stderr']), int(result['returncode']))
+                else:
+                    reason = base64.b64decode(result.get('reason'))
+                    if reason == 'timeout':
+                        raise TimeoutException("Timeout during execution of %s" % cmd,
+                                               output=base64.b64decode(result['stdout']),
+                                               stderr=base64.b64decode(result['stderr']),
+                                               retcode=int(result['returncode']))
+                    else:
+                        raise LinuxServerException("Execution of %s failed: %s" % (cmd, reason))
 
-    def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
-        stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout, privileged=privileged)
-        return '\n'.join(stdout_data)
+    def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT):
+        stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout)
+        # remove last trailing newline
+        if len(stdout_data) > 0 and stdout_data[-1] == '\n':
+            stdout_data = stdout_data[:-1]
+        return stdout_data
 
-    def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
+    def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp'):
         """Creates directory/file using mktemp and returns its name"""
-        cmd = 'mktemp '
-        if ftype == 'd':
-            cmd += '-d '
-        cmd += '-p %s %s' % (path, template)
-        tmp = self.get_cmd_out(cmd, privileged=False)
-        self._tmp.append(tmp)
-        return tmp
+        #generate name
+        prefix = template.rstrip('X')
+        suffix_len = len(template) - len(prefix)
+        pattern = prefix + '*'
+        existing_names = fnmatch.filter(self._listdir(path), pattern)
+        # try to generate random filename
+        name = None
+        while True:
+            suffix = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(suffix_len))
+            name = prefix + suffix
+            if not name in existing_names:  # name is unique
+                break
+        full_name = path + '/' + name
+        if ftype == 'd':  # directory
+            self.mkdir(full_name)
+        else:  # file
+            self.write(full_name, '')
+        self._tmp.append(full_name)
+        return full_name
 
     def put(self, localpath, remotepath=None):
         if remotepath is None or remotepath == '':
@@ -571,7 +549,7 @@ class LinuxServer(Server):
                 return self.check_reboot_result
         else:
             # check uptime, it can be the case server reboots too fast
-            uptime, space, idle = self.get_cmd_out('cat /proc/uptime', privileged=False).partition(' ')
+            uptime, space, idle = self.get_cmd_out('cat /proc/uptime').partition(' ')
             uptime = float(uptime)
             if uptime < timeout + 10:
                 self.check_reboot_result = 0
@@ -580,24 +558,15 @@ class LinuxServer(Server):
                 self.check_reboot_result = "server does not go to reboot: still accessible after %s seconds" % timeout
                 return self.check_reboot_result
 
-    def shell(self, privileged=True):
+    def shell(self):
         """Opens remote SSH session"""
         if self._connect():
-            channel = self._sshclient.invoke_shell(aux.term_type())
-            if privileged and ('su' in self.account or 'sudo' in self.account):
-                cmd = self._prepare_su_cmd('shell')
-                channel.sendall(cmd + '; exit \n')
-                # cleanup previous output, leaving only prompt
-                data = ''
-                while channel.recv_ready():
-                    data += channel.recv(1000)
-                time.sleep(0.3)
-                while channel.recv_ready():
-                    data += channel.recv(1000)
-                print data.split('\n')[-1],
-                sys.stdout.flush()
-            LinuxServer._interactive_shell(channel)
-            channel.close()
+            status, result = self.agent_cmd('shell', interactively=True)
+            if status:
+                return result
+            else:
+                logger.error("Execution of %s failed: %s" % (cmd, result))
+                return 1
 
     def agent_start(self):
         """Starts remote agent on server"""
@@ -609,28 +578,28 @@ class LinuxServer(Server):
                 # remote path
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
                 self.put(serverd_py, r_serverd_py)
-                if 'su' in self.account or 'sudo' in self.account:
-                    r_serverd_py_cmd = self._prepare_su_cmd('stty -echo; ' + r_serverd_py)
-                    r_serverd_py_privileged = True
-                    get_pty = True
-                else:
-                    r_serverd_py_cmd = r_serverd_py
-                    r_serverd_py_privileged = False
-                    get_pty = False
-                stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py_cmd, get_pty=get_pty)
+                debugopt = ' -d' if config['remote_debug'] else ''
+                stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py + debugopt, get_pty=True)
                 banner = stdout.readline()
                 if not banner.startswith('started_ok'):
                     banner = stdout.readline()
                 logger.debug('remote agent started on %s: %s' % (self, banner))
-                self._agent = {'r_serverd_py': r_serverd_py,
-                               'privileged': r_serverd_py_privileged,
-                               'pty': get_pty,
-                               'stdin': stdin,
+                self._agent = {'stdin': stdin,
                                'stdout': stdout,
                                'stderr': stderr}
+                sutype = self.account.get('sutype')
+                if sutype:
+                    supassword = self.account.get('supassword')
+                    cmd = 'elevate_' + sutype
+                    if supassword:
+                        cmd += ' ' + aux.shell_escape(supassword)
+                    elevated, reason = self.agent_cmd(cmd)
+                    if elevated:
+                        return True
+                    else:
+                        logger.error("Failed to elevate priviliges: %s" % reason)
+                        return False
                 return True
-        except KeyboardInterrupt:
-            raise
         except Exception as e:
             logger.error("agent not started, exception %s: %s"
                          % (type(e).__name__, e.args), exc_info=True)
@@ -648,7 +617,7 @@ class LinuxServer(Server):
             finally:
                 self._agent = None
 
-    def agent_cmd(self, cmd):
+    def agent_cmd(self, cmd, interactively=False):
         """Sends command to remote agent and returns tuple (status, result)"""
         if not self.agent_start():
             return False, 'agent not started'
@@ -658,6 +627,10 @@ class LinuxServer(Server):
             logger.debug('command: ' + cmd)
             stdin.write(cmd + '\n')
             reply = stdout.readline().strip()
+            logger.debug("reply1: %s" % reply)
+            if reply == cmd:  # our input echoed, need to read again
+                reply = stdout.readline().strip()
+                logger.debug("reply2: %s" % reply)
             logger.debug('accept reply: ' + reply)
             accepted, space, reason = reply.partition(' ')
             if accepted == 'accepted_notok':
@@ -666,15 +639,29 @@ class LinuxServer(Server):
                 return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
             else:  # accepted == 'accepted_ok'
                 logger.debug('command accepted on server %s: %s' % (self, reason))
-                reply = stdout.readline().strip()
-                logger.debug('result reply: ' + reply)
-                result_status, space, result = reply.partition(' ')
-                if result_status == 'result_ok':
-                    return True, result
-                elif result_status == 'result_notok':
-                    return False, 'command failed: ' + result
+                if interactively:
+                    channel = stdin.channel
+                    # flush stdout buffer, if any
+                    l = len(stdout._rbuffer)
+                    if l > 0:
+                        buffer = stdout.read(l)
+                        sys.stdout.write(buffer)
+                    LinuxServer._interactive_shell(channel)
+                    status = channel.recv_exit_status()
+                    logger.info("exit code: %s" % status)
+                    channel.close()
+                    self._agent = None
+                    return True, status
                 else:
-                    return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
+                    reply = stdout.readline().strip()
+                    logger.debug('result reply: ' + reply)
+                    result_status, space, result = reply.partition(' ')
+                    if result_status == 'result_ok':
+                        return True, result
+                    elif result_status == 'result_notok':
+                        return False, result
+                    else:
+                        return (False, 'wrong result message, should start with result_ok/result_notok: ' + reply)
 
     def param_cmd(self, cmd):
         """Execute cmd in prepared environment to obtain some server parameter
@@ -688,9 +675,7 @@ class LinuxServer(Server):
         try:
             output = self.get_cmd_out(prefixed_cmd)
         except TimeoutException as te:
-            output = None
-            if 'output' in te.details:
-                output = te.details['output']
+            output = te.details.get('output')
             return False, output, "Timeout exception: %s" % te
         else:
             return True, output, None
