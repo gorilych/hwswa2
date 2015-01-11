@@ -444,7 +444,7 @@ class LinuxServer(Server):
     def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
         stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout, privileged=privileged)
         # remove last trailing newline
-        if stdout_data[-1] == '\n':
+        if len(stdout_data) > 0 and stdout_data[-1] == '\n':
             stdout_data = stdout_data[:-1]
         return stdout_data
 
