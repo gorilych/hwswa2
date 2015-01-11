@@ -159,49 +159,6 @@ class LinuxServer(Server):
             self._sshclient = None
             self._disconnect_from_gateway()
 
-    def _prepare_su_cmd(self, cmd, timeout=TIMEOUT):
-        if not ('su' in self.account or 'sudo' in self.account):
-            return cmd
-        if self._supath is None:
-            self._prepare_su()
-        supath = self._supath
-        su_py = os.path.join(supath, 'su.py')
-        stdout_fifo = os.path.join(supath, 'stdout')
-        stderr_fifo = os.path.join(supath, 'stderr')
-        if 'sudo' in self.account:
-            sutype = 'sudo'
-            password = self.account['sudo']
-            if password is None:
-                password = ''
-        elif 'su' in self.account:
-            sutype = 'su'
-            password = self.account['su']
-        else:
-            logger.error("BUG: _prepare_su_cmd() call for %s, while it does not have account with su/sudo", self)
-            return None
-        if cmd == 'shell':  # pass window size instead of fifos
-            stdout_fifo, stderr_fifo = aux.getTerminalSize()
-        return 'python %s %s %s %s %s %s %s' % (su_py,
-                                                sutype,
-                                                aux.shell_escape(password),
-                                                stderr_fifo,
-                                                stdout_fifo,
-                                                aux.shell_escape(cmd),
-                                                timeout)
-
-    def _prepare_su(self):
-        """Copies su.py to remote server and returns path to containing directory"""
-        su_py = os.path.join(self._remote_scripts_dir, 'bin32', 'su.py')
-        pexpect_py = os.path.join(self._remote_scripts_dir, 'bin32', 'pexpect.py')
-        # create directory
-        supath = self.mktemp(template='su.XXXX', path='/tmp')
-        self.put(pexpect_py, supath)
-        self.put(su_py, supath)
-        # prepare stdout and stderr fifos:
-        self.exec_cmd("mkfifo %s" % os.path.join(supath, 'stdout'), privileged=False)
-        self.exec_cmd("mkfifo %s" % os.path.join(supath, 'stderr'), privileged=False)
-        self._supath = supath
-
     def _prepare_param_scripts(self):
         """Copy remote scripts to server, configure cmd prefix
 
@@ -486,7 +443,10 @@ class LinuxServer(Server):
 
     def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
         stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout, privileged=privileged)
-        return '\n'.join(stdout_data)
+        # remove last trailing newline
+        if stdout_data[-1] == '\n':
+            stdout_data = stdout_data[:-1]
+        return stdout_data
 
     def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp'):
         """Creates directory/file using mktemp and returns its name"""
@@ -601,21 +561,12 @@ class LinuxServer(Server):
     def shell(self, privileged=True):
         """Opens remote SSH session"""
         if self._connect():
-            channel = self._sshclient.invoke_shell(aux.term_type())
-            if privileged and ('su' in self.account or 'sudo' in self.account):
-                cmd = self._prepare_su_cmd('shell')
-                channel.sendall(cmd + '; exit \n')
-                # cleanup previous output, leaving only prompt
-                data = ''
-                while channel.recv_ready():
-                    data += channel.recv(1000)
-                time.sleep(0.3)
-                while channel.recv_ready():
-                    data += channel.recv(1000)
-                print data.split('\n')[-1],
-                sys.stdout.flush()
-            LinuxServer._interactive_shell(channel)
-            channel.close()
+            status, result = self.agent_cmd('shell', interactively=True)
+            if status:
+                return result
+            else:
+                logger.error("Execution of %s failed: %s" % (cmd, result))
+                return 1
 
     def agent_start(self):
         """Starts remote agent on server"""
@@ -691,8 +642,10 @@ class LinuxServer(Server):
                 if interactively:
                     channel = stdin.channel
                     # flush stdout buffer, if any
-                    buffer = stdout.read()
-                    sys.stdout.write(buffer)
+                    l = len(stdout._rbuffer)
+                    if l > 0:
+                        buffer = stdout.read(l)
+                        sys.stdout.write(buffer)
                     LinuxServer._interactive_shell(channel)
                     status = channel.recv_exit_status()
                     logger.info("exit code: %s" % status)

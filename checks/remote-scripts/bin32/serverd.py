@@ -34,7 +34,7 @@ def debug(msg):
         stackstr = ''
         for s in stack:
             stackstr += s[2] + '(%s):' % s[1]
-        os.write(DEBUGFILE, stackstr + ' ' + str(msg) + '\n')
+        os.write(DEBUGFILE, time.strftime('%Y/%m/%d %H:%M:%S') + ' ' + stackstr + ' ' + str(msg) + '\n')
 
 
 if DEBUG:
@@ -56,6 +56,7 @@ class Unbuffered:
 
 sys.stdout = Unbuffered(sys.stdout)
 sys.stderr = Unbuffered(sys.stderr)
+
 
 # array of dicts {socket: socketobject, proto:tcp/udp, address: IP/hostname, port: port number}
 sockets = []
@@ -379,6 +380,8 @@ def elevate(cmd_fmt, expect=None, send=None):
 def shell(sh=None):
     if not sh:
         sh='/bin/bash'
+    # sometimes SHELL will contain path to serverd.py and this will break `less`
+    os.environ['SHELL'] = sh
     exec_i(sh)
 
 
@@ -466,7 +469,7 @@ class CMD(object):
         # start process
         try:
             try:
-                p = Popen(shlex.split(self._cmd), shell=False,
+                p = Popen(self._cmd, shell=True,
                           stdin=PIPE, stdout=PIPE, stderr=PIPE, close_fds=True)
             except Exception, e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -541,6 +544,7 @@ class CMD(object):
 
     def start(self):
         # start execution thread
+        self.state = 'starting'
         self._exec_th = threading.Thread(target=self._exec_th_func, name="cmd_exec")
         self._exec_th.start()
         # start timer thread

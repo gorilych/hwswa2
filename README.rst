@@ -219,4 +219,4 @@ logs/reports/
 KNOWN ISSUES
 ------------
 
-- Interactive execution may hang for CentOS 5 servers
+- Interactive execution combines stdout and stderr
