@@ -302,7 +302,7 @@ class LinuxServer(Server):
         """redirects sys.stdin,out,err to/from channel"""
         while True:
             try:
-                r, w, e = select.select([sys.stdin, channel], [], [])
+                r, w, e = select.select([sys.stdin, channel], [], [], 0.1)
             except select.error:
                 continue
             except Exception, e:
@@ -314,7 +314,10 @@ class LinuxServer(Server):
                 logger.debug("stdin: %s" % repr(x))
                 if len(x) == 0:
                     channel.shutdown_write()
-                channel.send(x)
+                try:
+                    channel.send(x)
+                except socket.error:
+                    pass
             if channel in r:
                 if channel.recv_ready():
                     x = channel.recv(1024)
@@ -446,7 +449,7 @@ class LinuxServer(Server):
     def exec_cmd_i(self, cmd, get_pty=False):
         """Executes command interactively"""
         if self._connect():
-            status, result = self.agent_exec_i('exec_i ' + cmd)
+            status, result = self.agent_cmd('exec_i ' + cmd, interactively=True)
             if status:
                 return result
             else:
@@ -663,7 +666,7 @@ class LinuxServer(Server):
             finally:
                 self._agent = None
 
-    def agent_cmd(self, cmd):
+    def agent_cmd(self, cmd, interactively=False):
         """Sends command to remote agent and returns tuple (status, result)"""
         if not self.agent_start():
             return False, 'agent not started'
@@ -685,53 +688,27 @@ class LinuxServer(Server):
                 return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
             else:  # accepted == 'accepted_ok'
                 logger.debug('command accepted on server %s: %s' % (self, reason))
-                reply = stdout.readline().strip()
-                logger.debug('result reply: ' + reply)
-                result_status, space, result = reply.partition(' ')
-                if result_status == 'result_ok':
-                    return True, result
-                elif result_status == 'result_notok':
-                    return False, result
+                if interactively:
+                    channel = stdin.channel
+                    # flush stdout buffer, if any
+                    buffer = stdout.read()
+                    sys.stdout.write(buffer)
+                    LinuxServer._interactive_shell(channel)
+                    status = channel.recv_exit_status()
+                    logger.info("exit code: %s" % status)
+                    channel.close()
+                    self._agent = None
+                    return True, status
                 else:
-                    return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
-
-    def agent_exec_i(self, cmd):
-        """Execute command interactively via agent.
-
-        Create new agent process for this.
-        Return tuple (status, result)
-        """
-        if not self.agent_start():
-            return False, 'agent not started'
-        else:
-            stdin = self._agent['stdin']
-            stdout = self._agent['stdout']
-            logger.debug('command: ' + cmd)
-            channel = stdin.channel
-            #if get_pty and sys.stdin.isatty():
-            #    height, width = aux.term_winsz()
-            #    channel.get_pty(term=aux.term_type(), width=width, height=height)
-            stdin.write(cmd + '\n')
-            reply = stdout.readline().strip()
-            logger.debug("reply1: %s" % reply)
-            if reply == cmd:  # our input echoed, need to read again
-                reply = stdout.readline().strip()
-                logger.debug("reply2: %s" % reply)
-            logger.debug('accept reply: ' + reply)
-            accepted, space, reason = reply.partition(' ')
-            if accepted == 'accepted_notok':
-                return False, 'command not accepted: ' + reason
-            elif not accepted == 'accepted_ok':
-                return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
-            else:  # accepted == 'accepted_ok'
-                logger.debug('command accepted on server %s: %s' % (self, reason))
-                LinuxServer._interactive_shell(channel)
-                status = channel.recv_exit_status()
-                logger.info("exit code: %s" % status)
-                channel.close()
-                self._agent = None
-                return True, status
-
+                    reply = stdout.readline().strip()
+                    logger.debug('result reply: ' + reply)
+                    result_status, space, result = reply.partition(' ')
+                    if result_status == 'result_ok':
+                        return True, result
+                    elif result_status == 'result_notok':
+                        return False, result
+                    else:
+                        return (False, 'wrong result message, should start with result_ok/result_notok: ' + reply)
 
     def param_cmd(self, cmd):
         """Execute cmd in prepared environment to obtain some server parameter

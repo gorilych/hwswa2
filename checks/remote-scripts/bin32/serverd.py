@@ -206,7 +206,7 @@ def spawn(cmd, separate_stderr=False):
     """Create new process with pty attached
     Return child pid, pty and stderr
     """
-    debug("cmd: %s" % cmd)
+    debug("cmd: %s" % repr(cmd))
     if not isinstance(cmd, tuple) and not isinstance(cmd, list):
         argv = shlex.split(cmd)
     else:
@@ -334,8 +334,6 @@ def spawn_expect_send_interact_exit(cmd, expect_send=None):
     expect_send = [('expect1', 'send1'), ('expect2', 'send2') ...]
     """
     status = 0
-    if not isinstance(cmd, tuple):
-        cmd = shlex.split(cmd)
     if not expect_send:
         expect_send = []
     child_pid, child_pty, child_stderr = spawn(cmd)
@@ -355,10 +353,11 @@ def spawn_expect_send_interact_exit(cmd, expect_send=None):
     print(msg)
     debug("sent: %s" % msg)
     interact(child_pty, child_stderr)
-    status = os.waitpid(child_pid,0) # returns (pid, exit_status << 8 + signal)
-    sys.exit(status[1] >> 8)
+    # waitpid returns tuple (pid, exit_status << 8 + signal)
+    status = os.waitpid(child_pid,0)[1]
+    sys.exit(os.WEXITSTATUS(status))
 
-        
+
 def elevate(cmd_fmt, expect=None, send=None):
     """Elevate privileges with cmd_fmt.
 
