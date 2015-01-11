@@ -65,7 +65,7 @@ class LinuxServer(Server):
         if self._is_connected():
             self.agent_stop()
             for tmp in self._tmp:
-                self._remove(tmp, privileged=False)
+                self._remove(tmp)
             self._disconnect()
 
     ########## Internal methods
@@ -167,7 +167,7 @@ class LinuxServer(Server):
         if self._param_cmd_prefix is not None:
             return True
         try:
-            arch = self.get_cmd_out('uname --machine', privileged=False)
+            arch = self.get_cmd_out('uname --machine')
             if arch.endswith('64'):
                 rscriptdir = os.path.join(self._remote_scripts_dir,'bin64')
             else:
@@ -229,7 +229,7 @@ class LinuxServer(Server):
                 os.makedirs(lname)
                 self._get_dir_content(rname, lname)
 
-    def _remove(self, path, privileged=True, sftp=None):
+    def _remove(self, path, sftp=None):
         if self._connect():
             sftp = sftp or self._sshclient.open_sftp()
             if self._isdir(path):
@@ -413,7 +413,7 @@ class LinuxServer(Server):
                 logger.error("Execution of %s failed: %s" % (cmd, result))
                 return 1
 
-    def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
+    def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT):
         """Executes command and returns tuple of stdout, stderr and status"""
         logger.debug("Executing on %s: %s" % (self, cmd))
         if self._connect():
@@ -441,8 +441,8 @@ class LinuxServer(Server):
                     else:
                         raise LinuxServerException("Execution of %s failed: %s" % (cmd, reason))
 
-    def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
-        stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout, privileged=privileged)
+    def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT):
+        stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout)
         # remove last trailing newline
         if len(stdout_data) > 0 and stdout_data[-1] == '\n':
             stdout_data = stdout_data[:-1]
@@ -549,7 +549,7 @@ class LinuxServer(Server):
                 return self.check_reboot_result
         else:
             # check uptime, it can be the case server reboots too fast
-            uptime, space, idle = self.get_cmd_out('cat /proc/uptime', privileged=False).partition(' ')
+            uptime, space, idle = self.get_cmd_out('cat /proc/uptime').partition(' ')
             uptime = float(uptime)
             if uptime < timeout + 10:
                 self.check_reboot_result = 0
@@ -558,7 +558,7 @@ class LinuxServer(Server):
                 self.check_reboot_result = "server does not go to reboot: still accessible after %s seconds" % timeout
                 return self.check_reboot_result
 
-    def shell(self, privileged=True):
+    def shell(self):
         """Opens remote SSH session"""
         if self._connect():
             status, result = self.agent_cmd('shell', interactively=True)
@@ -578,7 +578,7 @@ class LinuxServer(Server):
                 # remote path
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
                 self.put(serverd_py, r_serverd_py)
-                debugopt = ' -d' if config['debug'] else ''
+                debugopt = ' -d' if config['remote_debug'] else ''
                 stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py + debugopt, get_pty=True)
                 banner = stdout.readline()
                 if not banner.startswith('started_ok'):
