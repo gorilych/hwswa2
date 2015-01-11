@@ -21,6 +21,9 @@ from subprocess import Popen, PIPE
 
 # Debugging routines
 DEBUG=False
+if len(sys.argv) >=2 and sys.argv[1] == '-d':
+    DEBUG=True
+
 
 def debug(msg):
     global DEBUG
@@ -694,7 +697,10 @@ def cmd_elevate_su(password):
 
     Usage: elevate_su <password>.
     """
-    cmd_fmt = "su --login root --shell {serverd}"
+    debugopt = ''
+    if DEBUG:
+        debugopt = ' -- -d'
+    cmd_fmt = "su --login root --shell {serverd}" + debugopt
     expect = ":"
     send = password + "\n"
     elevate(cmd_fmt, expect, send)
@@ -705,11 +711,14 @@ def cmd_elevate_sudo(password=None):
 
     Usage: elevate_sudo [<password>].
     """
+    debugopt = ''
+    if DEBUG:
+        debugopt = ' -d'
     if password is None:
-        elevate("sudo {serverd}")
+        elevate("sudo {serverd}" + debugopt)
     else:
         #cmd_fmt = "sudo --reset-timestamp --prompt=password: {serverd}"
-        cmd_fmt = "sudo -k -p password: {serverd}"
+        cmd_fmt = "sudo -k -p password: {serverd}" + debugopt
         expect = "password:"
         send = password + "\n"
         elevate(cmd_fmt, expect, send)

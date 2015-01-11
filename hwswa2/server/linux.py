@@ -18,6 +18,7 @@ import fnmatch
 from ipcalc import Network
 
 import hwswa2.auxiliary as aux
+from hwswa2.globals import config
 
 import hwswa2.server
 from hwswa2.server import Server, ServerException, TunnelException, TimeoutException
@@ -623,7 +624,8 @@ class LinuxServer(Server):
                 # remote path
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
                 self.put(serverd_py, r_serverd_py)
-                stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py, get_pty=True)
+                debugopt = ' -d' if config['debug'] else ''
+                stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py + debugopt, get_pty=True)
                 banner = stdout.readline()
                 if not banner.startswith('started_ok'):
                     banner = stdout.readline()
