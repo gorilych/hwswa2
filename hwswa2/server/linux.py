@@ -410,7 +410,8 @@ class LinuxServer(Server):
     def exec_cmd_i(self, cmd, get_pty=False):
         """Executes command interactively"""
         if self._connect():
-            status, result = self.agent_cmd('exec_i ' + cmd, interactively=True)
+            status, result = self.agent_cmd('exec_i ' + aux.shell_escape(cmd),
+                                            interactively=True)
             if status:
                 return result
             else:

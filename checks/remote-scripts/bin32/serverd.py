@@ -386,9 +386,7 @@ def shell(sh=None):
 
 
 def exec_i(cmd):
-    if not isinstance(cmd, tuple):
-        cmd = shlex.split(cmd)
-    p = Popen(cmd, shell=False, stdin=None, stdout=None, stderr=None, close_fds=False)
+    p = Popen(cmd, shell=True, stdin=None, stdout=None, stderr=None, close_fds=False)
     sys.exit(p.wait())
 
 
@@ -732,10 +730,10 @@ def cmd_shell(sh=None):
     shell(sh)
 
 
-def cmd_exec_i(*cmd):
+def cmd_exec_i(cmd):
     """Execute command interactively and exit. Usage: exec_i cmd
     
-    Usage: exec_i cmd arg1 arg2 ..
+    Usage: exec_i 'cmd arg1 arg2 ..'
     """
     exec_i(cmd)
 
