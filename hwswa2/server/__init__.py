@@ -40,8 +40,7 @@ class Server(object):
         self.gateway = gateway
         self.expect = expect
         # ordered list of reports, last generated report goes first
-        self.reports = []
-        self.read_reports()
+        self._reports = None
         # {network: ip, ...}
         self.nw_ips = {}
         self.find_nw_ips()
@@ -59,6 +58,12 @@ class Server(object):
         self._agent = None
         self.requirement_failures = []
         self.requirement_successes = []
+
+    @property
+    def reports(self):
+        if self._reports is None:
+            self._read_reports()
+        return self._reports
 
     def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
@@ -94,8 +99,9 @@ class Server(object):
                 self._accessible = False
         return self._accessible
 
-    def read_reports(self):
+    def _read_reports(self):
         """Read server reports"""
+        self._reports = []
         reports_dir = config.get('reportsdir')
         if not reports_dir:
             return
@@ -113,7 +119,7 @@ class Server(object):
                         logger.error("File name %s is not in format %s: %s" % (filename, timeformat, ve))
                     except ReportException as re:
                         logger.error("Error reading report from file %s: %s" % (filename, re))
-            self.reports = sorted(reports, key=lambda report: report.time, reverse=True)
+            self._reports = sorted(reports, key=lambda report: report.time, reverse=True)
 
     def list_reports(self):
         for report in self.reports:
