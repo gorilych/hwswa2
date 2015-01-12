@@ -347,7 +347,7 @@ class Server(object):
             return False
         if rtime is None:
             rtime = time.localtime()
-        reports_path = os.path.join(self._reports_dir, self.name)
+        reports_path = os.path.join(config['reportsdir'], self.name)
         if not os.path.exists(reports_path):
             os.makedirs(reports_path)
         yamlfile = os.path.join(reports_path, time.strftime(Server.time_format, rtime))

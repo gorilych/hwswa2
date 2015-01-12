@@ -224,7 +224,7 @@ def check():
         print("Progress: %s" % status)
         time.sleep(report_period)
     for server in servers:
-        server.prepare_and_save_report(config['networks'], check_time)
+        server.prepare_and_save_report(check_time)
         logger.info("%s status: %s, report file: %s" %
                     (server.name, server.last_report().data['check_status'], server.last_report().yamlfile))
 
