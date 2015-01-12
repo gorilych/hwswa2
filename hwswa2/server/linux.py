@@ -151,7 +151,7 @@ class LinuxServer(Server):
         if self._is_connected() and not reconnect:
             return True
         else:
-            if reconnect:
+            if self._is_connected():  # was asked to reconnect, obviously
                 self._disconnect()
                 logger.debug("Will reconnect to %s" % self)
             self._sshclient = self._new_sshclient(timeout)
