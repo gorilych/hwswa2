@@ -59,21 +59,13 @@ class Role(object):
     def __init__(self, name):
         """Constructs role from checksdir/name.yaml"""
         self.name = name.lower()
-        logger.debug("Collecting details for %s" % self)
-        f = os.path.join(config['checksdir'], self.name + '.yaml')
-        try:
-            self.data = yaml.load(open(f))
-        except IOError as ie:
-            logger.error("Error opening role file %s, assuming it is empty role. Exception: %s" % (f, ie))
-            self.data = {}
-            self._empty = True
-        except yaml.YAMLError as ye:
-            err_msg = "Error parsing role file %s: %s" % (f, ye)
-            logger.error(err_msg)
-            raise RoleException(err_msg)
-        else:
-            self._file = f
-        logger.debug("Finished collecting details for %s" % self)
+
+    @property
+    def data(self):
+        if not hasattr(self, '_data'):
+            logger.debug("Postponed reading of yaml file for %s started" % self)
+            self._init_data()
+        return self._data
 
     @property
     def description(self):
@@ -106,6 +98,18 @@ class Role(object):
             logger.debug("Postponed initialization of requirements for %s started" % self)
             self._init_requirements()
         return self._requirements
+
+    def _init_data(self):
+        f = os.path.join(config['checksdir'], self.name + '.yaml')
+        try:
+            self._data = yaml.load(open(f))
+        except IOError as ie:
+            logger.error("Error opening role file %s, assuming it is empty role. Exception: %s" % (f, ie))
+            self._data = {}
+        except yaml.YAMLError as ye:
+            err_msg = "Error parsing role file %s: %s" % (f, ye)
+            logger.error(err_msg)
+            raise RoleException(err_msg)
 
     def _init_includes(self):
         self._includes = []
@@ -390,7 +394,7 @@ class RoleCollection(Role):
     def __init__(self, roles):
         self.name = None
         self._roles = ' '.join(roles)
-        self.data = {'includes': roles}
+        self._data = {'includes': roles}
 
     def __str__(self):
         return "role collection: |" + self._roles + "|"
