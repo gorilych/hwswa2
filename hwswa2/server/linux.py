@@ -80,11 +80,12 @@ class LinuxServer(Server):
             address = self.account['login'] + '@' + self.address + ':' + self.port
         return address
 
-    def _new_sshclient(self, timeout=TIMEOUT):
+    def _new_sshclient(self, timeout=None):
         """Initiates connection and returns SSHClient object
 
         Returns None if connection fails.
         """
+        timeout = timeout or TIMEOUT
         logger.debug("Trying to connect to %s" % self)
         username = self.account['login']
         password = self.account.get('password')
@@ -114,11 +115,12 @@ class LinuxServer(Server):
         logger.error(self._last_connection_error)
         return None
 
-    def _connect_to_gateway(self, timeout=TIMEOUT):
+    def _connect_to_gateway(self, timeout=None):
         """Asks gateway to create ssh tunnel to this server
 
         Returns true if ssh tunnel is created successfully or there is no need for it
         """
+        timeout = timeout or TIMEOUT
         if self.gateway is None:
             return True
         else:
@@ -140,11 +142,12 @@ class LinuxServer(Server):
                 logger.debug("destroyed tunnel via %s" % self.gateway)
                 self._sshtunnel = None
 
-    def _connect(self, reconnect=False, timeout=TIMEOUT):
+    def _connect(self, reconnect=False, timeout=None):
         """Initiates SSH connection to the server.
 
         Returns true if connection was successful.
         """
+        timeout = timeout or TIMEOUT
         if self._is_connected() and not reconnect:
             return True
         else:
@@ -344,12 +347,13 @@ class LinuxServer(Server):
         else:
             return self._connect(reconnect=True, timeout=TIMEOUT)
 
-    def create_tunnel(self, name, address, port, timeout=TIMEOUT):
+    def create_tunnel(self, name, address, port, timeout=None):
         """Creates SSH tunnel via itself, using separate connection
 
         Returns tunnel, which can be used as socket
         Raises TunnelException in case of failure
         """
+        timeout = timeout or TIMEOUT
         logger.debug("%s was asked to create tunnel to %s" % (self, name))
         if name in self._sshtunnels:
             if self._sshtunnels[name]['sshclient'] is not None:
@@ -413,8 +417,9 @@ class LinuxServer(Server):
                 logger.error("Execution of %s failed: %s" % (cmd, result))
                 return 1
 
-    def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT):
+    def exec_cmd(self, cmd, input_data=None, timeout=None):
         """Executes command and returns tuple of stdout, stderr and status"""
+        timeout = timeout or TIMEOUT
         logger.debug("Executing on %s: %s" % (self, cmd))
         if self._connect():
             if self.agent_start():
@@ -440,7 +445,8 @@ class LinuxServer(Server):
                     else:
                         raise LinuxServerException("Execution of %s failed: %s" % (cmd, reason))
 
-    def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT):
+    def get_cmd_out(self, cmd, input_data=None, timeout=None):
+        timeout = timeout or TIMEOUT
         stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout)
         # remove last trailing newline
         if len(stdout_data) > 0 and stdout_data[-1] == '\n':
@@ -523,11 +529,12 @@ class LinuxServer(Server):
                     sftp.get(remotepath, localpath)
                     os.chmod(localpath, attrs.st_mode)
 
-    def check_reboot(self, timeout=REBOOT_TIMEOUT):
+    def check_reboot(self, timeout=None):
         """Reboots the server and checks the time it takes to come up
 
         Returns number of seconds (int/long) or reason why check is not possible (string)
         """
+        timeout = timeout or REBOOT_TIMEOUT
         if self._is_it_me():
             self.check_reboot_result = "we are running here, no reboot"
             return self.check_reboot_result
