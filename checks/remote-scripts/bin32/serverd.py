@@ -64,7 +64,7 @@ sockets = []
 def count_alive_threads(name):
     c = 0
     for th in threading.enumerate():
-        if name == th.name and th.isAlive():
+        if name == th.getName() and th.isAlive():
             c += 1
     return c
 
