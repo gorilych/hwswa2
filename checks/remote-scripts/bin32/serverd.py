@@ -42,6 +42,15 @@ if DEBUG:
     debug('started')
 
 
+# delete itself, but keep open file descriptor to be able to elevate
+try:
+    ITSELF='/proc/' + str(os.getpid()) + '/fd/' + str(os.open(os.path.realpath(__file__), os.O_RDONLY))
+    debug(ITSELF)
+    os.remove(os.path.realpath(__file__))
+except OSError: # already deleted?
+    pass
+
+
 class Unbuffered:
     def __init__(self, stream):
         self.stream = stream
@@ -366,8 +375,7 @@ def elevate(cmd_fmt, expect=None, send=None):
     Example elevate('sudo -u admin -p prmpt {serverd}s', 'prmpt', 'secret')
     """
     global BANNER
-    serverd_path = os.path.realpath(__file__)
-    cmd = cmd_fmt.replace('{serverd}', serverd_path)
+    cmd = cmd_fmt.replace('{serverd}', ITSELF)
     if expect:
         expect_send = [(expect, send), (BANNER + '\r\n', None)]
     else:

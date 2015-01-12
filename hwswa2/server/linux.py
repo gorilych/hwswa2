@@ -476,7 +476,7 @@ class LinuxServer(Server):
             stdout_data = stdout_data[:-1]
         return stdout_data
 
-    def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp'):
+    def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp', cleanup_later=True):
         """Creates directory/file using mktemp and returns its name"""
         #generate name
         prefix = template.rstrip('X')
@@ -495,7 +495,8 @@ class LinuxServer(Server):
             self.mkdir(full_name)
         else:  # file
             self.write(full_name, '')
-        self._tmp.append(full_name)
+        if cleanup_later:
+            self._tmp.append(full_name)
         return full_name
 
     def put(self, localpath, remotepath=None):
@@ -624,8 +625,8 @@ class LinuxServer(Server):
                 raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
             else:
                 serverd_py = os.path.join(config['rscriptdir'], 'bin32', 'serverd.py')
-                # remote path
-                r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
+                # remote path. No need to remove it on exit because script deletes itself.
+                r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp', cleanup_later=False)
                 self.put(serverd_py, r_serverd_py)
                 debugopt = ' -d' if config['remote_debug'] else ''
                 stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py + debugopt, get_pty=True)
