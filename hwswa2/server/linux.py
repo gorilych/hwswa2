@@ -548,6 +548,7 @@ class LinuxServer(Server):
                                        " stdout: %s, stderr: %s"\
                                        % (exitcode, repr(stdout), repr(stderr))
             return self.check_reboot_result
+        self.cleanup()
         logger.debug("reboot command is sent, now wait till server is down")
         # wait till shutdown:
         if aux.wait_for_not(self.accessible, [True], timeout):
