@@ -23,11 +23,14 @@ class Report(object):
         if data is None and yamlfile is None:
             raise ReportException("Report(None, None) is not allowed. Specify at least one arg")
         self.yamlfile = yamlfile
-        if data is None:
-            self._read()
-        else:
-            self.data = data
+        self._data = data
         self.time = time
+
+    @property
+    def data(self):
+        if not self._data:
+            self._read()
+        return self._data
 
     def _read(self, yamlfile=None):
         if yamlfile is None:
@@ -37,7 +40,7 @@ class Report(object):
         else:
             self.yamlfile = yamlfile
         try:
-            self.data = yaml.load(open(yamlfile))
+            self._data = yaml.load(open(yamlfile))
         except IOError as ie:
             raise ReportException("Error opening file %s: %s" % (yamlfile, ie))
         except yaml.YAMLError as ye:
