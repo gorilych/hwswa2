@@ -420,12 +420,19 @@ def show_report():
 
 
 def reports():
-    servername = config['servername']
-    server = get_server(servername)
-    if server is None:
-        logger.error("Cannot find server %s in servers list" % servername)
-        sys.exit(1)
-    server.list_reports()
+    servers = []
+    if config['allservers']:
+        config['servernames'] = server_names()
+    for name in config['servernames']:
+        server = get_server(name)
+        if server is None:
+            logger.error("Cannot find server %s in servers list" % name)
+            sys.exit(1)
+        else:
+            servers.append(server)
+    for server in servers:
+        print "==== %s" % server
+        server.list_reports()
 
 
 def reportdiff():

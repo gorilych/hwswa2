@@ -155,8 +155,14 @@ def read_configuration():
     subparser.add_argument('reportname', metavar='report')
     subparser.set_defaults(subcommand=subcommands.show_report)
 
-    subparser = subparsers.add_parser('reports', help='show all generated reports for the server', aliases=('rs',))
-    subparser.add_argument('servername', metavar='server')
+    subparser = subparsers.add_parser('reports',
+                                      help='list reports for server(s)',
+                                      aliases=('rs',))
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='show reports for all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='show reports for specific servers', metavar='server')
     subparser.set_defaults(subcommand=subcommands.reports)
 
     subparser = subparsers.add_parser('reportdiff', help='show difference between reports', aliases=('rd',))
