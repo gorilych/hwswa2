@@ -73,8 +73,6 @@ class Role(object):
             raise RoleException(err_msg)
         else:
             self._file = f
-        self.firewall = self._firewall()
-        self.requirements = self._requirements()
         logger.debug("Finished collecting details for %s" % self)
 
     @property
@@ -84,6 +82,7 @@ class Role(object):
     @property
     def includes(self):
         if not hasattr(self, '_includes'):
+            logger.debug("Postponed initialization of included roles for %s started" % self)
             self._init_includes()
         return self._includes
 
@@ -94,12 +93,23 @@ class Role(object):
             self._init_parameters()
         return self._parameters
 
+    @property
+    def firewall(self):
+        if not hasattr(self, '_firewall'):
+            logger.debug("Postponed initialization of firewall rules for %s started" % self)
+            self._init_firewall()
+        return self._firewall
+
+    @property
+    def requirements(self):
+        if not hasattr(self, '_requirements'):
+            logger.debug("Postponed initialization of requirements for %s started" % self)
+            self._init_requirements()
+        return self._requirements
+
     def _init_includes(self):
         self._includes = []
-        included_role_names = self.data.get('includes', list())
-        if included_role_names:
-            logger.debug("Postponed initialization of included roles for %s started" % self)
-        for name in included_role_names:
+        for name in self.data.get('includes', list()):
             # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
             r = role_factory(name)
             self._includes.append(r)
@@ -117,14 +127,14 @@ class Role(object):
         included_parameters.update(parameters)
         self._parameters = included_parameters
 
-    def _requirements(self):
+    def _init_requirements(self):
         reqs_body = self.data.get('requirements', {})
         incl_reqs = []
         for role in self.includes:
             incl_reqs.extend(role.requirements)
         reqs = reqs_factory(self.name, reqs_body, incl_reqs)
         logger.debug("Requirements for %s: %s" % (self, map(str,[r for r in reqs if not r.istemplate()])))
-        return reqs
+        self._requirements = reqs
 
     @staticmethod
     def _unroll_fw_groups(firewall):
@@ -152,7 +162,7 @@ class Role(object):
                 roles.extend(add_roles)
         return roles
 
-    def _firewall(self):
+    def _init_firewall(self):
         firewall = []
         if 'firewall' in self.data:
             firewall = self.data['firewall']
@@ -167,7 +177,7 @@ class Role(object):
                 pass
             else:
                 rule['connect_with']['roles'] = [role.lower() for role in roles]
-        return firewall
+        self._firewall = firewall
 
     @staticmethod
     def _get_param_value(param, param_cmd, param_script, deps=None):
@@ -381,8 +391,6 @@ class RoleCollection(Role):
         self.name = None
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
-        self.firewall = self._firewall()
-        self.requirements = self._requirements()
 
     def __str__(self):
         return "role collection: |" + self._roles + "|"
