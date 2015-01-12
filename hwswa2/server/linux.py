@@ -436,8 +436,7 @@ class LinuxServer(Server):
                     if reason == 'timeout':
                         raise TimeoutException("Timeout during execution of %s" % cmd,
                                                output=base64.b64decode(result['stdout']),
-                                               stderr=base64.b64decode(result['stderr']),
-                                               retcode=int(result['returncode']))
+                                               stderr=base64.b64decode(result['stderr']))
                     else:
                         raise LinuxServerException("Execution of %s failed: %s" % (cmd, reason))
 
