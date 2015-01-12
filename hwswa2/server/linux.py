@@ -66,6 +66,7 @@ class LinuxServer(Server):
             self.agent_stop()
             for tmp in self._tmp:
                 self._remove(tmp)
+            self._tmp = []
             self._disconnect()
 
     ########## Internal methods
