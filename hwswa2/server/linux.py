@@ -541,7 +541,13 @@ class LinuxServer(Server):
             return self.check_reboot_result
         logger.debug("Trying to reboot %s" % self)
         starttime = time.time()
-        self.exec_cmd('nohup shutdown -r now', timeout=3)
+        stdout, stderr, exitcode = self.exec_cmd("nohup sh -c 'sleep 1;" \
+                                                 "/sbin/shutdown -r now' &", timeout=3)
+        if not exitcode == 0:
+            self.check_reboot_result = "reboot command failed with exitcode %s."\
+                                       " stdout: %s, stderr: %s"\
+                                       % (exitcode, repr(stdout), repr(stderr))
+            return self.check_reboot_result
         logger.debug("reboot command is sent, now wait till server is down")
         # wait till shutdown:
         if aux.wait_for_not(self.accessible, [True], timeout):
