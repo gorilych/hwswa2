@@ -571,7 +571,7 @@ class LinuxServer(Server):
             if status:
                 return result
             else:
-                logger.error("Execution of %s failed: %s" % (cmd, result))
+                logger.error("Execution of shell failed: %s" % result)
                 return 1
 
     def agent_start(self):
