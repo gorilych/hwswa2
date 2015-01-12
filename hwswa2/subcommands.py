@@ -110,7 +110,8 @@ def firewall():
     for s in servers:
         results[s.name] = {}
         for other_s in servers:
-            if not other_s.name == s.name:
+            if (not other_s.name == s.name and
+                not (s.dontcheck and other_s.dontcheck)):
                 logger.info("Checking %s <- %s" % (s.name, other_s.name))
                 try:
                     for res in s.check_firewall_with(other_s,

@@ -221,10 +221,8 @@ class Server(object):
                                 left: num }
         :raises: FirewallException
         """
-        if self.dontcheck:
-            raise FirewallException("Dontcheck is set for %s" % self)
-        if other.dontcheck:
-            raise FirewallException("Dontcheck is set for %s" % other)
+        if self.dontcheck and other.dontcheck:
+            raise FirewallException("Dontcheck is set for both %s and %s" % (self, other))
         logger.debug("Checking connections %s <- %s" % (self, other))
         rules = self.rolecollection.collect_incoming_fw_rules(other.rolecollection)
         ports_left = reduce(lambda s, rule: s + aux.range_len(rule['ports']), rules, 0)
