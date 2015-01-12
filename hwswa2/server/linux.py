@@ -561,13 +561,18 @@ class LinuxServer(Server):
         Returns number of seconds (int/long) or reason why check is not possible (string)
         """
         timeout = timeout or REBOOT_TIMEOUT
-        if self._is_it_me():
-            self.check_reboot_result = "we are running here, no reboot"
+        try:
+            if self._is_it_me():
+                self.check_reboot_result = "we are running here, no reboot"
+                return self.check_reboot_result
+            logger.debug("Trying to reboot %s" % self)
+            starttime = time.time()
+            stdout, stderr, exitcode = self.exec_cmd("nohup sh -c 'sleep 1;" \
+                                                     "/sbin/shutdown -r now' &",
+                                                     timeout=3)
+        except LinuxServerException as ex:
+            self.check_reboot_result = "reboot check failed: %s" % ex
             return self.check_reboot_result
-        logger.debug("Trying to reboot %s" % self)
-        starttime = time.time()
-        stdout, stderr, exitcode = self.exec_cmd("nohup sh -c 'sleep 1;" \
-                                                 "/sbin/shutdown -r now' &", timeout=3)
         if not exitcode == 0:
             self.check_reboot_result = "reboot command failed with exitcode %s."\
                                        " stdout: %s, stderr: %s"\
