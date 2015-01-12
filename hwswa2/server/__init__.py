@@ -42,8 +42,7 @@ class Server(object):
         # ordered list of reports, last generated report goes first
         self._reports = None
         # {network: ip, ...}
-        self.nw_ips = {}
-        self.find_nw_ips()
+        self._nw_ips = None
         self.parameters = None
         self.param_failures = None
         self.param_check_status = "not started"
@@ -64,6 +63,12 @@ class Server(object):
         if self._reports is None:
             self._read_reports()
         return self._reports
+
+    @property
+    def nw_ips(self):
+        if self._nw_ips is None:
+            self._find_nw_ips()
+        return self._nw_ips
 
     def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
@@ -137,18 +142,19 @@ class Server(object):
     def last_finished_report(self):
         return next((r for r in self.reports if r.finished()), None)
 
-    def find_nw_ips(self):
+    def _find_nw_ips(self):
         """Collect network -> ip into self.nw_ips from last finished report
         
         Returns true on success
         """
+        self._nw_ips = {}
         lfr = self.last_finished_report()
         if lfr is None:
             logger.info("No finished reports for %s" % self)
             return False
         else:
-            self.nw_ips = lfr.get_nw_ips()
-            if self.nw_ips == {}:
+            self._nw_ips = lfr.get_nw_ips()
+            if self._nw_ips == {}:
                 logger.info('Found no IPs for %s' % self)
                 return False
             else:
