@@ -646,7 +646,10 @@ class LinuxServer(Server):
                     if l > 0:
                         buffer = stdout.read(l)
                         sys.stdout.write(buffer)
-                    LinuxServer._interactive_shell(channel)
+                    if sys.stdin.isatty():
+                        LinuxServer._interactive_shell(channel)
+                    else:
+                        LinuxServer._pipe_to_channel(channel)
                     status = channel.recv_exit_status()
                     logger.info("exit code: %s" % status)
                     channel.close()
