@@ -73,18 +73,15 @@ class Role(object):
             raise RoleException(err_msg)
         else:
             self._file = f
-        self.description = self._description()
         self.includes = self._includes()
         self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()
         logger.debug("Finished collecting details for %s" % self)
 
-    def _description(self):
-        if 'description' in self.data:
-            return self.data['description']
-        else:
-            return None
+    @property
+    def description(self):
+        return self.data.get('description')
 
     def _includes(self):
         includes = []
