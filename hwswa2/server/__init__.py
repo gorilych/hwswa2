@@ -29,9 +29,7 @@ class Server(object):
             self.roles = []
         else:
             self.roles = [role, ]
-        self.rolecollection = None
-        if config.get('checksdir') is not None:
-            self.init_rolecollection()
+        self._rolecollection = None
         self.account = account
         self.address = address
         self.port = port
@@ -61,14 +59,23 @@ class Server(object):
     @property
     def reports(self):
         if self._reports is None:
+            logger.debug("Postponed initialization of reports for %s started" % self)
             self._read_reports()
         return self._reports
 
     @property
     def nw_ips(self):
         if self._nw_ips is None:
+            logger.debug("Postponed initialization of network->ip list for %s started" % self)
             self._find_nw_ips()
         return self._nw_ips
+
+    @property
+    def rolecollection(self):
+        if self._rolecollection is None:
+            logger.debug("Postponed initialization of rolecollection for %s started" % self)
+            self._rolecollection = RoleCollection(self.roles)
+        return self._rolecollection
 
     def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
@@ -159,10 +166,6 @@ class Server(object):
                 return False
             else:
                 return True
-
-    def init_rolecollection(self):
-        if self.rolecollection is None:
-            self.rolecollection = RoleCollection(self.roles)
 
     def agent_start(self):
         """Starts remote agent on server"""
