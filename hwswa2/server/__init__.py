@@ -3,6 +3,7 @@ import os
 import time
 
 import hwswa2.auxiliary as aux
+from hwswa2.globals import config
 from hwswa2.server.report import Report, ReportException
 from hwswa2.server.role import RoleCollection
 
@@ -18,8 +19,7 @@ class Server(object):
     time_format = '%Y-%m-%d.%Hh%Mm%Ss'
 
     def __init__(self, name, account, address,
-                 role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None,
-                 roles_dir=None, reports_dir=None, remote_scripts_dir=None, role_aliases=None):
+                 role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None):
         self.name = name
         self.ostype = ostype
         self.role = role
@@ -30,9 +30,8 @@ class Server(object):
         else:
             self.roles = [role, ]
         self.rolecollection = None
-        self._roles_dir = roles_dir
-        if roles_dir is not None:
-            self.init_rolecollection(roles_dir, role_aliases)
+        if config.get('checksdir') is not None:
+            self.init_rolecollection()
         self.account = account
         self.address = address
         self.port = port
@@ -42,9 +41,7 @@ class Server(object):
         self.expect = expect
         # ordered list of reports, last generated report goes first
         self.reports = []
-        self._reports_dir = reports_dir
-        if reports_dir is not None:
-            self.read_reports(reports_dir)
+        self.read_reports()
         # {network: ip, ...}
         self.nw_ips = {}
         self.find_nw_ips()
@@ -56,7 +53,6 @@ class Server(object):
         self.check_reboot_result = None
         self._last_connection_error = None
         self._accessible = None
-        self._remote_scripts_dir = remote_scripts_dir
         # list of temporary dirs/files
         self._tmp = []
         # remote agent
@@ -72,7 +68,7 @@ class Server(object):
         raise NotImplemented
 
     @classmethod
-    def fromserverdict(cls, serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None, role_aliases=None):
+    def fromserverdict(cls, serverdict):
         """Instantiate from server dict which can be read from servers.yaml"""
         # these properties can be defined in servers.yaml
         properties = ['account', 'name', 'role', 'address', 'port', 'ostype', 'expect', 'dontcheck', 'gateway']
@@ -82,7 +78,7 @@ class Server(object):
                 initargs[key] = serverdict[key]
         if 'dontcheck' in initargs:
             initargs['dontcheck'] = True
-        return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, role_aliases=role_aliases, **initargs)
+        return cls(**initargs)
 
     def __str__(self):
         return "server %s" % self.name
@@ -98,8 +94,11 @@ class Server(object):
                 self._accessible = False
         return self._accessible
 
-    def read_reports(self, reports_dir):
+    def read_reports(self):
         """Read server reports"""
+        reports_dir = config.get('reportsdir')
+        if not reports_dir:
+            return
         path = os.path.join(reports_dir, self.name)
         timeformat = Server.time_format
         reports = []
@@ -132,7 +131,7 @@ class Server(object):
     def last_finished_report(self):
         return next((r for r in self.reports if r.finished()), None)
 
-    def find_nw_ips(self, networks=None):
+    def find_nw_ips(self):
         """Collect network -> ip into self.nw_ips from last finished report
         
         Returns true on success
@@ -142,16 +141,16 @@ class Server(object):
             logger.info("No finished reports for %s" % self)
             return False
         else:
-            self.nw_ips = lfr.get_nw_ips(networks)
+            self.nw_ips = lfr.get_nw_ips()
             if self.nw_ips == {}:
                 logger.info('Found no IPs for %s' % self)
                 return False
             else:
                 return True
 
-    def init_rolecollection(self, roles_dir, role_aliases=None):
+    def init_rolecollection(self):
         if self.rolecollection is None:
-            self.rolecollection = RoleCollection(self.roles, roles_dir, role_aliases)
+            self.rolecollection = RoleCollection(self.roles)
 
     def agent_start(self):
         """Starts remote agent on server"""
@@ -323,10 +322,9 @@ class Server(object):
                     self.requirement_failures.append(reason)
         self.param_check_status = "finished"
 
-    def prepare_and_save_report(self, networks=None, rtime=None):
+    def prepare_and_save_report(self, rtime=None):
         """Prepare report from previously generated parameters. Save it to reports dir.
 
-        :param networks: array of network descriptions [{name: .., address: .., prefix: ..},...]
         :param rtime: report creation time, used for filename
         :return: True on success
         """
@@ -350,7 +348,7 @@ class Server(object):
                              time=rtime)
         self.reports.insert(0, self.report)
         if self.report.finished():
-            self.report.fix_networks(networks)
+            self.report.fix_networks()
             self.report.check_expect(self.expect)
         self.report.save()
         return True

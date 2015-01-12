@@ -5,13 +5,15 @@ import copy
 
 import hwswa2.auxiliary as aux
 from hwswa2.server.req import reqs_factory
+from hwswa2.globals import config
 
 logger = logging.getLogger(__name__)
 
 # dict of roles {name: role}
 roles = {}
 
-def _alias_to_name(alias, name_aliases):
+def _alias_to_name(alias):
+    name_aliases = config.get('role-aliases', list())
     for name in name_aliases:
         # name_aliases[name] can be a list of aliases or a single alias
         aliases = name_aliases[name]
@@ -23,21 +25,18 @@ def _alias_to_name(alias, name_aliases):
     # not found in aliases? should be a name itself then
     return alias.lower()
 
-def role_factory(name, roles_dir, role_aliases=None):
+def role_factory(name):
     """ Factory for roles
     :param name: role name
-    :param roles_dir: path to directory with name.yaml
     :return: role object
     """
     global roles
-    nm = name.lower()
-    # nm can be alias
-    if role_aliases:
-        nm = _alias_to_name(nm, role_aliases)
+    # name can be alias
+    nm = _alias_to_name(name)
     if nm in roles:
         return roles[nm]
     else:
-        role = Role(nm, roles_dir)
+        role = Role(nm)
         roles[nm] = role
         return role
 
@@ -57,12 +56,11 @@ class Role(object):
     def __repr__(self):
         return "<Role " + self.name + ">"
 
-    def __init__(self, name, roles_dir):
+    def __init__(self, name):
         """Constructs role from checksdir/name.yaml"""
         self.name = name.lower()
-        self._roles_dir = roles_dir
         logger.debug("Collecting details for %s" % self)
-        f = os.path.join(self._roles_dir, self.name + '.yaml')
+        f = os.path.join(config['checksdir'], self.name + '.yaml')
         try:
             self.data = yaml.load(open(f))
         except IOError as ie:
@@ -88,12 +86,12 @@ class Role(object):
         else:
             return None
 
-    def _includes(self, role_aliases=None):
+    def _includes(self):
         includes = []
         if 'includes' in self.data:
             for name in self.data['includes']:
                 # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
-                r = role_factory(name, self._roles_dir, role_aliases)
+                r = role_factory(name)
                 includes.append(r)
         return includes
 
@@ -370,12 +368,11 @@ class Role(object):
 class RoleCollection(Role):
     """Collection of roles, which can be assigned to a server"""
 
-    def __init__(self, roles, roles_dir, role_aliases=None):
+    def __init__(self, roles):
         self.name = None
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
-        self._roles_dir = roles_dir
-        self.includes = self._includes(role_aliases)
+        self.includes = self._includes()
         self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()

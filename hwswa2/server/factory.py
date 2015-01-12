@@ -26,10 +26,10 @@ def server_names():
 
 
 @contextmanager
-def servers_context(servers_list, roles_dir, reports_dir, remote_scripts_dir, role_aliases=None):
+def servers_context(servers_list):
     srvrs = []
     for serverdict in servers_list:
-        srvrs.append(server_factory(serverdict, roles_dir, reports_dir, remote_scripts_dir, role_aliases))
+        srvrs.append(server_factory(serverdict))
     yield srvrs
     # clean up in proper order, gateways last
     with_gw = []
@@ -49,7 +49,7 @@ def servers_context(servers_list, roles_dir, reports_dir, remote_scripts_dir, ro
         s.cleanup()
 
 
-def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None, role_aliases=None):
+def server_factory(serverdict):
     global _servers, _servers_to_init_later
 
     name = serverdict['name']
@@ -71,9 +71,9 @@ def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_
         serverdict['ostype'] = 'linux'
 
     if serverdict['ostype'] == 'linux':
-        server = LinuxServer.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir, role_aliases)
+        server = LinuxServer.fromserverdict(serverdict)
     else:
-        server = Server.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir, role_aliases)
+        server = Server.fromserverdict(serverdict)
 
     _servers[name] = server
     if not name in _servers_to_init_later:

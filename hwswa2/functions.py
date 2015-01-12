@@ -46,11 +46,7 @@ def read_networks():
 
 
 def run_subcommand():
-    with servers_context(config['servers'],
-                         config['checksdir'],
-                         config['reportsdir'],
-                         config['rscriptdir'],
-                         config['role-aliases']):
+    with servers_context(config['servers']):
         config['subcommand']()
 
 

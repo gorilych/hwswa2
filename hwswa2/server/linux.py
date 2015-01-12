@@ -168,14 +168,15 @@ class LinuxServer(Server):
 
         :return True on success
         """
+        rscripts_dir = config['rscriptdir']
         if self._param_cmd_prefix is not None:
             return True
         try:
             arch = self.get_cmd_out('uname --machine')
             if arch.endswith('64'):
-                rscriptdir = os.path.join(self._remote_scripts_dir,'bin64')
+                rscriptdir = os.path.join(rscripts_dir,'bin64')
             else:
-                rscriptdir = os.path.join(self._remote_scripts_dir,'bin32')
+                rscriptdir = os.path.join(rscripts_dir,'bin32')
             remote_hwswa2_dir = self.mktemp()
         except ServerException as se:
             logger.error("Failed to prepare remote scripts for parameters check: %s" % se)
@@ -622,7 +623,7 @@ class LinuxServer(Server):
             if not self._connect():
                 raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
             else:
-                serverd_py = os.path.join(self._remote_scripts_dir, 'bin32', 'serverd.py')
+                serverd_py = os.path.join(config['rscriptdir'], 'bin32', 'serverd.py')
                 # remote path
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
                 self.put(serverd_py, r_serverd_py)

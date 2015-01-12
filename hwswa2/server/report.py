@@ -4,6 +4,8 @@ import copy
 import os
 from ipcalc import Network
 
+from hwswa2.globals import config
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,14 +55,15 @@ class Report(object):
         """Returns file name of report file"""
         return os.path.basename(self.yamlfile)
 
-    def fix_networks(self, networks):
+    def fix_networks(self):
         """Substitutes network name for network address in report
 
         1.2.3.0/24 -> frontnet
-
-        @param networks: list of dicts: [ {'network': nw, 'address': addr, 'prefix': px}, ... ]
         """
         report = self.data
+        networks = config.get('networks')
+        if not networks:
+            return
         try:
             nics = report['parameters']['network']['network_interfaces']
         except (TypeError, KeyError):
@@ -77,10 +80,9 @@ class Report(object):
                                           and n['address'] == n_a),
                                          n_a + '/' + ip_p)
 
-    def get_nw_ips(self, networks=None):
+    def get_nw_ips(self):
         """Obtains network -> ip dict from report"""
-        if networks is not None:
-            self.fix_networks(networks)
+        self.fix_networks()
         try:
             nics = self.data['parameters']['network']['network_interfaces']
         except KeyError:
