@@ -187,7 +187,9 @@ class LinuxServer(Server):
             return True
 
     def _exists(self, path):
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             try:
                 sftp.stat(path)
@@ -196,18 +198,24 @@ class LinuxServer(Server):
                 return False
 
     def _listdir(self, remotedir):
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             return sftp.listdir(remotedir)
 
     def _isdir(self, remotepath):
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             attrs = sftp.stat(remotepath)
             return stat.S_ISDIR(attrs.st_mode)
 
     def _isfile(self, remotepath):
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             attrs = sftp.stat(remotepath)
             return stat.S_ISREG(attrs.st_mode)
@@ -233,7 +241,9 @@ class LinuxServer(Server):
                 self._get_dir_content(rname, lname)
 
     def _remove(self, path, sftp=None):
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = sftp or self._sshclient.open_sftp()
             if self._isdir(path):
                 for name in sftp.listdir(path):
@@ -396,20 +406,26 @@ class LinuxServer(Server):
             pass
 
     def write(self, path, data):
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             f = sftp.open(path, 'w')
             f.write(data)
             f.close()
 
     def mkdir(self, path):
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             sftp.mkdir(path)
 
     def exec_cmd_i(self, cmd, get_pty=False):
         """Executes command interactively"""
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             status, result = self.agent_cmd('exec_i ' + aux.shell_escape(cmd),
                                             interactively=True)
             if status:
@@ -422,8 +438,12 @@ class LinuxServer(Server):
         """Executes command and returns tuple of stdout, stderr and status"""
         timeout = timeout or TIMEOUT
         logger.debug("Executing on %s: %s" % (self, cmd))
-        if self._connect():
-            if self.agent_start():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
+            if not self.agent_start():
+                raise LinuxServerException("Failed to start agent on %s" % self)
+            else:
                 if input_data:
                     i_d = base64.b64encode(input_data)
                 else:
@@ -482,7 +502,9 @@ class LinuxServer(Server):
         logger.debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), self, remotepath.decode('utf-8')))
         if not os.path.exists(localpath):
             raise LinuxServerException("Local path does not exist: %s" % localpath.decode('utf-8'))
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             if os.path.isfile(localpath):
                 if self._exists(remotepath):
@@ -507,7 +529,9 @@ class LinuxServer(Server):
         if localpath is None or localpath == '':
             localpath = '.'
         logger.debug("Copying to %s from %s:%s" % (localpath.decode('utf-8'), self, remotepath.decode('utf-8')))
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             sftp = self._sshclient.open_sftp()
             if not self._exists(remotepath):
                 raise LinuxServerException("Remote path does not exist: %s" % remotepath.decode('utf-8'))
@@ -574,7 +598,9 @@ class LinuxServer(Server):
 
     def shell(self):
         """Opens remote SSH session"""
-        if self._connect():
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
             status, result = self.agent_cmd('shell', interactively=True)
             if status:
                 return result
@@ -587,7 +613,9 @@ class LinuxServer(Server):
         if self._agent is not None:
             return True
         try:
-            if self._connect():
+            if not self._connect():
+                raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+            else:
                 serverd_py = os.path.join(self._remote_scripts_dir, 'bin32', 'serverd.py')
                 # remote path
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp')
