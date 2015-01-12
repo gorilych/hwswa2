@@ -73,7 +73,6 @@ class Role(object):
             raise RoleException(err_msg)
         else:
             self._file = f
-        self.includes = self._includes()
         self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()
@@ -83,14 +82,21 @@ class Role(object):
     def description(self):
         return self.data.get('description')
 
-    def _includes(self):
-        includes = []
-        if 'includes' in self.data:
-            for name in self.data['includes']:
-                # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
-                r = role_factory(name)
-                includes.append(r)
-        return includes
+    @property
+    def includes(self):
+        if not hasattr(self, '_includes'):
+            self._init_includes()
+        return self._includes
+
+    def _init_includes(self):
+        self._includes = []
+        included_role_names = self.data.get('includes', list())
+        if included_role_names:
+            logger.debug("Postponed initialization of included roles for %s started" % self)
+        for name in included_role_names:
+            # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
+            r = role_factory(name)
+            self._includes.append(r)
 
     def _parameters(self):
         parameters = {}
@@ -369,13 +375,12 @@ class RoleCollection(Role):
         self.name = None
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
-        self.includes = self._includes()
         self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()
 
     def __str__(self):
-        return "role collection: " + self._roles
+        return "role collection: |" + self._roles + "|"
 
     def __repr__(self):
         return "<RoleCollection: " + self._roles + ">"
