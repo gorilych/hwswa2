@@ -73,7 +73,6 @@ class Role(object):
             raise RoleException(err_msg)
         else:
             self._file = f
-        self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()
         logger.debug("Finished collecting details for %s" % self)
@@ -88,6 +87,13 @@ class Role(object):
             self._init_includes()
         return self._includes
 
+    @property
+    def parameters(self):
+        if not hasattr(self, '_parameters'):
+            logger.debug("Postponed initialization of parameters for %s started" % self)
+            self._init_parameters()
+        return self._parameters
+
     def _init_includes(self):
         self._includes = []
         included_role_names = self.data.get('includes', list())
@@ -98,7 +104,7 @@ class Role(object):
             r = role_factory(name)
             self._includes.append(r)
 
-    def _parameters(self):
+    def _init_parameters(self):
         parameters = {}
         if 'parameters' in self.data:
             parameters = self.data['parameters']
@@ -109,7 +115,7 @@ class Role(object):
             rp.update(included_parameters)
             included_parameters = rp
         included_parameters.update(parameters)
-        return included_parameters
+        self._parameters = included_parameters
 
     def _requirements(self):
         reqs_body = self.data.get('requirements', {})
@@ -375,7 +381,6 @@ class RoleCollection(Role):
         self.name = None
         self._roles = ' '.join(roles)
         self.data = {'includes': roles}
-        self.parameters = self._parameters()
         self.firewall = self._firewall()
         self.requirements = self._requirements()
 
