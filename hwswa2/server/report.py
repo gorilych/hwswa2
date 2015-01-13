@@ -4,7 +4,9 @@ import copy
 import os
 from ipcalc import Network
 
-from hwswa2.globals import config
+import hwswa2
+
+__all__ = ['Report', 'ReportException']
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +63,7 @@ class Report(object):
         1.2.3.0/24 -> frontnet
         """
         report = self.data
-        networks = config.get('networks')
+        networks = hwswa2.config.get('networks')
         if not networks:
             return
         try:

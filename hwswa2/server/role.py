@@ -4,8 +4,10 @@ import os
 import copy
 
 import hwswa2.auxiliary as aux
+import hwswa2
 from hwswa2.server.req import reqs_factory
-from hwswa2.globals import config
+
+__all__ = ['Role', 'RoleCollection']
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +15,7 @@ logger = logging.getLogger(__name__)
 roles = {}
 
 def _alias_to_name(alias):
-    name_aliases = config.get('role-aliases', list())
+    name_aliases = hwswa2.config.get('role-aliases', list())
     for name in name_aliases:
         # name_aliases[name] can be a list of aliases or a single alias
         aliases = name_aliases[name]
@@ -100,7 +102,7 @@ class Role(object):
         return self._requirements
 
     def _init_data(self):
-        f = os.path.join(config['checksdir'], self.name + '.yaml')
+        f = os.path.join(hwswa2.config['checksdir'], self.name + '.yaml')
         try:
             self._data = yaml.load(open(f))
         except IOError as ie:

@@ -5,12 +5,10 @@ import sys
 import os
 import fcntl
 import termios
-from hwswa2.globals import config
 
-
-def get_server(servername):
-    return next((s for s in config['servers'] if s['name'] == servername), None)
-
+__all__ = ['wait_for', 'wait_for_not', 'shell_escape', 'term_winsz',
+           'range2list', 'range_len', 'list2range', 'splitlist', 'splitrange',
+           'joinlists', 'joinranges', 'differenceranges']
 
 def wait_for(condition_fn, args, timeout=60):
     """Waits for condition or timeout
@@ -35,44 +33,6 @@ def wait_for_not(condition_fn, args, timeout=60):
     return wait_for(not_condition, tuple(), timeout)
 
 
-# decorator to make arguments to be passed by value
-def passbyval(func):
-    def _new_function_with_args_passed_by_value(*args, **kargs):
-        cargs = [copy.deepcopy(arg) for arg in args]
-        ckargs = {}
-        for key in kargs:
-            ckargs[key] = copy.deepcopy(kargs[key])
-        return func(*cargs, **ckargs)
-
-    return _new_function_with_args_passed_by_value
-
-
-def threaded(f, daemon=False):
-    """Decorator for threaded functions"""
-    import Queue, threading
-
-    def wrapped_f(q, *args, **kwargs):
-        """this function calls the decorated function and puts the
-           result in a queue"""
-        ret = f(*args, **kwargs)
-        q.put(ret)
-
-    def wrap(*args, **kwargs):
-        """this is the function returned from the decorator. It fires off
-           wrapped_f in a new thread and returns the thread object with
-           the result queue attached"""
-
-        q = Queue.Queue()
-
-        t = threading.Thread(target=wrapped_f, args=(q,) + args, kwargs=kwargs)
-        t.daemon = daemon
-        t.start()
-        t.result_queue = q
-        return t
-
-    return wrap
-
-
 def shell_escape(string):
     """
     Return string so it can be passed as argument in shell
@@ -87,42 +47,6 @@ def shell_escape(string):
     return "'" + string.replace("'", "'\"'\"'") + "'"
 
 
-def getTerminalSize():
-    import os
-
-    env = os.environ
-
-    def ioctl_GWINSZ(fd):
-        try:
-            import fcntl, termios, struct, os
-
-            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ, '1234'))
-        except KeyboardInterrupt:
-            raise
-        except:
-            return
-        return cr
-
-    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
-    if not cr:
-        try:
-            fd = os.open(os.ctermid(), os.O_RDONLY)
-            cr = ioctl_GWINSZ(fd)
-            os.close(fd)
-        except KeyboardInterrupt:
-            raise
-        except:
-            pass
-    if not cr:
-        cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
-        # ## Use get(key[, default]) instead of a try/catch
-        #try:
-        #  cr = (env['LINES'], env['COLUMNS'])
-        #except:
-        #  cr = (25, 80)
-    return (int(cr[0]), int(cr[1]))
-
-
 def term_winsz():
     """Return terminal window size (height, width)"""
     winsz_fmt = "HHHH"
@@ -131,11 +55,6 @@ def term_winsz():
         # raise type("NotConnectToTTYDevice", (Exception,), {})()
         return (25, 80)
     return struct.unpack(winsz_fmt, fcntl.ioctl(sys.stdin, termios.TIOCGWINSZ, winsz_arg))[:2]
-
-
-def term_type():
-    """Return terminal type"""
-    return os.environ.get('TERM', 'linux')
 
 
 def range2list(rstr):
@@ -206,21 +125,3 @@ def differenceranges(rg1, rg2):
     s1 = set(range2list(rg1))
     s2 = set(range2list(rg2))
     return list2range(list(s1.difference(s2)))
-
-def merge_config(conf1, conf2):
-    """Updates conf1 with values from conf2, recursively
-
-    If key for conf1[key] does not exist in conf2, value of conf1[key] is preserved.
-    If value is a dict, then conf1[key] is updated with merge_config(conf1[key], conf2[key])
-    If key for conf1[key] exists in conf2 and value is not dict - value is updated by conf2[key]
-    If key for conf2[key] does not exist in conf1, value is added
-    """
-    for key in conf1:
-        if key in conf2:
-            if isinstance(conf1[key], dict):
-                merge_config(conf1[key], conf2[key])
-            else:
-                conf1[key] = conf2[key]
-    for key in conf2:
-        if not key in conf1:
-            conf1[key] = conf2[key]

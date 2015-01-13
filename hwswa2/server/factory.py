@@ -5,6 +5,8 @@ from contextlib import contextmanager
 from hwswa2.server import Server
 from hwswa2.server.linux import LinuxServer
 
+__all__ = ['get_server', 'server_names', 'servers_context']
+
 logger = logging.getLogger(__name__)
 
 # _servers = {name1: server1, name2: server2}

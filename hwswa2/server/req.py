@@ -1,3 +1,6 @@
+
+__all__ = ['reqs_factory']
+
 def reqs_factory(role, body, incl_reqs):
     """Generate list of requirements for role from requirements body and join 
     with requirements from included roles

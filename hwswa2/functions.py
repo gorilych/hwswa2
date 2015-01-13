@@ -7,29 +7,30 @@ from configobj import ConfigObj
 from validate import Validator
 import yaml
 
-from hwswa2.globals import apppath, configspec, config
-from hwswa2.auxiliary import merge_config
-from hwswa2.server.factory import servers_context
+import hwswa2
 import hwswa2.subcommands as subcommands
+from hwswa2.server.factory import servers_context
 from hwswa2.aliases import AliasedSubParsersAction
 
 __version__ = '0.4.0'
+
+__all__ = ['read_configuration', 'read_servers', 'read_networks', 'run_subcommand']
 
 logger = logging.getLogger(__name__)
 
 
 def read_servers():
     try:
-        config['servers'] = yaml.load(open(config['serversfile']))['servers']
+        hwswa2.config['servers'] = yaml.load(open(hwswa2.config['serversfile']))['servers']
     except KeyError:
-        msg = "Cannot find section servers in " + config['serversfile']
+        msg = "Cannot find section servers in " + hwswa2.config['serversfile']
         logger.error(msg)
         print(msg)
         sys.exit(1)
     else:
-        logger.debug("Read info from servers file: %s" % config['servers'])
+        logger.debug("Read info from servers file: %s" % hwswa2.config['servers'])
         # check for dups
-        names = [elem['name'] for elem in config['servers']]
+        names = [elem['name'] for elem in hwswa2.config['servers']]
         if len(names) != len(set(names)):
             msg = "Found duplicates in servers file! Exiting ..."
             logger.error(msg)
@@ -38,20 +39,21 @@ def read_servers():
 
 
 def read_networks():
-    logger.debug("Read networks from cli: %s" % config['networks'])
-    networks_from_file = yaml.load(open(config['networksfile']))['networks']
+    logger.debug("Read networks from cli: %s" % hwswa2.config['networks'])
+    networks_from_file = yaml.load(open(hwswa2.config['networksfile']))['networks']
     logger.debug("Read info from networks file: %s" % networks_from_file)
-    config['networks'].extend(networks_from_file)
-    logger.debug("Resulting networks: %s" % config['networks'])
+    hwswa2.config['networks'].extend(networks_from_file)
+    logger.debug("Resulting networks: %s" % hwswa2.config['networks'])
 
 
 def run_subcommand():
-    with servers_context(config['servers']):
-        config['subcommand']()
+    with servers_context(hwswa2.config['servers']):
+        hwswa2.config['subcommand']()
 
 
 def _network(string):
-    """'Convert network:addr/prefix' to {name: 'network', address: 'addr', prefix: 'prefix'}"""
+    """Convert 'network:addr/prefix' to 
+    {name: 'network', address: 'addr', prefix: 'prefix'}"""
     regex = re.compile("^(\w+):((?:\d{1,3}\.){3}\d{1,3})/(\d{1,2})$")
     match = regex.match(string)
     if not match:
@@ -62,91 +64,127 @@ def _network(string):
 
 def read_configuration():
     """Reads configuration from command line args and main.cfg"""
+    global hwswa2
     ### Parsing commandline options
     parser = argparse.ArgumentParser(
         prog='hwswa2', argument_default=argparse.SUPPRESS,
         description='HWSWA: tool for automatization of hardware/software check')
     parser.register('action', 'parsers', AliasedSubParsersAction)
 
-    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
-    parser.add_argument('-c', '--config', help='path to config file', dest='configfile')
-    parser.add_argument('-s', '--servers', help='path to servers file', dest='serversfile')
-    parser.add_argument('-n', '--networks', help='path to networks file', dest='networksfile')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s ' + __version__)
+    parser.add_argument('-c', '--config', help='path to config file',
+                        dest='configfile')
+    parser.add_argument('-s', '--servers', help='path to servers file',
+                        dest='serversfile')
+    parser.add_argument('-n', '--networks', help='path to networks file',
+                        dest='networksfile')
     parser.add_argument('-k', '--network', help='network in format name:addr/prefix',
-                        type=_network, action='append', metavar='NETWORK', dest='networks',
+                        type=_network, action='append', metavar='NETWORK',
+                        dest='networks',
                         default=[])
     parser.add_argument('-l', '--log', help='path to log file', dest='logfile')
-    parser.add_argument('-r', '--reports', help='directory to store reports', dest='reportsdir')
+    parser.add_argument('-r', '--reports', help='directory to store reports',
+                        dest='reportsdir')
     parser.add_argument('-d', '--debug', help='enable debug', action='store_true')
 
-    subparsers = parser.add_subparsers(title='Subcommands', help='Run `hwswa2 <subcommand> -h` for usage')
+    subparsers = parser.add_subparsers(title='Subcommands',
+                                       help='Run `hwswa2 <subcommand> -h` for usage')
 
     subparser = subparsers.add_parser('list-roles', help='show available roles')
     subparser.set_defaults(subcommand=subcommands.list_roles)
 
-    subparser = subparsers.add_parser('check', help='check specific servers', aliases=('c',))
-    subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
+    subparser = subparsers.add_parser('check', help='check specific servers',
+                                      aliases=('c',))
+    subparser.add_argument('servernames', nargs='+', help='server name to check',
+                           metavar='server')
     subparser.set_defaults(subcommand=subcommands.check)
 
-    subparser = subparsers.add_parser('prepare', help='prepare specific servers', aliases=('p',))
-    subparser.add_argument('servernames', nargs='+', help='server name to prepare', metavar='server')
+    subparser = subparsers.add_parser('prepare', help='prepare specific servers',
+                                      aliases=('p',))
+    subparser.add_argument('servernames', nargs='+', help='server name to prepare',
+                           metavar='server')
     subparser.set_defaults(subcommand=subcommands.prepare)
 
-    subparser = subparsers.add_parser('checkall', help='check all servers', aliases=('ca',))
+    subparser = subparsers.add_parser('checkall', help='check all servers',
+                                      aliases=('ca',))
     subparser.set_defaults(subcommand=subcommands.checkall)
 
-    subparser = subparsers.add_parser('prepareall', help='prepare all servers', aliases=('pa',))
+    subparser = subparsers.add_parser('prepareall', help='prepare all servers',
+                                      aliases=('pa',))
     subparser.set_defaults(subcommand=subcommands.prepareall)
 
-    subparser = subparsers.add_parser('shell', help='open shell to server', aliases=('s',))
+    subparser = subparsers.add_parser('shell', help='open shell to server',
+                                      aliases=('s',))
     subparser.add_argument('servername', metavar='server')
     subparser.set_defaults(subcommand=subcommands.shell)
 
-    subparser = subparsers.add_parser('reboot', help='reboot server(s) and measure reboot time')
-    subparser.add_argument('servernames', nargs='+', help='servers to reboot', metavar='server')
+    subparser = subparsers.add_parser('reboot',
+                                      help='reboot server(s) and measure reboot time')
+    subparser.add_argument('servernames', nargs='+', help='servers to reboot',
+                           metavar='server')
     subparser.set_defaults(subcommand=subcommands.reboot)
 
-    subparser = subparsers.add_parser('exec', help='execute command interactively', aliases=('e',))
-    subparser.add_argument('-t', '--tty', help='enable pseudo-tty allocation', action='store_true')
+    subparser = subparsers.add_parser('exec', help='execute command interactively',
+                                      aliases=('e',))
+    subparser.add_argument('-t', '--tty', help='enable pseudo-tty allocation',
+                           action='store_true')
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
     subparser.set_defaults(subcommand=subcommands.exec_cmd)
 
-    subparser = subparsers.add_parser('ni_exec', help='execute command non-interactively', aliases=('ne',))
+    subparser = subparsers.add_parser('ni_exec',
+                                      help='execute command non-interactively',
+                                      aliases=('ne',))
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
     subparser.set_defaults(subcommand=subcommands.ni_exec_cmd)
 
-    subparser = subparsers.add_parser('put', help='copy file to server', aliases=('p',))
+    subparser = subparsers.add_parser('put', help='copy file to server',
+                                      aliases=('p',))
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('localpath')
     subparser.add_argument('remotepath', nargs='?', default=None)
     subparser.set_defaults(subcommand=subcommands.put)
 
-    subparser = subparsers.add_parser('get', help='copy file from server', aliases=('g',))
+    subparser = subparsers.add_parser('get', help='copy file from server',
+                                      aliases=('g',))
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('remotepath')
     subparser.add_argument('localpath', nargs='?', default=None)
     subparser.set_defaults(subcommand=subcommands.get)
 
-    subparser = subparsers.add_parser('firewall', help='check connections between servers', aliases=('f',))
-    subparser.add_argument('servernames', nargs='+', help='server name to check', metavar='server')
+    subparser = subparsers.add_parser('firewall',
+                                      help='check connections between servers',
+                                      aliases=('f',))
+    subparser.add_argument('servernames', nargs='+', help='server name to check',
+                           metavar='server')
     subparser.set_defaults(subcommand=subcommands.firewall)
 
-    subparser = subparsers.add_parser('show-firewall', help='show firewall requirements for servers', aliases=('sf',))
+    subparser = subparsers.add_parser('show-firewall',
+                                      help='show firewall requirements for servers',
+                                      aliases=('sf',))
     formatgroup = subparser.add_mutually_exclusive_group()
-    formatgroup.add_argument('-c', '--compact', help='compact output', action='store_true')
+    formatgroup.add_argument('-c', '--compact', help='compact output',
+                             action='store_true')
     formatgroup.add_argument('-s', '--csv', help='csv output', action='store_true')
-    subparser.add_argument('servernames', nargs='+', help='server names', metavar='server')
+    subparser.add_argument('servernames', nargs='+', help='server names',
+                           metavar='server')
     subparser.set_defaults(subcommand=subcommands.show_firewall)
 
-    subparser = subparsers.add_parser('lastreport', help='show last report for the server', aliases=('lr',))
-    subparser.add_argument('-r', '--raw', help='show raw file content', action='store_true')
+    subparser = subparsers.add_parser('lastreport',
+                                      help='show last report for the server',
+                                      aliases=('lr',))
+    subparser.add_argument('-r', '--raw', help='show raw file content',
+                           action='store_true')
     subparser.add_argument('servername', metavar='server')
     subparser.set_defaults(subcommand=subcommands.lastreport)
 
-    subparser = subparsers.add_parser('report', help='show particular report for server', aliases=('r',))
-    subparser.add_argument('-r', '--raw', help='show raw file content', action='store_true')
+    subparser = subparsers.add_parser('report',
+                                      help='show particular report for server',
+                                      aliases=('r',))
+    subparser.add_argument('-r', '--raw', help='show raw file content',
+                           action='store_true')
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('reportname', metavar='report')
     subparser.set_defaults(subcommand=subcommands.show_report)
@@ -156,12 +194,16 @@ def read_configuration():
                                       aliases=('rs',))
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
-                             help='show reports for all servers', action='store_true')
+                             help='show reports for all servers',
+                             action='store_true')
     servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
-                             help='show reports for specific servers', metavar='server')
+                             help='show reports for specific servers',
+                             metavar='server')
     subparser.set_defaults(subcommand=subcommands.reports)
 
-    subparser = subparsers.add_parser('reportdiff', help='show difference between reports', aliases=('rd',))
+    subparser = subparsers.add_parser('reportdiff',
+                                      help='show difference between reports',
+                                      aliases=('rd',))
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('oldreport')
     subparser.add_argument('newreport')
@@ -171,39 +213,31 @@ def read_configuration():
 
     ### Parse configuration file
     if hasattr(args, 'configfile'):
-        config['configfile'] = args.configfile
+        hwswa2.config['configfile'] = args.configfile
+    hwswa2.config = ConfigObj(hwswa2.config['configfile'],
+                              interpolation='Template',
+                              configspec=hwswa2.configspec)
 
-    # add apppath definition to configuration file and read configobj from it
-    f = open(config['configfile'])
-    config_lines = f.readlines()
-    f.close()
-    config_lines.insert(0, 'apppath=' + apppath)
-    config_from_file = ConfigObj(config_lines, interpolation='Template', configspec=configspec)
-
-    # validation is required to convert values to correct type
-    # say, from string to boolean
+    # validation is required
+    # to convert values to correct type, say, from string to boolean
+    # and to set default values
     val = Validator()
-    config_from_file.validate(val)
+    hwswa2.config.validate(val)
 
-    # update defaults by values from configuration file
-    merge_config(config, config_from_file.dict())
+    # convert from ConfigObj into dict
+    # so we can update it later easily
+    hwswa2.config = hwswa2.config.dict()
 
-    # update defaults by values from command line args
     # values from command line take precedence over configuration file options
-    config.update(vars(args))
+    hwswa2.config.update(vars(args))
 
-    # create reportsdir
-    if not os.path.exists(config['reportsdir']):
-        os.makedirs(config['reportsdir'])
-
-    # create logsdir
-    if not os.path.exists(config['logdir']):
-        os.makedirs(config['logdir'])
+    # create reports directory
+    if not os.path.exists(hwswa2.config['reportsdir']):
+        os.makedirs(hwswa2.config['reportsdir'])
 
     # set global ssh and reboot timeouts
     import hwswa2.server.linux
     import hwswa2.server
-
-    hwswa2.server.linux.TIMEOUT = config['ssh_timeout']
-    hwswa2.server.linux.REBOOT_TIMEOUT = config['reboot_timeout']
-    hwswa2.server.REBOOT_TIMEOUT = config['reboot_timeout']
+    hwswa2.server.linux.TIMEOUT = hwswa2.config['ssh_timeout']
+    hwswa2.server.linux.REBOOT_TIMEOUT = hwswa2.config['reboot_timeout']
+    hwswa2.server.REBOOT_TIMEOUT = hwswa2.config['reboot_timeout']

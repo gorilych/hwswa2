@@ -18,17 +18,15 @@ import fnmatch
 from ipcalc import Network
 
 import hwswa2.auxiliary as aux
-from hwswa2.globals import config
+import hwswa2
 
-import hwswa2.server
-from hwswa2.server import Server, ServerException, TunnelException, TimeoutException
+from hwswa2.server import (Server, ServerException, TunnelException,
+                           TimeoutException, TIMEOUT, REBOOT_TIMEOUT)
+
+__all__ = ['LinuxServer', 'LinuxServerException', 'TIMEOUT', 'REBOOT_TIMEOUT']
 
 logger = logging.getLogger(__name__)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
-
-# default timeout value for all operations
-TIMEOUT = hwswa2.server.TIMEOUT
-REBOOT_TIMEOUT = hwswa2.server.REBOOT_TIMEOUT
 
 
 class LinuxServerException(ServerException):
@@ -168,7 +166,7 @@ class LinuxServer(Server):
 
         :return True on success
         """
-        rscripts_dir = config['rscriptdir']
+        rscripts_dir = hwswa2.config['rscriptdir']
         if self._param_cmd_prefix is not None:
             return True
         try:
@@ -624,11 +622,11 @@ class LinuxServer(Server):
             if not self._connect():
                 raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
             else:
-                serverd_py = os.path.join(config['rscriptdir'], 'bin32', 'serverd.py')
+                serverd_py = os.path.join(hwswa2.config['rscriptdir'], 'bin32', 'serverd.py')
                 # remote path. No need to remove it on exit because script deletes itself.
                 r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp', cleanup_later=False)
                 self.put(serverd_py, r_serverd_py)
-                debugopt = ' -d' if config['remote_debug'] else ''
+                debugopt = ' -d' if hwswa2.config['remote_debug'] else ''
                 stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py + debugopt, get_pty=True)
                 banner = stdout.readline()
                 if not banner.startswith('started_ok'):

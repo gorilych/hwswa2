@@ -3,9 +3,12 @@ import os
 import time
 
 import hwswa2.auxiliary as aux
-from hwswa2.globals import config
+import hwswa2
 from hwswa2.server.report import Report, ReportException
 from hwswa2.server.role import RoleCollection
+
+__all__ = ['Server', 'TIMEOUT', 'REBOOT_TIMEOUT', 'ServerException',
+           'TunnelException', 'TimeoutException', 'FirewallException']
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +117,7 @@ class Server(object):
     def _read_reports(self):
         """Read server reports"""
         self._reports = []
-        reports_dir = config.get('reportsdir')
+        reports_dir = hwswa2.config.get('reportsdir')
         if not reports_dir:
             return
         path = os.path.join(reports_dir, self.name)
@@ -347,7 +350,7 @@ class Server(object):
             return False
         if rtime is None:
             rtime = time.localtime()
-        reports_path = os.path.join(config['reportsdir'], self.name)
+        reports_path = os.path.join(hwswa2.config['reportsdir'], self.name)
         if not os.path.exists(reports_path):
             os.makedirs(reports_path)
         yamlfile = os.path.join(reports_path, time.strftime(Server.time_format, rtime))
