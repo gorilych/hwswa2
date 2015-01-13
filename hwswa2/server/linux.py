@@ -741,7 +741,10 @@ class LinuxServer(Server):
         """
         if not self._prepare_param_scripts():
             return False, None, "Remote scripts are not on the server"
-        scriptpath = self.mktemp(ftype='f', path=self._param_binpath)
+        # no need to include in cleanup sequence because it is inside binpath
+        # inside remote hwswa2 dir which is already in self._tmp
+        scriptpath = self.mktemp(ftype='f', path=self._param_binpath,
+                                 cleanup_later=False)
         self.write(scriptpath, script)
         self.exec_cmd('chmod +x %s' % scriptpath)
         return self.param_cmd(scriptpath)
