@@ -10,9 +10,10 @@ else:
     apppath = '.'
 
 configspec = ConfigObj(_inspec=True, list_values=False)
-configspec['debug'] = 'boolean()'
+configspec['debug'] = 'boolean(default=False)'
 configspec['remote_debug'] = 'boolean(default=False)'
 configspec['ssh_timeout'] = 'integer(0,7200,default=30)'
+configspec['reboot_timeout'] = 'integer(5,7200,default=300)'
 configspec['firewall'] = {
     'send_timeout': 'float(0, 99, default=1)',
     'max_open_sockets': 'integer(1,10000,default=100)',
@@ -30,7 +31,8 @@ config = {'configdir': apppath + '/' + 'config',
           'checksdir': apppath + '/' + 'checks',
           'debug': False,
           'remote_debug': False,
-          'ssh_timeout': 30}
+          'ssh_timeout': 30,
+          'reboot_timeout': 300}
 config['configfile'] = config['configdir'] + '/' + 'main.cfg'
 config['serversfile'] = config['configdir'] + '/' + 'servers.yaml'
 config['networksfile'] = config['configdir'] + '/' + 'networks.yaml'

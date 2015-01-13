@@ -200,7 +200,10 @@ def read_configuration():
     if not os.path.exists(config['logdir']):
         os.makedirs(config['logdir'])
 
-    # set global ssh timeout
+    # set global ssh and reboot timeouts
     import hwswa2.server.linux
+    import hwswa2.server
 
     hwswa2.server.linux.TIMEOUT = config['ssh_timeout']
+    hwswa2.server.linux.REBOOT_TIMEOUT = config['reboot_timeout']
+    hwswa2.server.REBOOT_TIMEOUT = config['reboot_timeout']
