@@ -466,7 +466,7 @@ def list_roles(roles_dir=None):
     role_names = []
     for role_file in glob.glob(os.path.join(roles_dir, '*.yaml')):
         role_name = os.path.basename(role_file)[:-5].lower()
-        roles.append(Role(role_name, roles_dir))
+        roles.append(Role(role_name))
         role_names.append(role_name)
     aux_role_names = []
     for role in roles:
