@@ -115,14 +115,19 @@ def read_configuration():
     subparser.set_defaults(subcommand=subcommands.prepareall)
 
     subparser = subparsers.add_parser('shell', help='open shell to server',
-                                      aliases=('s',))
+                                      aliases=('sh',))
     subparser.add_argument('servername', metavar='server')
     subparser.set_defaults(subcommand=subcommands.shell)
 
     subparser = subparsers.add_parser('reboot',
                                       help='reboot server(s) and measure reboot time')
-    subparser.add_argument('servernames', nargs='+', help='servers to reboot',
-                           metavar='server')
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers',
+                             action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)',
+                             metavar='server')
     subparser.set_defaults(subcommand=subcommands.reboot)
 
     subparser = subparsers.add_parser('exec', help='execute command interactively',
@@ -156,20 +161,30 @@ def read_configuration():
 
     subparser = subparsers.add_parser('firewall',
                                       help='check connections between servers',
-                                      aliases=('f',))
-    subparser.add_argument('servernames', nargs='+', help='server name to check',
-                           metavar='server')
+                                      aliases=('fw',))
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers',
+                             action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)',
+                             metavar='server')
     subparser.set_defaults(subcommand=subcommands.firewall)
 
     subparser = subparsers.add_parser('show-firewall',
                                       help='show firewall requirements for servers',
-                                      aliases=('sf',))
+                                      aliases=('sfw',))
     formatgroup = subparser.add_mutually_exclusive_group()
     formatgroup.add_argument('-c', '--compact', help='compact output',
                              action='store_true')
-    formatgroup.add_argument('-s', '--csv', help='csv output', action='store_true')
-    subparser.add_argument('servernames', nargs='+', help='server names',
-                           metavar='server')
+    formatgroup.add_argument('-v', '--csv', help='csv output', action='store_true')
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers',
+                             action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)',
+                             metavar='server')
     subparser.set_defaults(subcommand=subcommands.show_firewall)
 
     subparser = subparsers.add_parser('lastreport',
@@ -194,10 +209,10 @@ def read_configuration():
                                       aliases=('rs',))
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
-                             help='show reports for all servers',
+                             help='all servers',
                              action='store_true')
     servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
-                             help='show reports for specific servers',
+                             help='specific server(s)',
                              metavar='server')
     subparser.set_defaults(subcommand=subcommands.reports)
 

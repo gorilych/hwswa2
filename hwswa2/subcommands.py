@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 def show_firewall():
     """Show firewall requirements"""
     servers = []
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
@@ -93,6 +95,8 @@ def firewall():
     max_failures = hwswa2.config['firewall']['max_failures']
     max_closed_ports = hwswa2.config['firewall']['max_closed_ports']
     servers = []
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
@@ -288,6 +292,8 @@ def reboot():
     """Reboots specified servers"""
     logger.info("Rebooting servers: %s" % hwswa2.config['servernames'])
     servers = []
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
