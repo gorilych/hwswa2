@@ -101,7 +101,7 @@ def read_configuration():
     subparser.set_defaults(subcommand=subcommands.check)
 
     subparser = subparsers.add_parser('prepare', help='prepare specific servers',
-                                      aliases=('p',))
+                                      aliases=('pr',))
     subparser.add_argument('servernames', nargs='+', help='server name to prepare',
                            metavar='server')
     subparser.set_defaults(subcommand=subcommands.prepare)
