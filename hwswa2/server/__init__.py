@@ -325,20 +325,25 @@ class Server(object):
             return
         else:
             self.param_check_status = "in progress"
-        for result in self.rolecollection.collect_parameters(self.param_cmd, self.param_script):
-            self.param_check_status = "in progress, %s checks" % result['progress']
-            self.parameters = result['parameters']
-            self.param_failures = result['failures']
-            self.param_check_time = time.time()
-            yield result['progress']
-        for req in self.rolecollection.requirements:
-            if not req.istemplate():
-                (result, reason) = req.check(self.parameters)
-                if result:
-                    self.requirement_successes.append(str(req))
-                else:
-                    self.requirement_failures.append(reason)
-        self.param_check_status = "finished"
+        try:
+            for result in self.rolecollection.collect_parameters(self.param_cmd, self.param_script):
+                self.param_check_status = "in progress, %s checks" % result['progress']
+                self.parameters = result['parameters']
+                self.param_failures = result['failures']
+                self.param_check_time = time.time()
+                yield result['progress']
+        except ServerException as se:
+            self.param_check_status = "FAILED with ServerException: %s" % se
+            self.parameters = {}
+        else:
+            for req in self.rolecollection.requirements:
+                if not req.istemplate():
+                    (result, reason) = req.check(self.parameters)
+                    if result:
+                        self.requirement_successes.append(str(req))
+                    else:
+                        self.requirement_failures.append(reason)
+            self.param_check_status = "finished"
 
     def prepare_and_save_report(self, rtime=None):
         """Prepare report from previously generated parameters. Save it to reports dir.

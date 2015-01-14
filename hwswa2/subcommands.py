@@ -195,10 +195,10 @@ def check():
     """Check servers"""
     check_time = time.localtime()
     report_period = hwswa2.config['check']['report_period']
-    logger.info("Checking servers: %s" % hwswa2.config['servernames'])
     servers = []
     if hwswa2.config['allservers']:
         hwswa2.config['servernames'] = server_names()
+    logger.info("Checking servers: %s" % hwswa2.config['servernames'])
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:

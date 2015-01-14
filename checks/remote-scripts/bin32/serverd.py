@@ -875,8 +875,8 @@ if __name__ == '__main__':
             except Exception, e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 msg = "result_notok Exception %s: %s" % \
-                      (traceback.format_exception_only(exc_type, exc_obj)[0],
-                       traceback.format_tb(exc_tb))
+                      (repr(traceback.format_exception_only(exc_type, exc_obj)[0]),
+                       repr(traceback.format_tb(exc_tb)))
                 print msg
                 debug('sent: %s' % msg)
         else:

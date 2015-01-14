@@ -169,22 +169,17 @@ class LinuxServer(Server):
         rscripts_dir = hwswa2.config['rscriptdir']
         if self._param_cmd_prefix is not None:
             return True
-        try:
-            arch = self.get_cmd_out('uname --machine')
-            if arch.endswith('64'):
-                rscriptdir = os.path.join(rscripts_dir,'bin64')
-            else:
-                rscriptdir = os.path.join(rscripts_dir,'bin32')
-            remote_hwswa2_dir = self.mktemp()
-        except ServerException as se:
-            logger.error("Failed to prepare remote scripts for parameters check: %s" % se)
-            return False
+        arch = self.get_cmd_out('uname --machine')
+        if arch.endswith('64'):
+            rscriptdir = os.path.join(rscripts_dir,'bin64')
         else:
-            binpath = posixpath.join(remote_hwswa2_dir, 'bin')
-            self.put(rscriptdir, binpath)
-            self._param_binpath = binpath
-            self._param_cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
-            return True
+            rscriptdir = os.path.join(rscripts_dir,'bin32')
+        remote_hwswa2_dir = self.mktemp()
+        binpath = posixpath.join(remote_hwswa2_dir, 'bin')
+        self.put(rscriptdir, binpath)
+        self._param_binpath = binpath
+        self._param_cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
+        return True
 
     def _exists(self, path):
         if not self._connect():
@@ -432,7 +427,7 @@ class LinuxServer(Server):
                 return result
             else:
                 logger.error("Execution of %s failed: %s" % (cmd, result))
-                return 1
+                raise LinuxServerException("Execution of %s failed: %s" % (cmd, result))
 
     def exec_cmd(self, cmd, input_data=None, timeout=None):
         """Executes command and returns tuple of stdout, stderr and status"""
@@ -442,6 +437,7 @@ class LinuxServer(Server):
             raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
         else:
             if not self.agent_start():
+                logger.error("Failed to start agent on %s" % self)
                 raise LinuxServerException("Failed to start agent on %s" % self)
             else:
                 if input_data:
@@ -646,6 +642,10 @@ class LinuxServer(Server):
                         return True
                     else:
                         logger.error("Failed to elevate priviliges: %s" % reason)
+                        try:
+                            self.agent_stop()
+                        except Exception:
+                            pass
                         return False
                 return True
         except Exception as e:
