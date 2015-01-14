@@ -76,7 +76,7 @@ class LinuxServer(Server):
         if self.port is None:
             address = self.account['login'] + '@' + self.address
         else:
-            address = self.account['login'] + '@' + self.address + ':' + self.port
+            address = self.account['login'] + '@' + self.address + ':' + str(self.port)
         return address
 
     def _new_sshclient(self, timeout=None):
