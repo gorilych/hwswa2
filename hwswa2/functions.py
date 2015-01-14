@@ -94,25 +94,23 @@ def read_configuration():
     subparser = subparsers.add_parser('list-roles', help='show available roles')
     subparser.set_defaults(subcommand=subcommands.list_roles)
 
-    subparser = subparsers.add_parser('check', help='check specific servers',
-                                      aliases=('c',))
-    subparser.add_argument('servernames', nargs='+', help='server name to check',
-                           metavar='server')
+    subparser = subparsers.add_parser('check', help='check servers',
+                                      aliases=('ck',))
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.check)
 
-    subparser = subparsers.add_parser('prepare', help='prepare specific servers',
+    subparser = subparsers.add_parser('prepare', help='prepare servers (not implemented)',
                                       aliases=('pr',))
-    subparser.add_argument('servernames', nargs='+', help='server name to prepare',
-                           metavar='server')
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.prepare)
-
-    subparser = subparsers.add_parser('checkall', help='check all servers',
-                                      aliases=('ca',))
-    subparser.set_defaults(subcommand=subcommands.checkall)
-
-    subparser = subparsers.add_parser('prepareall', help='prepare all servers',
-                                      aliases=('pa',))
-    subparser.set_defaults(subcommand=subcommands.prepareall)
 
     subparser = subparsers.add_parser('shell', help='open shell to server',
                                       aliases=('sh',))
@@ -123,11 +121,9 @@ def read_configuration():
                                       help='reboot server(s) and measure reboot time')
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
-                             help='all servers',
-                             action='store_true')
+                             help='all servers', action='store_true')
     servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
-                             help='specific server(s)',
-                             metavar='server')
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.reboot)
 
     subparser = subparsers.add_parser('exec', help='execute command interactively',
@@ -164,11 +160,9 @@ def read_configuration():
                                       aliases=('fw',))
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
-                             help='all servers',
-                             action='store_true')
+                             help='all servers', action='store_true')
     servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
-                             help='specific server(s)',
-                             metavar='server')
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.firewall)
 
     subparser = subparsers.add_parser('show-firewall',
@@ -180,11 +174,9 @@ def read_configuration():
     formatgroup.add_argument('-v', '--csv', help='csv output', action='store_true')
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
-                             help='all servers',
-                             action='store_true')
+                             help='all servers', action='store_true')
     servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
-                             help='specific server(s)',
-                             metavar='server')
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.show_firewall)
 
     subparser = subparsers.add_parser('lastreport',
@@ -209,11 +201,9 @@ def read_configuration():
                                       aliases=('rs',))
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
-                             help='all servers',
-                             action='store_true')
+                             help='all servers', action='store_true')
     servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
-                             help='specific server(s)',
-                             metavar='server')
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.reports)
 
     subparser = subparsers.add_parser('reportdiff',

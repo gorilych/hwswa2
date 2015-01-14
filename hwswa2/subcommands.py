@@ -192,11 +192,13 @@ def firewall():
 
 
 def check():
-    """Check only specified servers"""
+    """Check servers"""
     check_time = time.localtime()
     report_period = hwswa2.config['check']['report_period']
     logger.info("Checking servers: %s" % hwswa2.config['servernames'])
     servers = []
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
@@ -243,17 +245,12 @@ def _check(server, resultsqueue):
         resultsqueue.put({'name': name, 'progress': progress})
 
 
-def checkall():
-    """Check all servers"""
-    logger.debug("Checking all servers")
-    hwswa2.config['servernames'] = server_names()
-    check()
-
-
 def prepare():
-    """Prepare only specified servers"""
+    """Prepare servers"""
     logger.debug("Preparing servers: %s" % hwswa2.config['servernames'])
     servers = []
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
@@ -264,13 +261,6 @@ def prepare():
                 logger.info("Skipping server %s because of dontcheck option" % name)
             else:
                 servers.append(server)
-
-
-def prepareall():
-    """Prepare all servers"""
-    logger.debug("Preparing all servers")
-    hwswa2.config['servernames'] = server_names()
-    prepare()
 
 
 def shell():
