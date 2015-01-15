@@ -6,9 +6,14 @@ Version History
     - Added: documentation for role files
     - Added: remote_debug option in main.cfg
     - Added: guess requirement type as disk if it starts with slash
+    - Added: option --all for subcommands firewall, show-firewall, reboot, reports
+    - Added: reports subcommand can show reports for several servers
+    - Improvement: merged subcommands check and checkall
     - Improvement: command execution made via remote agent now
     - Improvement: logging reworked, now important messages are recorded
-    - Fixed: disk requirement is false positieve if disk size is not integer
+    - Improvement: su/sudo passwords are not passed in plain text in commandline anymore
+    - Improvement: speed-up: application is refactored to postpone initialization of unneeded objects
+    - Fixed: disk requirement is false positive if disk size is not integer
     - Fixed: remove empty failures from reports
     - Fixed: handle keyerror exceptions in hwswa2.functions.read_servers()
     - Fixed: reboot check improved, it could hang in previous version
