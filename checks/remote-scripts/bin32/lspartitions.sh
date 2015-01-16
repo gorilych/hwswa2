@@ -20,6 +20,12 @@ human () {
       {gsub(/^[0-9]+/, human($1)); print}'
 }
 
+BtoGB () {
+  local x=$1
+  echo $x | awk '{printf("%.3f",$1/1024/1024/1024)}' \
+          | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
+}
+
 mounts=$( { grep '^/dev/' /proc/mounts; grep '^/dev/' /proc/swaps | awk '{print $1, "-", "swap"}'; } \
           | while read p m fs rest; do 
             p=$(readlink -f $p)
@@ -39,7 +45,7 @@ for dev in $(find /sys/block/ -maxdepth 1 \( -name 'sd*' -o -name 'sr*' -o -name
   for partition in $(find /sys/block/$dev/ -name start \
                      | sed -e 's%^/sys/block/'$dev'/%%' -e 's%/start$%%' ); do
     size=$(cat /sys/block/$dev/$partition/size)
-    size=$(human $(expr $size \* $blksize))
+    size=$(BtoGB $(expr $size \* $blksize))
     mounted=$(echo "$mounts" | grep -q '^/dev/'$partition && echo 1 || echo 0)
     if [ "$mounted" = "0" ]; then
       mountpoint="-"
@@ -56,10 +62,9 @@ done
 if [ ${#mounts} -gt 0 ]; then
   echo "$mounts" | while read p m fs; do
     if [ "$fs" = "swap" ]; then
-      size=$(swapon -s | awk '$1=="'$p'"{print $3; exit}')
-      size=$(human $(expr $size \* 1024))
+      size=$(BtoGB $(swapon --summary | awk '$1=="'$p'"{print $3*1024; exit}'))
     else
-      size=$(df $m --human-readable --portability --print-type | tail -1 | awk '{print $3}')
+      size=$(BtoGB $(df $m --block-size 1 --portability --print-type | tail -1 | awk '{print $3}'))
     fi
     p=${p##*/}
     echo "$p|$size|$m|$fs"

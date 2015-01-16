@@ -9,31 +9,38 @@ parameters:
   ntp_service_status: service ntpd status 2>&1
   OS:                 which lsb_release >/dev/null 2>&1 
                       && lsb_release --short --id --release | xargs 
-                      || cat /etc/system-release
+                      || cat /etc/system-release 2>/dev/null || cat /etc/redhat-release
   architecture:       uname --machine
-  ram:       awk '$1=="MemTotal:" {printf("%.3fGB",$2/1024/1024)}' /proc/meminfo
-  swap:      awk '$1=="SwapTotal:"{printf("%.3fGB",$2/1024/1024)}' /proc/meminfo
+  ram(GB):  awk '$1=="MemTotal:" {printf("%.3f",$2/1024/1024)}' /proc/meminfo 
+            | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
+  swap(GB): awk '$1=="SwapTotal:"{printf("%.3f",$2/1024/1024)}' /proc/meminfo
+            | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
   selinux:   which getenforce >/dev/null && getenforce || echo no selinux
   yum_repos: which yum >/dev/null
              && echo $(yum repolist | sed '/repo id/,$ !d' 
                     | sed -e '1 d' -e '$ d' | awk '{ print $1}' | xargs)
              || echo no yum
+  tmp_noexec: grep -q '/tmp[^/]*noexec' /proc/mounts
+              && echo NOK noexec found
+              || echo OK
   processors:
     _type: dictionary
     count:     grep --fixed-strings processor -c /proc/cpuinfo
     model:     grep --fixed-strings --max-count=1 'model name' /proc/cpuinfo | awk -F':' '{print $2}' | sed 's/^ //g'
-    frequency: grep --fixed-strings --max-count=1 'cpu MHz' /proc/cpuinfo 
-               | awk '{printf("%.1fGHz",$NF/1000)}'
+    frequency(GHz): grep --fixed-strings --max-count=1 'cpu MHz' /proc/cpuinfo 
+                    | awk '{printf("%.2f",$NF/1000)}' 
+                    | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
   partitions:
     _type: table
-    _fields: [device, size, mountpoint, fs_type]
+    _fields: [device, size(GB), mountpoint, fs_type]
     _separator: '|'
     _command: lspartitions.sh
   blockdevs:
     _type: table
-    _fields: [name, type, readonly, removable, rotational, size, vendor, model]
+    _fields: [name, type, readonly, removable, rotational, size(GB), vendor, model]
     _separator: '|'
     _command: lsblk.sh
+  virtualization: virt-what.py
   network:
     _type: dictionary 
     name_servers: awk '$1=="nameserver"{print $2}' /etc/resolv.conf | xargs
@@ -46,7 +53,7 @@ parameters:
       # _generator: {field_name: placeholder_name}
       _generator: {name: name}
       name:   /sbin/ip --oneline link show | grep --fixed-strings --invert-match 'link/loopback'
-              | awk '{print $2}' | sed 's/:$//'
+              | awk '{print $2}' | sed 's/:$//' | sed 's/@[^@]*$//'
       state:  /sbin/ip --oneline link show dev %(name)s 
               | grep --only-matching --extended-regexp ' state (UP|DOWN|UNKNOWN) ' 
               | awk '{print $2}'
@@ -56,22 +63,71 @@ parameters:
       gateway: /sbin/ip route list dev %(name)s | grep ^default | awk '{print $3}'
       ip:
         _type: table
-        _fields: [address, network]
+        _fields: [address, prefix]
         _separator: ' '
-        _script: |
-          #!/bin/bash
-          { /sbin/ip -family inet -oneline address list scope global dev %(name)s;
-            /sbin/ip -family inet6 -oneline address list scope global dev %(name)s; } \
-          | awk '{print $4}' | tr '/' ' ' \
-          | while read ip prefix; do
-              netaddr=$( { /sbin/ip -family inet route list dev %(name)s;
-                           /sbin/ip -family inet6 route list dev %(name)s; } \
-                         | grep " src $ip" | awk '{print $1}' | sed 's|/[0-9]*$||' )
-              if [ -z "$netaddr" ]; then
-                  netname="no_route_with_this_ip_as_src"
-              else
-                  netname="$netaddr/$prefix"
-              fi
-              echo $ip $netname
-          done
-          exit 0
+        _command: "{ /sbin/ip -family inet -oneline address list scope global dev %(name)s;
+                     /sbin/ip -family inet6 -oneline address list scope global dev %(name)s; }
+                   | awk '{print $4}' | tr '/' ' '"
+
+requirements:
+  #<name>:
+  #  parameter: parameter path, f.e. 'hostname' or 'processors:count'. Default: <name>
+  #  type: can be eq, neq, regex, lt, le, gt, ge, or disk. Default: eq
+  #  value: value to compare with. Default: None, and requirement is treated as template
+  #  join-rule: can be override, and, or, sum, mul, avg, min, max. Default: override
+  #
+  #'disk' is a special type. Requirement will check if path, specified in parameter, 
+  #  has enough diskspace. Also join-rule for 'disk' is always 'sum'.
+  #
+  #Roles, which include this role can replace value in requirement like this:
+  #<name>: <value> 
+  #Actual value is determined by composing requirement with requirements 
+  #from included roles by join-rule.
+  #
+  OS:
+    type: regex
+    value-example: '(CentOS|RedHat).* 6\.'
+    join-rule: and
+  architecture: x86_64
+  ram(GB):
+    type: ge
+    value-example: 0.5
+    join-rule: sum
+  swap(GB):
+    type: ge
+    value-example: 1
+    join-rule: sum
+  cpu-cores:
+    parameter: processors:count
+    type: ge
+    value: 1
+    join-rule: max
+  cpu-frequency:
+    parameter: processors:frequency(GHz)
+    type: ge
+    value-example: 1
+    join-rule: max
+  /:
+    type: disk
+    value-example: 5
+  /usr:
+    type: disk
+    value-example: 5
+  /usr/local:
+    type: disk
+    value-example: 5
+  /var:
+    type: disk
+    value-example: 5
+  /var/log:
+    type: disk
+    value-example: 5
+  /tmp:
+    type: disk
+    value-example: 5
+  /opt:
+    type: disk
+    value-example: 5
+  /home:
+    type: disk
+    value-example: 5

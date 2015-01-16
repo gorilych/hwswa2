@@ -28,7 +28,7 @@ firewall:
     direction: outgoing
     networks: [backnet]
     protos: [TCP]
-    ports: 8352-8439,8441-8500,80,16384,49152-65534
+    ports: 8352-8439,8441-8500,80,16384
     type: infra
     connect_with:
       roles: [linmn]

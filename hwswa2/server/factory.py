@@ -6,6 +6,8 @@ from hwswa2.server import Server, ServerException
 from hwswa2.server.linux import LinuxServer
 from hwswa2.server.windows import WindowsServer
 
+__all__ = ['get_server', 'server_names', 'servers_context']
+
 logger = logging.getLogger(__name__)
 
 # _servers = {name1: server1, name2: server2}
@@ -27,10 +29,10 @@ def server_names():
 
 
 @contextmanager
-def servers_context(servers_list, roles_dir, reports_dir, remote_scripts_dir):
+def servers_context(servers_list):
     srvrs = []
     for serverdict in servers_list:
-        srvrs.append(server_factory(serverdict, roles_dir, reports_dir, remote_scripts_dir))
+        srvrs.append(server_factory(serverdict))
     yield srvrs
     # clean up in proper order, gateways last
     with_gw = []
@@ -50,7 +52,7 @@ def servers_context(servers_list, roles_dir, reports_dir, remote_scripts_dir):
         s.cleanup()
 
 
-def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
+def server_factory(serverdict):
     global _servers, _servers_to_init_later
 
     name = serverdict['name']
@@ -73,11 +75,11 @@ def server_factory(serverdict, roles_dir=None, reports_dir=None, remote_scripts_
 
     try:
         if serverdict['ostype'] == 'linux':
-            server = LinuxServer.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
+            server = LinuxServer.fromserverdict(serverdict)
         elif serverdict['ostype'] == 'windows':
-            server = WindowsServer.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
+            server = WindowsServer.fromserverdict(serverdict)
         else:
-            server = Server.fromserverdict(serverdict, roles_dir, reports_dir, remote_scripts_dir)
+            server = Server.fromserverdict(serverdict)
     except ServerException as se:
         logger.debug("Server initialization fails for %s: %s" % (serverdict, se))
         return None

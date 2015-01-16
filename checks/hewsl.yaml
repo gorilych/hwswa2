@@ -11,3 +11,12 @@ firewall:
     type: infra
     connect_with:
       roles: [helb]
+requirements:
+  OS: 'Cloud Linux 6\.'
+  virtualization: 'bare metal'
+  ram(GB): 32
+  swap(GB): 32
+  cpu-cores: 4
+  cpu-frequency: 2.2
+  /: 5
+  /var/log: 10

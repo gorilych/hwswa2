@@ -2,6 +2,45 @@
 Version History
 ===============
 
+0.5.0 (work in progress)
+    - Added: documentation for role files
+    - Added: remote_debug option in main.cfg
+    - Added: reboot_timeout option in main.cfg
+    - Added: guess requirement type as disk if it starts with slash
+    - Added: option --all for subcommands firewall, show-firewall, reboot, reports
+    - Added: reports subcommand can show reports for several servers
+    - Improvement: merged subcommands check and checkall
+    - Improvement: command execution made via remote agent now
+    - Improvement: logging reworked, now important messages are recorded
+    - Improvement: su/sudo passwords are not passed in plain text in commandline anymore
+    - Improvement: speed-up: application is refactored to postpone initialization of unneeded objects
+    - Fixed: disk requirement is false positive if disk size is not integer
+    - Fixed: remove empty failures from reports
+    - Fixed: handle keyerror exceptions in hwswa2.functions.read_servers()
+    - Fixed: reboot check improved, it could hang in previous version
+    - Fixed: command execution timeout option works now
+
+0.4.0 (2014-11-22)
+    - Added: requirements (ram, disk, cpu, etc) in role files
+    - Added: subcommand show-firewall
+    - Added: put and get subcommands allow to omit remotepath and localpath, respectively
+    - Added: subcommand list-roles
+    - Added: check for virtualization
+    - Added: role aliases
+    - Added: role linwdg
+    - Added: adjusted firewall checks for role linmn
+    - Added: updated firewall rules in role pbalinfe
+    - Added: check for pba account in pbalinfe
+    - Added: check noexec for /tmp
+    - Added: requirements for roles: helb hewsl wsng ui paci_pcs paci_sn_pcs pvclin
+    - Fixed: multiply roles are not printed in report
+    - Fixed: NameError: global name 'se' is not defined
+    - Fixed: name is missing in report
+    - Fixed: firewall does not work if role is not lowercase in servers.yaml
+    - Fixed: incorrect vlan names in report
+    - Fixed: exception is not handled in _new_sshclient()
+    - Fixed: check fails for server with empty role
+
 0.3.0 (2014-06-29)
     - Removed: check_reboot option. Use reboot subcommand instead
     - Fixed: firewall does not fail if server is not accessible

@@ -28,3 +28,12 @@ firewall:
         connect_with: {roles: [paci_im]}
       - ports: 48480
         connect_with: {roles: [wpesrvdb, wpesrv]}
+  - name: pa_download
+    description: allow access to pa.download.parallels.com repo
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    protos: [TCP]
+    type: internet
+    ports: 80,443
+    connect_with: {hosts: [download.pa.parallels.com]}

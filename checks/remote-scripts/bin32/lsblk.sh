@@ -43,6 +43,11 @@ human () {
       {gsub(/^[0-9]+/, human($1)); print}'
 }
 
+BtoGB () {
+  local x=$1
+  echo $x | awk '{printf("%.3f",$1/1024/1024/1024)}' \
+          | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
+}
 
 for dev in $(find /sys/block/ -maxdepth 1 \( -name 'sd*' -o -name 'sr*' -o -name 'hd*' \
                                  -o -name 'vd*' \) | sed 's%^/sys/block/%%'); do
@@ -51,7 +56,7 @@ for dev in $(find /sys/block/ -maxdepth 1 \( -name 'sd*' -o -name 'sr*' -o -name
     continue
   fi
   blksize=$(cat /sys/block/$dev/queue/logical_block_size 2>/dev/null || echo 512)
-  size=$(human $(expr $size \* $blksize))
+  size=$(BtoGB $(expr $size \* $blksize))
   type=$(cat /sys/block/$dev/device/type 2>/dev/null || echo 0)
   if [ "$type" = "0" ]; then
     type="disk"

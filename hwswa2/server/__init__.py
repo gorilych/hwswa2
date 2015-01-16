@@ -3,8 +3,12 @@ import os
 import time
 
 import hwswa2.auxiliary as aux
+import hwswa2
 from hwswa2.server.report import Report, ReportException
 from hwswa2.server.role import RoleCollection
+
+__all__ = ['Server', 'TIMEOUT', 'REBOOT_TIMEOUT', 'ServerException',
+           'TunnelException', 'TimeoutException', 'FirewallException']
 
 logger = logging.getLogger(__name__)
 
@@ -18,8 +22,7 @@ class Server(object):
     time_format = '%Y-%m-%d.%Hh%Mm%Ss'
 
     def __init__(self, name, account, address,
-                 role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None,
-                 roles_dir=None, reports_dir=None, remote_scripts_dir=None):
+                 role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None):
         self.name = name
         self.ostype = ostype
         self.role = role
@@ -29,10 +32,7 @@ class Server(object):
             self.roles = []
         else:
             self.roles = [role, ]
-        self.rolecollection = None
-        self._roles_dir = roles_dir
-        if roles_dir is not None:
-            self.init_rolecollection(roles_dir)
+        self._rolecollection = None
         self.account = account
         self.address = address
         self.port = port
@@ -41,13 +41,9 @@ class Server(object):
         self.gateway = gateway
         self.expect = expect
         # ordered list of reports, last generated report goes first
-        self.reports = []
-        self._reports_dir = reports_dir
-        if reports_dir is not None:
-            self.read_reports(reports_dir)
+        self._reports = None
         # {network: ip, ...}
-        self.nw_ips = {}
-        self.find_nw_ips()
+        self._nw_ips = None
         self.parameters = None
         self.param_failures = None
         self.param_check_status = "not started"
@@ -56,11 +52,33 @@ class Server(object):
         self.check_reboot_result = None
         self._last_connection_error = None
         self._accessible = None
-        self._remote_scripts_dir = remote_scripts_dir
         # list of temporary dirs/files
         self._tmp = []
         # remote agent
         self._agent = None
+        self.requirement_failures = []
+        self.requirement_successes = []
+
+    @property
+    def reports(self):
+        if self._reports is None:
+            logger.debug("Postponed initialization of reports for %s started" % self)
+            self._read_reports()
+        return self._reports
+
+    @property
+    def nw_ips(self):
+        if self._nw_ips is None:
+            logger.debug("Postponed initialization of network->ip list for %s started" % self)
+            self._find_nw_ips()
+        return self._nw_ips
+
+    @property
+    def rolecollection(self):
+        if self._rolecollection is None:
+            logger.debug("Postponed initialization of rolecollection for %s started" % self)
+            self._rolecollection = RoleCollection(self.roles)
+        return self._rolecollection
 
     def _connect(self, reconnect=False, timeout=None):
         """Initiates connection to the server.
@@ -70,7 +88,7 @@ class Server(object):
         raise NotImplemented
 
     @classmethod
-    def fromserverdict(cls, serverdict, roles_dir=None, reports_dir=None, remote_scripts_dir=None):
+    def fromserverdict(cls, serverdict):
         """Instantiate from server dict which can be read from servers.yaml"""
         # these properties can be defined in servers.yaml
         properties = ['account', 'name', 'role', 'address', 'port', 'ostype', 'expect', 'dontcheck', 'gateway']
@@ -80,7 +98,7 @@ class Server(object):
                 initargs[key] = serverdict[key]
         if 'dontcheck' in initargs:
             initargs['dontcheck'] = True
-        return cls(roles_dir=roles_dir, reports_dir=reports_dir, remote_scripts_dir=remote_scripts_dir, **initargs)
+        return cls(**initargs)
 
     def __str__(self):
         return "server %s" % self.name
@@ -96,8 +114,12 @@ class Server(object):
                 self._accessible = False
         return self._accessible
 
-    def read_reports(self, reports_dir):
+    def _read_reports(self):
         """Read server reports"""
+        self._reports = []
+        reports_dir = hwswa2.config.get('reportsdir')
+        if not reports_dir:
+            return
         path = os.path.join(reports_dir, self.name)
         timeformat = Server.time_format
         reports = []
@@ -109,10 +131,10 @@ class Server(object):
                         filetime = time.mktime(time.strptime(filename, timeformat))
                         reports.append(Report(yamlfile=filepath, time=filetime))
                     except ValueError as ve:
-                        logger.debug("File name %s is not in format %s: %s" % (filename, timeformat, ve))
+                        logger.error("File name %s is not in format %s: %s" % (filename, timeformat, ve))
                     except ReportException as re:
-                        logger.debug("Error reading report from file %s: %s" % (filename, re))
-            self.reports = sorted(reports, key=lambda report: report.time, reverse=True)
+                        logger.error("Error reading report from file %s: %s" % (filename, re))
+            self._reports = sorted(reports, key=lambda report: report.time, reverse=True)
 
     def list_reports(self):
         for report in self.reports:
@@ -130,26 +152,23 @@ class Server(object):
     def last_finished_report(self):
         return next((r for r in self.reports if r.finished()), None)
 
-    def find_nw_ips(self, networks=None):
+    def _find_nw_ips(self):
         """Collect network -> ip into self.nw_ips from last finished report
         
         Returns true on success
         """
+        self._nw_ips = {}
         lfr = self.last_finished_report()
         if lfr is None:
-            logger.debug("No finished reports for %s" % self)
+            logger.info("No finished reports for %s" % self)
             return False
         else:
-            self.nw_ips = lfr.get_nw_ips(networks)
-            if self.nw_ips == {}:
-                logger.debug('Found no IPs for %s' % self)
+            self._nw_ips = lfr.get_nw_ips()
+            if self._nw_ips == {}:
+                logger.info('Found no IPs for %s' % self)
                 return False
             else:
                 return True
-
-    def init_rolecollection(self, roles_dir):
-        if self.rolecollection is None:
-            self.rolecollection = RoleCollection(self.roles, roles_dir)
 
     def agent_start(self):
         """Starts remote agent on server"""
@@ -219,10 +238,8 @@ class Server(object):
                                 left: num }
         :raises: FirewallException
         """
-        if self.dontcheck:
-            raise FirewallException("Dontcheck is set for %s" % self)
-        if other.dontcheck:
-            raise FirewallException("Dontcheck is set for %s" % other)
+        if self.dontcheck and other.dontcheck:
+            raise FirewallException("Dontcheck is set for both %s and %s" % (self, other))
         logger.debug("Checking connections %s <- %s" % (self, other))
         rules = self.rolecollection.collect_incoming_fw_rules(other.rolecollection)
         ports_left = reduce(lambda s, rule: s + aux.range_len(rule['ports']), rules, 0)
@@ -308,18 +325,29 @@ class Server(object):
             return
         else:
             self.param_check_status = "in progress"
-        for result in self.rolecollection.collect_parameters(self.param_cmd, self.param_script):
-            self.param_check_status = "in progress, %s checks" % result['progress']
-            self.parameters = result['parameters']
-            self.param_failures = result['failures']
-            self.param_check_time = time.time()
-            yield result['progress']
-        self.param_check_status = "finished"
+        try:
+            for result in self.rolecollection.collect_parameters(self.param_cmd, self.param_script):
+                self.param_check_status = "in progress, %s checks" % result['progress']
+                self.parameters = result['parameters']
+                self.param_failures = result['failures']
+                self.param_check_time = time.time()
+                yield result['progress']
+        except ServerException as se:
+            self.param_check_status = "FAILED with ServerException: %s" % se
+            self.parameters = {}
+        else:
+            for req in self.rolecollection.requirements:
+                if not req.istemplate():
+                    (result, reason) = req.check(self.parameters)
+                    if result:
+                        self.requirement_successes.append(str(req))
+                    else:
+                        self.requirement_failures.append(reason)
+            self.param_check_status = "finished"
 
-    def prepare_and_save_report(self, networks=None, rtime=None):
+    def prepare_and_save_report(self, rtime=None):
         """Prepare report from previously generated parameters. Save it to reports dir.
 
-        :param networks: array of network descriptions [{name: .., address: .., prefix: ..},...]
         :param rtime: report creation time, used for filename
         :return: True on success
         """
@@ -327,22 +355,28 @@ class Server(object):
             return False
         if rtime is None:
             rtime = time.localtime()
-        reports_path = os.path.join(self._reports_dir, self.name)
+        reports_path = os.path.join(hwswa2.config['reportsdir'], self.name)
         if not os.path.exists(reports_path):
             os.makedirs(reports_path)
         yamlfile = os.path.join(reports_path, time.strftime(Server.time_format, rtime))
         self.report = Report(data={'check_status': self.param_check_status,
                                    'check_time': time.ctime(self.param_check_time),
+                                   'name': self.name,
                                    'role': self.role,
                                    'parameters': self.parameters,
-                                   'parameters_failures': self.param_failures},
+                                   'parameters_failures': self.param_failures,
+                                   'requirement_successes': self.requirement_successes,
+                                   'requirement_failures': self.requirement_failures},
                              yamlfile=yamlfile,
                              time=rtime)
         self.reports.insert(0, self.report)
         if self.report.finished():
-            self.report.fix_networks(networks)
+            self.report.fix_networks()
             self.report.check_expect(self.expect)
         self.report.save()
+        return True
+
+    def cleanup(self):
         return True
 
 
