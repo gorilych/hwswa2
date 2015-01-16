@@ -5,6 +5,7 @@ Version History
 0.5.0 (work in progress)
     - Added: documentation for role files
     - Added: remote_debug option in main.cfg
+    - Added: reboot_timeout option in main.cfg
     - Added: guess requirement type as disk if it starts with slash
     - Added: option --all for subcommands firewall, show-firewall, reboot, reports
     - Added: reports subcommand can show reports for several servers
