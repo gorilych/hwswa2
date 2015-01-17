@@ -15,7 +15,7 @@ from hwswa2.server.role import Role
 __all__ = ['show_firewall', 'firewall', 'check', 'checkall', 'prepare',
            'prepareall', 'shell', 'reboot', 'exec_cmd', 'ni_exec_cmd', 'put',
            'get', 'lastreport', 'show_report', 'reports', 'reportdiff',
-           'list_roles']
+           'list_roles', 'agent_console']
 
 logger = logging.getLogger(__name__)
 
@@ -472,3 +472,18 @@ def list_roles(roles_dir=None):
     aux_role_names.sort()
     print("==== Roles ====\n" + ', '.join(role_names))
     print("==== Auxiliary roles (no yaml files, but mentioned in firewall rules) ====\n" + ', '.join(aux_role_names))
+
+
+def agent_console():
+    """Open interactive shell to specific server"""
+    servername = hwswa2.config['servername']
+    server = get_server(servername)
+    if server is None:
+        logger.error("Cannot find server %s in servers list" % servername)
+        sys.exit(1)
+    logger.info("Opening agent console for server %s" % servername)
+    if server.accessible():
+        server.agent_console()
+    else:
+        logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
+        sys.exit(1)
