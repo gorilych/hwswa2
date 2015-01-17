@@ -714,6 +714,18 @@ class LinuxServer(Server):
                     else:
                         return (False, 'wrong result message, should start with result_ok/result_notok: ' + reply)
 
+    def agent_console(self):
+        """Open agent console"""
+        if not self._connect():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
+            status, result = self.agent_cmd('help', interactively=True)
+            if status:
+                return result
+            else:
+                logger.error("Execution of shell failed: %s" % result)
+                return 1
+
     def param_cmd(self, cmd):
         """Execute cmd in prepared environment to obtain some server parameter
 

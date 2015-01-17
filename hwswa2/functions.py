@@ -214,6 +214,10 @@ def read_configuration():
     subparser.add_argument('newreport')
     subparser.set_defaults(subcommand=subcommands.reportdiff)
 
+    subparser = subparsers.add_parser('agent', help="open agent console")
+    subparser.add_argument('servername', metavar='server')
+    subparser.set_defaults(subcommand=subcommands.agent_console)
+
     args = parser.parse_args()
 
     ### Parse configuration file
