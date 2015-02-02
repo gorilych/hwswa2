@@ -7,14 +7,12 @@ from impacket.dcerpc.v5.transport import DCERPCStringBindingCompose, DCERPCTrans
 from impacket.dcerpc.v5 import scmr
 from impacket.smbconnection import SessionError
 
-import hwswa2.server
-from hwswa2.server import Server, ServerException, TimeoutException
+from hwswa2.server import (Server, ServerException, TimeoutException, TIMEOUT,
+                           REBOOT_TIMEOUT)
+
+__all__ = [ 'WindowsServer', 'WindowsServerException', 'TIMEOUT', 'REBOOT_TIMEOUT' ]
 
 logger = logging.getLogger(__name__)
-
-# default timeout value for all operations
-TIMEOUT = hwswa2.server.TIMEOUT
-REBOOT_TIMEOUT = hwswa2.server.REBOOT_TIMEOUT
 
 _agent_pipe_name = 'hwswa2_agent'
 
@@ -200,8 +198,8 @@ class WindowsServer(Server):
         else:
             pipe = self._agent_pipe
             logger.debug('command: ' + cmd)
-            pipe.write(cmd + '\n')
-            reply = pipe.read().strip()
+            pipe.write(cmd)
+            reply = pipe.read()
             logger.debug('accept reply: ' + reply)
             accepted, space, reason = reply.partition(' ')
             if accepted == 'accepted_notok':
@@ -213,7 +211,7 @@ class WindowsServer(Server):
                     return True, None
                 else:
                     logger.debug('command accepted on server %s: %s' % (self, reason))
-                    reply = pipe.read().strip()
+                    reply = pipe.read()
                     logger.debug('result reply: ' + reply)
                     result_status, space, result = reply.partition(' ')
                     if result_status == 'result_ok':
@@ -236,10 +234,10 @@ class NamedPipe(object):
         self._fid = smbconnection.openFile(self._tid, '\\' + name)
 
     def write(self, data):
-        self._smbconnection.writeNamedPipe(self._tid, self._fid, data)
+        self._smbconnection.writeNamedPipe(self._tid, self._fid, data.encode('utf-16le'))
 
     def read(self, bytesToRead=None):
-        return self._smbconnection.readNamedPipe(self._tid, self._fid, bytesToRead)
+        return self._smbconnection.readNamedPipe(self._tid, self._fid, bytesToRead).decode('utf-16le')
 
     def close(self):
         self._smbconnection.closeFile(self._tid, self._fid)
