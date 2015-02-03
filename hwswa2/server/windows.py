@@ -7,6 +7,7 @@ from impacket.dcerpc.v5.transport import DCERPCStringBindingCompose, DCERPCTrans
 from impacket.dcerpc.v5 import scmr
 from impacket.smbconnection import SessionError
 
+import hwswa2
 from hwswa2.server import (Server, ServerException, TimeoutException, TIMEOUT,
                            REBOOT_TIMEOUT)
 
@@ -71,8 +72,18 @@ class WindowsServer(Server):
         else:
             dce.bind(scmr.MSRPC_UUID_SCMR)
             logger.debug('Established connection with %s@%s' % (username, hostname))
+            self._dce = dce
             self._transport = transport
             return True
+
+    def _create_service(self, name, binpath):
+        scManagerHandle = scmr.hROpenSCManagerW(self._dce)['lpScHandle']
+        resp = scmr.hRCreateServiceW(self._dce, scManagerHandle, name + '\x00',
+                                     name + '\x00', lpBinaryPathName=binpath + '\x00')
+        serviceHandle = resp['lpServiceHandle']
+        scmr.hRStartServiceW(self._dce, serviceHandle)
+        scmr.hRCloseServiceHandle(self._dce, serviceHandle)
+        scmr.hRCloseServiceHandle(self._dce, scManagerHandle)
 
     def shell(self, privileged=True):
         """Opens remote cmd session"""
@@ -164,7 +175,11 @@ class WindowsServer(Server):
                 if not self._connect():
                     return False
                 else:
-                    #TODO: add initialization of hwswa2_agent service
+                    wagent_exe = 'wagent-debug.exe' if hwswa2.config['remote_debug'] else 'wagent.exe'
+                    wagent_exe = hwswa2.config['resources'] + os.sep + wagent_exe
+                    wagent_remote_path = 'C:\\wagent.exe'
+                    self.put(wagent_exe, wagent_remote_path)
+                    self._create_service('hwswa2_agent', wagent_remote_path)
                     self._agent_pipe = self.open_pipe(_agent_pipe_name)
                     banner = self._agent_pipe.read()
                     logger.debug("agent started, banner: %s" % banner)
@@ -177,14 +192,11 @@ class WindowsServer(Server):
             else:
                 return True
 
-    def agent_stop(self, destroy=True):
+    def agent_stop(self):
         """Stop remote agent on server"""
         if self._agent_pipe is not None:
             try:
-                if destroy:
-                    self.agent_cmd("stop", wait_result=False)
-                else:
-                    self.agent_cmd("exit", wait_result=False)
+                self.agent_cmd("exit", wait_result=False)
                 self._agent_pipe.close()
             except Exception as e:
                 logger.debug("agent: error closing named pipe, exception %s: %s" %

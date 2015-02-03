@@ -42,8 +42,17 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
 3. Install requirements::
 
    (env)$ pip install -r requirements.txt
-     
-4. Create distribution with pyinstaller
+
+4. Compile hwswa2 windows agent
+
+   https://bitbucket.org/gorilych/hwswa2_wagent
+
+   Both debug and non-debug versions are needed. Copy them into resources directory:
+
+   resources/wagent.exe
+   resources/wagent-debug.exe
+
+5. Create distribution with pyinstaller
 
    .. code:: shell
 
