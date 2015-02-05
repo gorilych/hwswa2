@@ -2,6 +2,7 @@ import ntpath
 import os.path
 import socket
 import logging
+import base64
 
 from impacket.dcerpc.v5.transport import DCERPCStringBindingCompose, DCERPCTransportFactory
 from impacket.dcerpc.v5 import scmr
@@ -16,6 +17,14 @@ __all__ = [ 'WindowsServer', 'WindowsServerException', 'TIMEOUT', 'REBOOT_TIMEOU
 logger = logging.getLogger(__name__)
 
 _agent_pipe_name = 'hwswa2_agent'
+
+
+def encode_arg(arg):
+    return base64.b64encode(arg.encode('utf-16le'))
+
+
+def decode_res(res):
+    return base64.b64decode(res).decode('utf-16le')
 
 
 class WindowsServerException(ServerException):
