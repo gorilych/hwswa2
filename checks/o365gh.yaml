@@ -2,15 +2,3 @@ description: Checks for O365GH role, Office 365 Gateway Host
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common, win.poa.managed.fw, wpe.poa.managed.fw ]
-firewall:
-  - name: gr_tcp_out_frontnet
-    description: Group for outgoing TCP connections in frontnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [frontnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 443,53
-        connect_with: {roles: any }

@@ -14,14 +14,4 @@ firewall:
     rules:
       - ports: 21,1024-65535
         connect_with: {roles: [winweb, winbr]}
-  - name: gr_tcp_out_frontnet
-    description: Group for outgoing TCP connections in frontnet
-    group: yes
-    policy: allow
-    type: internet
-    networks: [frontnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 1299
-        connect_with: {roles: any }
+

@@ -12,29 +12,16 @@ firewall:
     direction: outgoing
     protos: [tcp]
     rules:
-      - ports: 25
-        connect_with: {roles: any }
       - ports: 8352
         connect_with: {roles: [custbackup]}
       - ports: 3306
-        connect_with: {roles: [mysql ]}
+        connect_with: {roles: [mysql]}
       - ports: 5432
-        connect_with: {roles: [pgsql ]}
+        connect_with: {roles: [pgsql]}
       - ports: 1433
         connect_with: {roles: [mssql, mssqlcluster ]}
       - ports: 21,1024-65535
         connect_with: {roles: [awstats]}
-  - name: gr_tcp_out_frontnet
-    description: Group for outgoing TCP connections in frontnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [frontnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 1299
-        connect_with: {roles: any }
   - name: Incoming_from_public
     description: "Allow access to hosting services"
     policy: allow

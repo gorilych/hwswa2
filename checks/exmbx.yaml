@@ -13,6 +13,6 @@ firewall:
     protos: [tcp]
     rules:
       - ports: 81, 444
-        connect_with: {roles: wpesrv }
+        connect_with: {roles: [wpesrv] }
       - ports: 80, 443
         connect_with: {roles: [exmbx, excas]}
