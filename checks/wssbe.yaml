@@ -1,0 +1,4 @@
+description: Checks for WSSBE role, Windows SharePoint Services Content Server
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ common, win.poa.managed.fw ]

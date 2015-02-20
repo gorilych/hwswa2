@@ -1,0 +1,17 @@
+description: Checks for CDIWS role, Customer Active Directory Integration Server
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ common ]
+firewall:
+  - name: gr_tcp_out_backnet
+    description: Group for outgoing TCP connections in backnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 8440 
+        connect_with: {roles: [linmn,winmn]}
+

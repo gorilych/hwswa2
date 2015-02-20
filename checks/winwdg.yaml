@@ -1,0 +1,42 @@
+description: Checks for WINWDG role, server for watchdog
+includes: [ common ]
+firewall:
+  - name: outgoing
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    type: infra
+    protos: [TCP]
+    group: yes
+    rules:
+      - ports: 53
+        protos: [TCP, UDP]
+        connect_with: { roles: [lindns] }
+      - ports: 21,80,443,60000-65534
+        connect_with: { roles: [branding,helb,hewsl,wsng] }
+      - ports: 22,443
+        connect_with: { roles: [pbalinfe] }
+      - ports: 25,110,143
+        connect_with: { roles: [linmailsh] }
+      - ports: 443
+        connect_with: { roles: [wm] }
+      - ports: 110,143,443
+        connect_with: { roles: [excas] }
+      - ports: 25
+        connect_with: { roles: [exhub] }
+      - ports: 21,80,443,1024-65534
+        connect_with: { roles: [cf, winweb] }
+      - ports: 80
+        connect_with: { roles: [mssqldataadm] }
+      - ports: 1299
+        connect_with: { roles: [filemanager,winweb] }
+      - ports: 8080
+        connect_with: { roles: [ui] }
+      - ports: 22
+        connect_with: { roles: [common] }
+      - ports: 3306
+        connect_with: { roles: [mysql] }
+      - ports: 5432
+        connect_with: { roles: [linmn,pgsql] }
+      - ports: 1433
+        connect_with: { roles: [winmn,mssql] }

@@ -1,0 +1,16 @@
+description: Checks for WINDNS role, MS DNS Servers
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ common, win.poa.managed.fw, wpe.poa.managed.fw ]
+firewall:
+  - name: Incoming_from_public
+    description: "Allow access to DNS service"
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 53
+    type: internet
+    connect_with:
+      hosts: any
+

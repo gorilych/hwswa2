@@ -1,0 +1,51 @@
+description: Checks for VZWIN role, VPS Hardware Node
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ common ]
+firewall:
+  - name: gr_tcp_out_backnet
+    description: Group for outgoing TCP connections in backnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 80, 16384, 49152-65534
+        connect_with: {roles: linmn }
+      - ports: 8082 
+        connect_with: {roles: [winmn]}
+      - ports: 20, 21, 22, 25, 80, 110
+        connect_with: {roles: [vzwinbu,vzwin ]}
+      - ports: 8008
+        connect_with: {roles: [ linpps,winpps ]}
+  - name: gr_tcp_out_frontnet
+    description: Group for outgoing TCP connections in frontnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [frontnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 53
+        connect_with: {roles: any }
+  - name: vzwinupdate
+    description: allow access to parallels repositories
+    policy: allow
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    type: internet
+    ports: 80
+    connect_with: {hosts: [vzwinupdate.parallels.com ]}
+  - name: ka_parallels_com
+    description: allow access to parallels key server
+    policy: allow
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    type: internet
+    ports: 5224
+    connect_with: {hosts: [ ka.parallels.com ]}

@@ -1,0 +1,34 @@
+description: Checks for PBALINOS role, Windows PBA online store
+includes: [ common ]
+firewall:
+  - name: Outgoing_to_PBA
+    description: Allow access from Online Store to PBA API
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    protos: [TCP]
+    ports: 5224
+    type: infra
+    connect_with:
+      roles: [pbalinfe,pbawinfe]
+  - name: Incoming_from_PBA
+    description: Allow access to Online Store from PBA
+    policy: allow
+    direction: incoming
+    networks: [backnet]
+    protos: [TCP]
+    ports: 80,443
+    type: infra
+    connect_with:
+      roles: [pbalinfe,pbawinfe]
+  - name: Incoming_to_PBAWINOS
+    description: Allow access to Online Store
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443
+    type: internet
+    connect_with:
+      hosts: any
+

@@ -1,0 +1,47 @@
+description: Checks for WINWEB role,  Windows Web Server
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ common, win.poa.managed.fw, wpe.poa.managed.fw ]
+firewall:
+  - name: gr_tcp_out_backnet
+    description: Group for outgoing TCP connections in backnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 25
+        connect_with: {roles: any }
+      - ports: 8352
+        connect_with: {roles: [custbackup]}
+      - ports: 3306
+        connect_with: {roles: [mysql ]}
+      - ports: 5432
+        connect_with: {roles: [pgsql ]}
+      - ports: 1433
+        connect_with: {roles: [mssql, mssqlcluster ]}
+      - ports: 21,1024-65535
+        connect_with: {roles: [awstats]}
+  - name: gr_tcp_out_frontnet
+    description: Group for outgoing TCP connections in frontnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [frontnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 1299
+        connect_with: {roles: any }
+  - name: Incoming_from_public
+    description: "Allow access to hosting services"
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 80,443,21,1299,1024-65535
+    type: internet
+    connect_with:
+      hosts: any

@@ -1,0 +1,33 @@
+description: Firewall rules for POA managed server
+firewall:
+  - name: Incoming_from_MN
+    description: Allow connections to pleskd from POA MN
+    # policy: allow/deny
+    policy: allow
+    # direction: incoming/outgoing
+    direction: incoming
+    networks: [backnet]
+    # proto: TCP/UDP/ICMP
+    protos: [TCP]
+    # ports: 22,53,80,443,2000-2100 - comma-separated, no spaces
+    # type: infra/internet
+    group: yes
+    type: infra
+    rules:
+      - ports: 8352-8439,8441-8500
+        connect_with: {roles: [winmn,linmn]}
+      - ports: 389,88,53,3268,3269
+        connect_with: {roles: [ad]}
+      - ports: 123
+        protos: [udp]
+        connect_with: {roles: [ad]}
+  - name: Outgoing_to_WinMN
+    description: Allow connections to MN
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    protos: [TCP]
+    ports: 8352-8439,8441-8500,8082
+    type: infra
+    connect_with:
+      roles: [linmn,winmn]
