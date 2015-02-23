@@ -108,11 +108,50 @@ class WindowsServer(Server):
 
     def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
         """Executes command and returns tuple of stdout, stderr and status"""
-        raise NotImplementedError
+        timeout = timeout or TIMEOUT
+        logger.debug("Executing on %s: %s" % (self, cmd))
+        if not self._connect():
+            raise WindowsServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        else:
+            if not self.agent_start():
+                logger.error("Failed to start agent on %s" % self)
+                raise WindowsServerException("Failed to start agent on %s" % self)
+            else:
+                if input_data:
+                    acmd = ('exec_in ' + encode_arg(cmd) + ' ' +
+                            encode_arg(input_data) + ' ' + str(timeout))
+                elif cmd.startswith('cmd|'):
+                    acmd = ('exec_cmd ' + encode_arg(cmd[4:]) + ' ' + str(timeout))
+                elif cmd.startswith('ps|'):
+                    acmd = ('exec_pse ' + encode_arg(cmd[3:]) + ' ' + str(timeout))
+                else:
+                    acmd = ('exec ' + encode_arg(cmd) + ' ' + str(timeout))
+                status, result = self.agent_cmd(acmd)
+                # result is "[reason:<reason of failure>] \
+                # returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
+                logger.debug("exec_cmd result %s" % result)
+                result = dict([r.split(':') for r in result.split(' ')])
+                if status:
+                    return (decode_res(result['stdout']),
+                            decode_res(result['stderr']),
+                            int(result['returncode']))
+                else:
+                    reason = decode_res(result.get('reason'))
+                    if reason == 'timeout':
+                        raise TimeoutException("Timeout during execution of %s" % cmd,
+                                               output=decode_res(result['stdout']),
+                                               stderr=decode_res(result['stderr']))
+                    else:
+                        raise WindowsServerException("Execution of %s failed: %s" % (cmd, reason))
 
     def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
         """Returns command output (stdout)"""
-        raise NotImplementedError
+        timeout = timeout or TIMEOUT
+        stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout)
+        # remove last trailing newline
+        if len(stdout_data) > 0 and stdout_data[-1] == '\n':
+            stdout_data = stdout_data[:-1]
+        return stdout_data
 
     def remove(self, path, privileged=True):
         """Removes file/directory"""
