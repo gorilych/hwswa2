@@ -153,6 +153,22 @@ class WindowsServer(Server):
             stdout_data = stdout_data[:-1]
         return stdout_data
 
+    def param_cmd(self, cmd):
+        """Execute cmd in prepared environment to obtain some server parameter
+
+        :param cmd: raw command to execute
+        :return: (status, output, failure)
+        """
+        if not self.agent_start():
+            return False, None, "Agent is not started on the server"
+        try:
+            output = self.get_cmd_out(cmd)
+        except TimeoutException as te:
+            output = te.details.get('output')
+            return False, output, "Timeout exception: %s" % te
+        else:
+            return True, output, None
+
     def remove(self, path, privileged=True):
         """Removes file/directory"""
         raise NotImplementedError
