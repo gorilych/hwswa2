@@ -162,9 +162,9 @@ class WindowsServer(Server):
         if not self.agent_start():
             return False, None, "Agent is not started on the server"
         try:
-            output = self.get_cmd_out(cmd)
+            output = self.get_cmd_out(cmd).strip()
         except TimeoutException as te:
-            output = te.details.get('output')
+            output = te.details.get('output').strip()
             return False, output, "Timeout exception: %s" % te
         else:
             return True, output, None
@@ -224,6 +224,8 @@ class WindowsServer(Server):
 
     def cleanup(self):
         if self._transport is not None:
+            if self._agent_pipe is not None:
+                self.agent_stop()
             self._transport.disconnect()
             self._transport = None
             logger.debug("Closed connection to  %s" % self)
