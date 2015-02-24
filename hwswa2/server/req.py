@@ -98,8 +98,9 @@ def _find_template(name, reqs):
                 if jr.name == name:
                     rs.append(jr)
     if not rs:
-        if name.startswith('/'):
-            #guessing compare type by name as disk
+        #guessing compare type by name as disk
+        if (name.startswith('/') or  # /, /usr, /var
+            name[1] == ':'):         # C:, D:, E:, C:\logs
             return ('disk', None, None)
         else:
             return (None, None, None)
