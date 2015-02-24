@@ -122,6 +122,8 @@ parameters:
                        Write-Host -Separator "|" $i $prefix}
 requirements:
   OS: {type: regex, value-example: 'Microsoft Windows Server', join-rule: and}
+  Activation: Licensed
+  dns_check: {parameter: 'network:dns_check', type: eq, value: OK}
   architecture: 64-bit
   ram(GB): {type: ge, value-example: 0.5, join-rule: sum}
   swap(GB): {type: ge, value-example: 1, join-rule: sum}
