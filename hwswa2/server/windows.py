@@ -3,10 +3,12 @@ import os.path
 import socket
 import logging
 import base64
+import time
 
 from impacket.dcerpc.v5.transport import DCERPCStringBindingCompose, DCERPCTransportFactory
 from impacket.dcerpc.v5 import scmr
 from impacket.smbconnection import SessionError
+from impacket import system_errors
 
 import hwswa2
 from hwswa2.server import (Server, ServerException, TimeoutException, TIMEOUT,
@@ -85,8 +87,23 @@ class WindowsServer(Server):
             self._transport = transport
             return True
 
-    def _create_service(self, name, binpath):
+    def _create_service(self, name, binpath, exefile=None):
         scManagerHandle = scmr.hROpenSCManagerW(self._dce)['lpScHandle']
+        try:  # check if service exists
+            resp = scmr.hROpenServiceW(self._dce, scManagerHandle, name + '\x00')
+        except Exception, e:
+            if e.get_error_code() == system_errors.ERROR_SERVICE_DOES_NOT_EXIST:
+                pass
+            else:
+                raise
+        else:  # service exists, stop it and it will remove itself
+            logger.debug("service %s exists, removing" % name)
+            scmr.hRControlService(self._dce, resp['lpServiceHandle'],
+                                  scmr.SERVICE_CONTROL_STOP)
+            scmr.hRCloseServiceHandle(self._dce, resp['lpServiceHandle'])
+            time.sleep(0.1)
+        if exefile is not None:
+            self.put(exefile, binpath)
         resp = scmr.hRCreateServiceW(self._dce, scManagerHandle, name + '\x00',
                                      name + '\x00', lpBinaryPathName=binpath + '\x00')
         serviceHandle = resp['lpServiceHandle']
@@ -244,8 +261,7 @@ class WindowsServer(Server):
                     wagent_exe = 'wagent-debug.exe' if hwswa2.config['remote_debug'] else 'wagent.exe'
                     wagent_exe = hwswa2.config['resources'] + os.sep + wagent_exe
                     wagent_remote_path = 'C:\\wagent.exe'
-                    self.put(wagent_exe, wagent_remote_path)
-                    self._create_service('hwswa2_agent', wagent_remote_path)
+                    self._create_service('hwswa2_agent', wagent_remote_path, wagent_exe)
                     self._agent_pipe = self.open_pipe(_agent_pipe_name)
                     banner = self._agent_pipe.read()
                     logger.debug("agent started, banner: %s" % banner)
