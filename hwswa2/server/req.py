@@ -389,9 +389,9 @@ class DiskReq(_BaseReq):
             if req_size >= msize:
                 self.compare_result_reason = (
                     "disk space: required: " +
-                    ' '.join(["{}({})".format(p,path_size[p]) 
+                    ' '.join(["{0}({1})".format(p,path_size[p]) 
                               for p in mount_paths[m]]) +
-                    " > actual: {}({})".format(m,msize))
+                    " > actual: {0}({1})".format(m,msize))
                 return False
         return True
                 
