@@ -32,6 +32,7 @@ configspec['rscriptdir'] = "string(default='" + _apppath + os.sep + "checks" + o
 configspec['debug'] = 'boolean(default=False)'
 configspec['remote_debug'] = 'boolean(default=False)'
 configspec['ssh_timeout'] = 'integer(0,7200,default=30)'
+configspec['win_timeout'] = 'integer(0,7200,default=100)'
 configspec['reboot_timeout'] = 'integer(5,7200,default=300)'
 configspec['firewall'] = {
     'send_timeout': 'float(0, 99, default=1)',

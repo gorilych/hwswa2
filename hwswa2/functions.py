@@ -246,7 +246,10 @@ def read_configuration():
 
     # set global ssh and reboot timeouts
     import hwswa2.server.linux
+    import hwswa2.server.windows
     import hwswa2.server
     hwswa2.server.linux.TIMEOUT = hwswa2.config['ssh_timeout']
+    hwswa2.server.windows.TIMEOUT = hwswa2.config['win_timeout']
     hwswa2.server.linux.REBOOT_TIMEOUT = hwswa2.config['reboot_timeout']
+    hwswa2.server.windows.REBOOT_TIMEOUT = hwswa2.config['reboot_timeout']
     hwswa2.server.REBOOT_TIMEOUT = hwswa2.config['reboot_timeout']

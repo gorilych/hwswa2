@@ -42,11 +42,12 @@ class WindowsServer(Server):
         self._param_binpath = None
         self._agent_pipe = None
 
-    def _connect(self, reconnect=False, timeout=TIMEOUT):
+    def _connect(self, reconnect=False, timeout=None):
         """Connect to server
         
         Return True on success 
         """
+        timeout = timeout or TIMEOUT
         if self._transport is not None:
             if reconnect:
                 try:
@@ -119,11 +120,11 @@ class WindowsServer(Server):
         """Checks if server is accessible and manageable"""
         return self._connect(reconnect=retry)
 
-    def exec_cmd_i(self, cmd, privileged=True, timeout=TIMEOUT, get_pty=False):
+    def exec_cmd_i(self, cmd, privileged=True, timeout=None, get_pty=False):
         """Executes command interactively"""
         raise NotImplementedError
 
-    def exec_cmd(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
+    def exec_cmd(self, cmd, input_data=None, timeout=None, privileged=True):
         """Executes command and returns tuple of stdout, stderr and status"""
         timeout = timeout or TIMEOUT
         logger.debug("Executing on %s: %s" % (self, cmd))
@@ -161,7 +162,7 @@ class WindowsServer(Server):
                     else:
                         raise WindowsServerException("Execution of %s failed: %s" % (cmd, reason))
 
-    def get_cmd_out(self, cmd, input_data=None, timeout=TIMEOUT, privileged=True):
+    def get_cmd_out(self, cmd, input_data=None, timeout=None, privileged=True):
         """Returns command output (stdout)"""
         timeout = timeout or TIMEOUT
         stdout_data, stderr_data, status = self.exec_cmd(cmd, input_data, timeout=timeout)
