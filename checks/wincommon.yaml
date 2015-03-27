@@ -84,22 +84,24 @@ parameters:
                   Catch {Write-Host "NOT OK"}
     network_interfaces:
       _type: list
-      _generator: {name: name}
-      name: ps|$adapters = gwmi win32_networkadapterconfiguration 
-                           | Where { $_.IPAddress -and 
+      _generator: {index: index}
+      index: ps|$adapters = gwmi win32_networkadapterconfiguration
+                           | Where { $_.IPAddress -and
                                      $_.Description -ne "WAN Miniport (Network Monitor)"};
-               foreach($a in $adapters){$a.Description}
-      hwaddr: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Description -eq "%(name)s"};
+               foreach($a in $adapters){$a.Index}
+      name: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
+               $adapter.Description
+      hwaddr: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
                  $adapter.MACAddress
-      gateway: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Description -eq "%(name)s"};
+      gateway: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
                   $adapter.DefaultIPGateway[0]
-      DHCPEnabled: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Description -eq "%(name)s"};
+      DHCPEnabled: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
                       $adapter.DHCPEnabled
       ip:
         _type: table
         _fields: [address, prefix]
         _separator: '|'
-        _command: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Description -eq "%(name)s"};
+        _command: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
                      $ips = @($adapter.IPAddress);
                      $subnets = @($adapter.IPSubnet);
                      0..($ips.count-1) | foreach {
