@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from hwswa2.server import Server, ServerException
 from hwswa2.server.linux import LinuxServer
 from hwswa2.server.windows import WindowsServer
+import hwswa2.server.role
 
 __all__ = ['get_server', 'server_names', 'servers_context']
 
@@ -56,22 +57,30 @@ def server_factory(serverdict):
     global _servers, _servers_to_init_later
 
     name = serverdict['name']
-    logger.debug("Trying to init server object %s" % name)
 
     if 'gateway' in serverdict:
         gwname = serverdict['gateway']
         if gwname in _servers:
-            logger.debug("Already have gateway %s" % gwname)
             serverdict['gateway'] = _servers[gwname]
         else:
-            logger.debug("Will postpone gateway setup, we are waiting for server %s" % gwname)
             if name not in _servers_to_init_later:
                 _servers_to_init_later[name] = {}
             _servers_to_init_later[name]['gateway'] = gwname
 
-    # fall back to linux - default ostype
     if 'ostype' not in serverdict:
-        serverdict['ostype'] = 'linux'
+        # try to get ostype from roles
+        rolenames = serverdict.get('role')
+        if rolenames is not None:
+            if not isinstance(rolenames, list):
+                rolenames = [rolenames, ]
+            for rolename in rolenames:
+                role = hwswa2.server.role.role_factory(rolename)
+                if role.ostype is not None:
+                    serverdict['ostype'] = role.ostype
+                    break
+        if 'ostype' not in serverdict:  # didn't find in roles
+            # fall back to linux - default ostype
+            serverdict['ostype'] = 'linux'
 
     try:
         if serverdict['ostype'] == 'linux':
@@ -85,8 +94,6 @@ def server_factory(serverdict):
         return None
 
     _servers[name] = server
-    if not name in _servers_to_init_later:
-        logger.debug("Finished initialization of server %s" % name)
 
     # now check if new server blocks previous server initialization:
     for sname, reasons in _servers_to_init_later.iteritems():
@@ -96,8 +103,6 @@ def server_factory(serverdict):
                 so = _servers[sname]
                 so.gateway = server
                 del reasons['gateway']
-        if not reasons:  # no more reasons?
-            logger.debug("Finished initialization of server %s" % sname)
 
     # remove servers with empty reasons
     _servers_to_init_later = dict([(n, r) for n, r in _servers_to_init_later.iteritems() if r])

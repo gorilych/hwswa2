@@ -1,4 +1,5 @@
-description: Common checks for all roles
+description: Common checks for all linux roles
+ostype: linux
 parameters:
   hostname:           hostname -f 2>/dev/null || hostname
   time_utc:           LANG=C date --utc

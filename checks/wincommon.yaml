@@ -1,4 +1,5 @@
 description: Common checks for all windows roles
+ostype: windows
 parameters:
   hostname: ps|hostname
   sid: ps|(gwmi Win32_UserAccount
