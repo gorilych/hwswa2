@@ -11,6 +11,7 @@ parameters:
                         $sysuptime.minutes "minutes" $sysuptime.seconds "seconds"
   OS: ps|(gwmi Win32_OperatingSystem).Caption
   SP_level: ps|(gwmi Win32_OperatingSystem).CSDVersion
+  OS_SP: ps|(gwmi Win32_OperatingSystem).Caption + (gwmi Win32_OperatingSystem).CSDVersion
   OSLanguage: ps|[System.Globalization.CultureInfo]::InstalledUICulture.Name
   architecture: ps|(gwmi Win32_OperatingSystem).OSArchitecture
   Activation: ps|Function ActivationStatus($code) {switch($code)
@@ -73,6 +74,7 @@ parameters:
                             | Select-Object -Property Caption, Label, FileSystem, $TotalGB, $FreeGB;
                  foreach($v in $volumes) {
                    Write-Host -Separator "|" $v.Caption $v.Label $v.FileSystem $v.Capacity $v.Free}
+  updates_number: ps|@(gwmi win32_quickfixengineering).count
   updates:
     _type: table
     _fields: [id, description, install_date]
@@ -125,7 +127,7 @@ parameters:
                        else {$prefix = $s}
                        Write-Host -Separator "|" $i $prefix}
 requirements:
-  OS: {type: regex, value-example: 'Microsoft Windows Server', join-rule: and}
+  OS_SP: {type: regex, value-example: 'Microsoft Windows Server', join-rule: and}
   Activation: Licensed
   dns_check: {parameter: 'network:dns_check', type: eq, value: OK}
   architecture: 64-bit
