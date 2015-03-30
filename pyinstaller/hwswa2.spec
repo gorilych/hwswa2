@@ -5,6 +5,8 @@ a = Analysis(['hwswa2.py'],
              hookspath=None,
              runtime_hooks=None)
 pyz = PYZ(a.pure)
+a.datas += [('wagent.exe','resources/wagent.exe','DATA'),
+            ('wagent-debug.exe','resources/wagent-debug.exe','DATA')]
 exe = EXE(pyz,
           a.scripts,
           a.binaries,

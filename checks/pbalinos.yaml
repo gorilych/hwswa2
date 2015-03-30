@@ -31,4 +31,11 @@ firewall:
     type: internet
     connect_with:
       hosts: any
+requirements:
+  OS: '(CentOS|RedHat).* 6\.5'
+  ram(GB): 1
+  swap(GB): 2
+  cpu-frequency: 2.3
+  /boot: 0.2
+  /: 100
 

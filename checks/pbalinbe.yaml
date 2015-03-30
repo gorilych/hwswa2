@@ -11,4 +11,11 @@ firewall:
     type: infra
     connect_with:
       roles: [pbalinfe]
-
+requirements:
+  OS: '(CentOS|RedHat).* 6\.5'
+  ram(GB): 8
+  swap(GB): 16
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  /boot: 0.2
+  /: 130

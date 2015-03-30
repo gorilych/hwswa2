@@ -74,6 +74,17 @@ class Role(object):
         return self.data.get('description')
 
     @property
+    def ostype(self):
+        if not hasattr(self, '_ostype'):
+            self._ostype = self.data.get('ostype')
+            if self._ostype is None:  # not in data? 
+                for role in self.includes:  # try to find in included roles
+                    if role.ostype is not None:
+                        self._ostype = role.ostype
+                        break  # use the first found ostype
+        return self._ostype
+
+    @property
     def includes(self):
         if not hasattr(self, '_includes'):
             logger.debug("Postponed initialization of included roles for %s started" % self)

@@ -4,5 +4,6 @@ argparse==1.2.1
 configobj==5.0.4
 paramiko
 pexpect==3.2
+impacket
 ipcalc
 validate
