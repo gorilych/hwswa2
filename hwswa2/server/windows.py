@@ -97,12 +97,24 @@ class WindowsServer(Server):
                 pass
             else:
                 raise
-        else:  # service exists, stop it and it will remove itself
+        else:  # service exists, try to stop it and it will remove itself
             logger.debug("service %s exists, removing" % name)
-            scmr.hRControlService(self._dce, resp['lpServiceHandle'],
-                                  scmr.SERVICE_CONTROL_STOP)
+            try:
+                scmr.hRControlService(self._dce, resp['lpServiceHandle'],
+                                      scmr.SERVICE_CONTROL_STOP)
+            except Exception, e:
+                logger.debug("failed to stop %s, exception %s: %s" %
+                             (name, type(e).__name__, e.args), exc_info=True)
+                pass
+            # try to delete it
+            try:
+                scmr.hRDeleteService(self._dce, resp['lpServiceHandle'])
+            except Exception, e:
+                logger.debug("failed to delete %s, exception %s: %s" %
+                             (name, type(e).__name__, e.args), exc_info=True)
+                pass
             scmr.hRCloseServiceHandle(self._dce, resp['lpServiceHandle'])
-            time.sleep(0.1)
+            time.sleep(1)  # give it a time to vanish
         if exefile is not None:
             self.put(exefile, binpath)
         resp = scmr.hRCreateServiceW(self._dce, scManagerHandle, name + '\x00',
