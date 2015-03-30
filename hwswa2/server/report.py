@@ -245,11 +245,11 @@ class Report(object):
                             nic_ips.append(res_str)
                         print('nics, ' + ' | '.join(nic_ips))
             if 'requirement_failures' in report:
-                print('  Requirement FAILURES')
+                print('  Requirement FAILURES (role:req: reason)')
                 for failure in report['requirement_failures']:
                     print failure
             if 'requirement_successes' in report:
-                print('  Requirement successes')
+                print('  Requirement successes (role:req)')
                 for success in report['requirement_successes']:
                     print success
   
