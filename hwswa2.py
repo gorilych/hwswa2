@@ -8,8 +8,9 @@ from hwswa2.functions import read_configuration, read_servers, read_networks, ru
 
 
 def init_logger():
-    if not os.path.exists(os.path.dirname(hwswa2.config['logfile'])):
-        os.makedirs(os.path.dirname(hwswa2.config['logfile']))
+    logdir = os.path.dirname(os.path.abspath(hwswa2.config['logfile']))
+    if not os.path.exists(logdir):
+        os.makedirs(logdir)
     logging.basicConfig(filename=hwswa2.config['logfile'], filemode='a', level=logging.INFO,
                         format="%(asctime)s %(levelname)s " +
                                "[%(threadName)s:%(name)s.%(funcName)s():%(lineno)d] " +
