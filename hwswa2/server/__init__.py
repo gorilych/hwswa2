@@ -342,7 +342,7 @@ class Server(object):
                     if result:
                         self.requirement_successes.append(str(req))
                     else:
-                        self.requirement_failures.append(reason)
+                        self.requirement_failures.append(str(req) + ': ' + reason)
             self.param_check_status = "finished"
 
     def prepare_and_save_report(self, rtime=None):

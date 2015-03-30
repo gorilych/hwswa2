@@ -271,7 +271,11 @@ class EqualReq(_BaseReq):
     compare_type = 'eq'
 
     def _compare(self, value):
-        return value == self.value
+        if not value == self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class NotEqualReq(_BaseReq):
@@ -279,7 +283,11 @@ class NotEqualReq(_BaseReq):
     compare_type = 'neq'
 
     def _compare(self, value):
-        return value != self.value
+        if not value != self.value:
+            self.compare_result_reason = "actual value: %s" % value 
+            return False
+        else:
+            return True
 
 
 class LessThenReq(_BaseReq):
@@ -287,7 +295,11 @@ class LessThenReq(_BaseReq):
     compare_type = 'lt'
 
     def _compare(self, value):
-        return value < self.value
+        if not value < self.value:
+            self.compare_result_reason = "actual value: %s" % value 
+            return False
+        else:
+            return True
 
 
 class LessEqualReq(_BaseReq):
@@ -295,7 +307,11 @@ class LessEqualReq(_BaseReq):
     compare_type = 'le'
 
     def _compare(self, value):
-        return value <= self.value
+        if not value <= self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class GreaterThenReq(_BaseReq):
@@ -303,7 +319,11 @@ class GreaterThenReq(_BaseReq):
     compare_type = 'gt'
 
     def _compare(self, value):
-        return value > self.value
+        if not value > self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class GreaterEqualReq(_BaseReq):
@@ -311,7 +331,11 @@ class GreaterEqualReq(_BaseReq):
     compare_type = 'ge'
 
     def _compare(self, value):
-        return value >= self.value
+        if not value >= self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class RegexReq(_BaseReq):
@@ -328,7 +352,11 @@ class RegexReq(_BaseReq):
         return param_value
 
     def _compare(self, value):
-        return self.pattern.match(value)
+        if not self.pattern.match(value):
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class DiskReq(_BaseReq):
@@ -384,16 +412,19 @@ class DiskReq(_BaseReq):
             mount_req_size[m] += psize
             mount_paths.setdefault(m, [])
             mount_paths[m].append(p)
+        self.compare_result_reason = ''
+        result = True
         for (m, req_size) in mount_req_size.iteritems():
             msize = mount_size[m]
             if req_size >= msize:
-                self.compare_result_reason = (
-                    "disk space: required: " +
-                    ' '.join(["{0}({1})".format(p,path_size[p]) 
+                if len(self.compare_result_reason) > 0:
+                    self.compare_result_reason += ' | '
+                self.compare_result_reason += (
+                    '+'.join(["{0}({1})".format(p,path_size[p]) 
                               for p in mount_paths[m]]) +
                     " > actual: {0}({1})".format(m,msize))
-                return False
-        return True
+                result = False
+        return result
                 
 
     @classmethod
