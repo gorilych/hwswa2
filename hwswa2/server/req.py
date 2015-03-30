@@ -65,7 +65,9 @@ def _req_factory(name, role, body, incl_reqs):
         parameter = body.get('parameter', None)
         value = body.get('value', None)
         (t_compare_type, t_join_rule, t_parameter) = _find_template(name, incl_reqs)
-        if t_compare_type is not None and compare_type != t_compare_type:
+        if t_compare_type == 'manual':
+            compare_type = 'manual'
+        if compare_type != 'manual' and t_compare_type is not None and compare_type != t_compare_type:
             raise ReqException("different compare types for req %s exist: %s and %s" % (name, compare_type, t_compare_type))
         if join_rule is not None:
             if t_join_rule is not None and join_rule != t_join_rule:
@@ -107,7 +109,11 @@ def _find_template(name, reqs):
     compare_type = rs[0].compare_type
     join_rule = rs[0].join_rule
     parameter = rs[0].parameter
+    if compare_type == 'manual':
+        return (compare_type, None, None)
     for r in rs:
+        if r.compare_type == 'manual':
+            return ('manual', None, None)
         if r.compare_type != compare_type:
             raise ReqException("different compare types for req %s exist" % name)
         if r.join_rule != join_rule:
@@ -130,11 +136,11 @@ class _BaseReq(object):
 
     def __str__(self):
         if self.istemplate():
-            return "req tmpl: %s %s X" % (self.name, self.compare_type)
+            return "tmpl: %s %s X" % (self.name, self.compare_type)
         elif self.joined:
-            return "req: %s %s %s (joined from %s)" % (self.name, self.compare_type, self.value, map(str, self.joined_from))
+            return "%s %s %s (joined from %s)" % (self.name, self.compare_type, self.value, map(str, self.joined_from))
         else:
-            return "req: %s:%s %s %s" % (self.role, self.name, self.compare_type, self.value)
+            return "%s:%s %s %s" % (self.role, self.name, self.compare_type, self.value)
 
     def __repr__(self):
         return "<Req " + self.name + ">"
@@ -265,6 +271,20 @@ class _BaseReq(object):
             self.compare_result_reason = str(self)
         return (result, self.compare_result_reason)
     
+
+
+class ManualReq(_BaseReq):
+    compare_type = 'manual'
+
+    def __str__(self):
+        return "%s:%s %s" % (self.role, self.name, self.compare_type)
+
+    def istemplate(self):
+        return False
+
+    def check(self, parameters):
+        self.compare_result_reason = self.value or "Check manually, too complex to automate"
+        return (False, self.compare_result_reason)
 
 
 class EqualReq(_BaseReq):
