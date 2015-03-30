@@ -31,3 +31,10 @@ firewall:
     type: internet
     connect_with:
       hosts: [apscatalog.com]
+requirements:
+  OS: '(CentOS|RedHat).* 6\.'
+  ram(GB): 0.5
+  swap(GB): 1
+  cpu-cores: 1
+  cpu-frequency: 2
+  /: 40
