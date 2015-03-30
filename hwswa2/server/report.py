@@ -236,7 +236,8 @@ class Report(object):
                         for nic in network_interfaces:
                             res_str = nic['name']
                             for ip in nic['ip']:
-                                res_str += ' ' + ip['address'] + '/' + ip['network']
+                                if ip['address'].find(':') == -1:  # filter out IPv6 addresses
+                                    res_str += ' ' + ip['address'] + '/' + ip['network']
                             nic_ips.append(res_str)
                         print('nics, ' + ' | '.join(nic_ips))
             if 'requirement_failures' in report:
