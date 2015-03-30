@@ -132,3 +132,11 @@ requirements:
   /home:
     type: disk
     value-example: 5
+  yum_repos:
+    type: neq
+    value: ''
+  tmp_noexec: OK
+  dns:
+    type: eq
+    parameter: network:dns_check
+    value: OK
