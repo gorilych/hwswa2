@@ -11,6 +11,7 @@ parameters:
                         $sysuptime.minutes "minutes" $sysuptime.seconds "seconds"
   OS: ps|(gwmi Win32_OperatingSystem).Caption
   SP_level: ps|(gwmi Win32_OperatingSystem).CSDVersion
+  OSLanguage: ps|[System.Globalization.CultureInfo]::InstalledUICulture.Name
   architecture: ps|(gwmi Win32_OperatingSystem).OSArchitecture
   Activation: ps|Function ActivationStatus($code) {switch($code)
                      { 0 {"Unlicensed"}; 1 {"Licensed"}; 2 {"Out-Of-Box Grace Period"};
