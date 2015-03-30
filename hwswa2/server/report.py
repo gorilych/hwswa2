@@ -71,16 +71,18 @@ class Report(object):
         except (TypeError, KeyError):
             pass
         else:
-            for nic in nics:
-                ips = nic['ip']
-                for ip in ips:
-                    ip_a = ip['address']
-                    ip_p = ip['prefix']
-                    n_a = "%s" % Network(ip_a + '/' + ip_p).network()
-                    ip['network'] = next((n['name'] for n in networks 
-                                          if "%s" % n['prefix'] == ip_p 
-                                          and n['address'] == n_a),
-                                         n_a + '/' + ip_p)
+            if hasattr(nics, '__iter__'):
+                for nic in nics:
+                    ips = nic['ip']
+                    if hasattr(ips, '__iter__'):
+                        for ip in ips:
+                            ip_a = ip['address']
+                            ip_p = ip['prefix']
+                            n_a = "%s" % Network(ip_a + '/' + ip_p).network()
+                            ip['network'] = next((n['name'] for n in networks 
+                                                  if "%s" % n['prefix'] == ip_p
+                                                  and n['address'] == n_a),
+                                                 n_a + '/' + ip_p)
 
     def get_nw_ips(self):
         """Obtains network -> ip dict from report"""
@@ -108,9 +110,13 @@ class Report(object):
         except KeyError:
             pass
         else:
-            for nic in interfaces:
-                for ip in nic['ip']:
-                    ip_nw_nic.append({'ip': ip['address'], 'nw': ip['network'], 'nic': nic['name']})
+            if hasattr(interfaces, '__iter__'):
+                for nic in interfaces:
+                    if hasattr(nic['ip'], '__iter__'):
+                        for ip in nic['ip']:
+                            ip_nw_nic.append({'ip': ip['address'],
+                                              'nw': ip['network'],
+                                              'nic': nic['name']})
         return ip_nw_nic
 
     def check_expect(self, expect=None):
