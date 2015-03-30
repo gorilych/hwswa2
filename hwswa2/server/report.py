@@ -191,10 +191,12 @@ class Report(object):
                 print('  Parameters')
                 parameters = copy.deepcopy(report['parameters'])
                 # trying to print in pretty order
-                for key in ['hostname', 'OS', 'architecture', 'processors', 'ram(GB)', 'swap(GB)',
-                            'partitions', 'blockdevs', 'time', 'time_utc',
-                            'ntp_service_status', 'uptime', 'iptables', 'selinux',
-                            'yum_repos', 'umask']:
+                skip_keys = ['OS_SP', 'updates_number', 'umask', 'time_utc',
+                             'ntp_service_status', 'uptime', 'tmp_noexec']
+                for key in ['hostname', 'OS', 'SP_level', 'OSLanguage',
+                            'Activation', 'architecture', 'processors',
+                            'ram(GB)', 'swap(GB)', 'partitions', 'blockdevs',
+                            'time', 'iptables', 'selinux', 'yum_repos']:
                     if key in parameters:
                         val = parameters[key]
                         if isinstance(val, (type(None), str, unicode, int, float, bool)):
@@ -219,6 +221,8 @@ class Report(object):
                         del parameters[key]
                 # print all the rest (scalars only)
                 for key in parameters:
+                    if key in skip_keys:
+                        continue
                     val = parameters[key]
                     if isinstance(val, (type(None), str, unicode, int, float, bool)):
                         print(key + ', ' + str(val))
