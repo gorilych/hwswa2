@@ -390,6 +390,7 @@ def shell(sh=None):
         sh='/bin/bash'
     # sometimes SHELL will contain path to serverd.py and this will break `less`
     os.environ['SHELL'] = sh
+    os.environ['TERM'] = 'xterm'
     exec_i(sh)
 
 
