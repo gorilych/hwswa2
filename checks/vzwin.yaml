@@ -1,7 +1,7 @@
 description: Checks for VZWIN role, VPS Hardware Node
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common ]
+includes: [ wincommon ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet

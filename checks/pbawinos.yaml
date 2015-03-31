@@ -1,5 +1,5 @@
 description: Checks for PBALINOS role, Windows PBA online store
-includes: [ common ]
+includes: [ wincommon ]
 firewall:
   - name: Outgoing_to_PBA
     description: Allow access from Online Store to PBA API

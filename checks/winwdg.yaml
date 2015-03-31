@@ -1,5 +1,5 @@
 description: Checks for WINWDG role, server for watchdog
-includes: [ common ]
+includes: [ wincommon ]
 firewall:
   - name: outgoing
     policy: allow

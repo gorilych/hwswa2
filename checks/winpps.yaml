@@ -1,5 +1,5 @@
 description: Checks for WINPPS role, windows privacy proxy server
-includes: [ common, win.poa.managed.fw, wpe.poa.managed.fw ]
+includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
 firewall:
   - name: incoming_from_POA
     description: POA MN should be able to connect to privoxy service

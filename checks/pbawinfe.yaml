@@ -1,5 +1,5 @@
 description: Checks for PBALINFE role, Windows PBA application server
-includes: [ common ]
+includes: [ wincommon ]
 parameters:
   pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
 firewall:

@@ -1,4 +1,4 @@
 description: Checks for LYNCPOOLFE role, Front End and A/V Conferencing Server
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common ]
+includes: [ wincommon ]
