@@ -1,5 +1,8 @@
+import logging
 
 __all__ = ['reqs_factory']
+
+logger = logging.getLogger(__name__)
 
 def reqs_factory(role, body, incl_reqs):
     """Generate list of requirements for role from requirements body and join 
@@ -270,10 +273,10 @@ class _BaseReq(object):
         if self.compare_result_reason is None:
             self.compare_result_reason = str(self)
         return (result, self.compare_result_reason)
-    
 
 
 class ManualReq(_BaseReq):
+
     compare_type = 'manual'
 
     def __str__(self):
@@ -287,7 +290,53 @@ class ManualReq(_BaseReq):
         return (False, self.compare_result_reason)
 
 
+class NetworksReq(_BaseReq):
+
+    compare_type = 'networks'
+
+    def __init__(self, *args, **kargs):
+        super(NetworksReq, self).__init__(*args, **kargs)
+        self.networks = self.value
+        self.join_rule = 'set'
+
+    def __str__(self):
+        if self.istemplate():
+            return "tmpl: %s" % self.compare_type
+        elif self.joined:
+            networks = ', '.join(self.networks)
+            return "%s(%s), joined from %s" % (self.compare_type, networks, map(str, self.joined_from))
+        else:
+            networks = ', '.join(self.networks)
+            return "%s:%s(%s)" % (self.role, self.compare_type, networks)
+
+    def check(self, parameters):
+        networks_in_p = []
+        try:  # can fail if no nics
+            for nic in parameters['network']['network_interfaces']:
+                try:  # can fail if no ips
+                    for ip in nic['ip']:
+                        try:  # can fail if no network
+                            networks_in_p.append(ip['network'])
+                        except Exception:
+                            logger.debug("found no network in %s" % ip)
+                            pass
+                except Exception:
+                    logger.debug("found no ips in %s" % nic)
+                    pass
+        except Exception:
+            logger.debug("found no network interfaces in %s" % parameters)
+            pass
+        not_found_networks = [network for network in self.networks if not network in networks_in_p]
+        if len(not_found_networks) > 0:
+            self.compare_result_reason = "not found: %s" % ', '.join(not_found_networks)
+            return (False, self.compare_result_reason)
+        else:
+            self.compare_result_reason = "all networks found"
+            return (True, self.compare_result_reason)
+
+
 class EqualReq(_BaseReq):
+
     compare_type = 'eq'
 
     def _compare(self, value):
@@ -559,6 +608,11 @@ def _join_max(values):
     return max(values)
 
 
+@_join_values
+def _join_set(values):
+    return reduce(lambda set1,set2: list(set(set1+set2)), values, [])
+
+
 for cls in _BaseReq.__subclasses__():
     _register_req_class(cls)
 _default_compare_type = EqualReq.compare_type
@@ -571,6 +625,7 @@ _register_join_function('min', _join_min)
 _register_join_function('max', _join_max)
 _register_join_function('and', _join_and)
 _register_join_function('or', _join_or)
+_register_join_function('set', _join_set)
 _default_join_rule = 'override'
 
 
