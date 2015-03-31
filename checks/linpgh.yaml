@@ -10,3 +10,4 @@ requirements:
   cpu-frequency: 2.3
   /usr: 70
   /: 5
+  networks: [backnet, frontnet]

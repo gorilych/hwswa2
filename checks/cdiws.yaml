@@ -20,4 +20,4 @@ requirements:
   cpu-frequency: 2
   ram(GB): 1
   'C:': 80
-
+  networks: [backnet, frontnet]

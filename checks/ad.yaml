@@ -11,3 +11,5 @@ requirements:
   'C:': 40
   'D:': 30
   'E:': 2
+  networks: [backnet]
+

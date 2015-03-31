@@ -10,3 +10,4 @@ requirements:
   cpu-frequency: 2.3
   /var: 80
   /: 4
+  networks: [backnet]

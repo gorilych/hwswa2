@@ -17,6 +17,5 @@ requirements:
   swap(GB): 4
   cpu-frequency: 1.5
   /: 12
-  /vz:
-    type: disk
-    value: 500
+  /vz: 500
+  networks: [backnet]

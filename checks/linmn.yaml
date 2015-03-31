@@ -46,3 +46,4 @@ requirements:
   /: 5
   /usr: 20
   /var: 90
+  networks: [backnet]

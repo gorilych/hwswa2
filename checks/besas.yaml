@@ -9,3 +9,4 @@ requirements:
   cpu-frequency: 2.3
   ram(GB): 4
   'C:': 36
+  networks: [backnet]

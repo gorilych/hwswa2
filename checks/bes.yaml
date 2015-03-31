@@ -10,3 +10,4 @@ requirements:
   ram(GB): 4
   'C:': 46
   'E:\BESLogs': 18
+  networks: [backnet, frontnet]

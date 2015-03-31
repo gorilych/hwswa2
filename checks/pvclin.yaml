@@ -16,4 +16,5 @@ requirements:
   cpu-cores: 2
   ram(GB): 2
   swap(GB): 8
-  
+  networks: [backnet, frontnet]
+ 

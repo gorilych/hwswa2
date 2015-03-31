@@ -11,3 +11,4 @@ requirements:
   cpu-frequency: 2
   /: 5
   /var/log: 10
+  networks: [backnet, frontnet]

@@ -21,3 +21,4 @@ requirements:
   /vz:
     type: disk
     value: 500
+  networks: [backnet, frontnet]

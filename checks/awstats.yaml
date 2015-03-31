@@ -10,3 +10,5 @@ requirements:
   ram(GB): 2
   'C:': 40
   'D:': 100
+  networks: [backnet, frontnet]
+

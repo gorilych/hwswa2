@@ -43,4 +43,4 @@ requirements:
   cpu-frequency: 2.3
   /boot: 0.2
   /: 130
-
+  networks: [backnet, frontnet]

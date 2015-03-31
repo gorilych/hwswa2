@@ -11,3 +11,4 @@ requirements:
   'C:': 40
   'D:': 60
   'Clustered': { type: manual, value: 'Quorum disk and heartbeatNet are needed for clustered configuration, check manually' }
+  networks: [backnet]

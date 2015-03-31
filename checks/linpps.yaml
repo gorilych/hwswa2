@@ -38,3 +38,5 @@ requirements:
   cpu-cores: 1
   cpu-frequency: 2
   /: 40
+  networks: [backnet, frontnet]
+

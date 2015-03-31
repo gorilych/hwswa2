@@ -25,3 +25,5 @@ requirements:
   'C:': 146
   'D:': 292
   MDB_and_PDF: { type: manual, value: 'Disks for mailbox databases, check manually' }
+  HA: { type: manual, value: 'ReplicationNet for HA, check manually' }
+  networks: [backnet]

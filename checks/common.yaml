@@ -73,12 +73,14 @@ parameters:
 requirements:
   #<name>:
   #  parameter: parameter path, f.e. 'hostname' or 'processors:count'. Default: <name>
-  #  type: can be manual, eq, neq, regex, lt, le, gt, ge, or disk. Default: eq
+  #  type: can be eq, neq, regex, lt, le, gt, ge, disk, networks or manual. Default: eq
   #  value: value to compare with. Default: None, and requirement is treated as template
   #  join-rule: can be override, and, or, sum, mul, avg, min, max. Default: override
   #
   #'disk' is a special type. Requirement will check if path, specified in parameter, 
   #  has enough diskspace. Also join-rule for 'disk' is always 'sum'.
+  #
+  #Requirement's value of 'networks' type should be a list of required networks
   #
   #Requirements of 'manual' type will always fail, in report you will be asked to check manually
   #
@@ -87,6 +89,9 @@ requirements:
   #Actual value is determined by composing requirement with requirements 
   #from included roles by join-rule.
   #
+  networks:
+    type: networks
+    value-example: [backnet, frontnet]
   OS:
     type: regex
     value-example: '(CentOS|RedHat).* 6\.'

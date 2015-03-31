@@ -21,4 +21,4 @@ requirements:
   cpu-frequency: 2.3
   /var: 20
   /: 4
-
+  networks: [backnet, frontnet]
