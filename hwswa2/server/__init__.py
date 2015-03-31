@@ -336,13 +336,6 @@ class Server(object):
             self.param_check_status = "FAILED with ServerException: %s" % se
             self.parameters = {}
         else:
-            for req in self.rolecollection.requirements:
-                if not req.istemplate():
-                    (result, reason) = req.check(self.parameters)
-                    if result:
-                        self.requirement_successes.append(str(req))
-                    else:
-                        self.requirement_failures.append(str(req) + ': ' + reason)
             self.param_check_status = "finished"
 
     def prepare_and_save_report(self, rtime=None):
@@ -364,15 +357,22 @@ class Server(object):
                                    'name': self.name,
                                    'role': self.role,
                                    'parameters': self.parameters,
-                                   'parameters_failures': self.param_failures,
-                                   'requirement_successes': self.requirement_successes,
-                                   'requirement_failures': self.requirement_failures},
+                                   'parameters_failures': self.param_failures},
                              yamlfile=yamlfile,
                              time=rtime)
         self.reports.insert(0, self.report)
         if self.report.finished():
             self.report.fix_networks()
             self.report.check_expect(self.expect)
+            for req in self.rolecollection.requirements:
+                if not req.istemplate():
+                    (result, reason) = req.check(self.report.data['parameters'])
+                    if result:
+                        self.requirement_successes.append(str(req))
+                    else:
+                        self.requirement_failures.append(str(req) + ': ' + reason)
+            self.report.data['requirement_successes'] = self.requirement_successes
+            self.report.data['requirement_failures'] = self.requirement_failures
         self.report.save()
         return True
 
