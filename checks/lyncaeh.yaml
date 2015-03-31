@@ -25,3 +25,10 @@ firewall:
     rules:
       - ports: 443 
         connect_with: {roles: [winmn,linmn]}
+requirements:
+  OS_LP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012.*(Standard|Datacenter))$"
+  OSLanguage: en-US
+  cpu-cores: 4
+  cpu-frequency: 2
+  ram(GB): 4
+  'C:': 70

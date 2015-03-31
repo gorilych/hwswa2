@@ -1,7 +1,7 @@
 description: Checks for CDIWS role, Customer Active Directory Integration Server
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common ]
+includes: [ wincommon ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet
@@ -14,4 +14,10 @@ firewall:
     rules:
       - ports: 8440 
         connect_with: {roles: [linmn,winmn]}
+requirements:
+  OS_SP: "^Microsoft Windows Server 2008.*(Standard|Enterprise|Datacenter)$"
+  OSLanguage: en-US
+  cpu-frequency: 2
+  ram(GB): 1
+  'C:': 80
 
