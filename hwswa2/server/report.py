@@ -173,7 +173,6 @@ class Report(object):
         elif raw:
             print yaml.safe_dump(report)
         else:
-            aux.printout('REPORT', aux.WHITE)
             # trying to print in pretty order
             for key in ['name', 'role', 'check_status', 'check_time', 'parameters_failures']:
                 if key in report:
@@ -271,9 +270,9 @@ class Report(object):
     def print_diff(oldr, newr):
         """Prints reports differences: oldr->newr"""
         diff = _deepdiff(oldr.data, newr.data)
-        print("       ###DIFF NEW###")
+        aux.printout("NEW", aux.WHITE)
         Report(data=diff['new']).show()
-        print("       ###DIFF OLD###")
+        aux.printout("OLD", aux.WHITE)
         Report(data=diff['old']).show()
         
 
