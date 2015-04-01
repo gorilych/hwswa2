@@ -28,6 +28,12 @@ description
 
     description: Checks for PVCLIN role
 
+ostype
+  Determines OS type for the server which can have this role. Can be either
+  linux or windows. Example from common.yaml::
+
+    ostype: linux
+
 includes
   The value specified in this section should be a sequence of included roles,
   from more specific to less specific. HWSWA2 will read included roles and merge
