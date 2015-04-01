@@ -467,7 +467,12 @@ class DiskReq(_BaseReq):
 
         Example: _find_mount4path('/var/log', ['/', '/var', '/usr']) -> '/var'
         """
-        return max([m for m in mounts if path.startswith(m)], key=len)
+        def under_mount(path, mount):
+            return (mount == '/' or
+                    path == mount or
+                    (path.startswith(mount) and (path[len(mount)] == '/'
+                                                 or path[len(mount)] == '\\')))
+        return max([m for m in mounts if under_mount(path,m)], key=len)
 
     def _compare(self, mount_size):
         path_size = self.path_size
