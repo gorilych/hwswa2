@@ -6,19 +6,30 @@ Version History
     - Added: documentation for role files
     - Added: remote_debug option in main.cfg
     - Added: reboot_timeout option in main.cfg
-    - Added: guess requirement type as disk if it starts with slash
+    - Added: guess requirement type as disk if it starts with / or C:, D:, etc
     - Added: option --all for subcommands firewall, show-firewall, reboot, reports
     - Added: reports subcommand can show reports for several servers
+    - Added: subcommand agent to run agent console
+    - Added: support for windows, with numerous (~50) windows roles
+    - Added: updated requirements in roles
+    - Added: ostype field in role file
+    - Added: new requirement types: manual and networks
     - Improvement: merged subcommands check and checkall
     - Improvement: command execution made via remote agent now
     - Improvement: logging reworked, now important messages are recorded
     - Improvement: su/sudo passwords are not passed in plain text in commandline anymore
     - Improvement: speed-up: application is refactored to postpone initialization of unneeded objects
+    - Improvement: report does not show IPv6 addresses (can be found in raw report, if needed)
+    - Improvement: report output is improved (ordering, coloured, indented, etc)
     - Fixed: disk requirement is false positive if disk size is not integer
     - Fixed: remove empty failures from reports
     - Fixed: handle keyerror exceptions in hwswa2.functions.read_servers()
     - Fixed: reboot check improved, it could hang in previous version
     - Fixed: command execution timeout option works now
+    - Fixed: 'No such file or directory' while specifying logfile without a path in command line
+    - Fixed: wrong mount point can be used while checking disk requirements
+    - Fixed: firewall should not check only if both ends has dontcheck enabled
+    - Fixed: some other bugs
 
 0.4.0 (2014-11-22)
     - Added: requirements (ram, disk, cpu, etc) in role files
