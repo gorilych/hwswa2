@@ -8,7 +8,9 @@ import termios
 
 __all__ = ['wait_for', 'wait_for_not', 'shell_escape', 'term_winsz',
            'range2list', 'range_len', 'list2range', 'splitlist', 'splitrange',
-           'joinlists', 'joinranges', 'differenceranges']
+           'joinlists', 'joinranges', 'differenceranges',
+           'BLACK', 'RED', 'GREEN', 'YELLOW',
+           'BLUE', 'MAGENTA', 'CYAN', 'WHITE', 'printout']
 
 def wait_for(condition_fn, args, timeout=60):
     """Waits for condition or timeout
@@ -125,3 +127,33 @@ def differenceranges(rg1, rg2):
     s1 = set(range2list(rg1))
     s2 = set(range2list(rg2))
     return list2range(list(s1.difference(s2)))
+
+
+######## print in color
+# from http://blog.mathieu-leplatre.info/colored-output-in-console-with-python.html
+
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+
+def printout(text, colour=WHITE, stream=None, nonewline=False):
+    newline = '\n'
+    if nonewline:
+        newline = ''
+    stream = stream or sys.stdout
+    if not hasattr(printout, 'has_colours'):
+        if not hasattr(stream, "isatty"):
+            printout.has_colours = False
+        elif not stream.isatty():
+            printout.has_colours = False  # auto color only on TTYs
+        else:
+            try:
+                import curses
+                curses.setupterm()
+                printout.has_colours = curses.tigetnum("colors") > 2
+            except:
+                # guess false in case of error
+                printout.has_colours = False
+    if printout.has_colours:
+        seq = "\x1b[1;%dm" % (30+colour) + text + "\x1b[0m" + newline
+        stream.write(seq)
+    else:
+        stream.write(text + newline)

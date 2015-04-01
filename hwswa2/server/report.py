@@ -5,6 +5,7 @@ import os
 from ipcalc import Network
 
 import hwswa2
+import hwswa2.auxiliary as aux
 
 __all__ = ['Report', 'ReportException']
 
@@ -163,32 +164,40 @@ class Report(object):
             raise ReportException("Error writing to file %s: %s" % (yamlfile, e))
 
     def show(self, raw=False):
+        indent = '    '
         report = copy.deepcopy(self.data)
+        def printkey(key):
+            aux.printout(indent + key + ', ', aux.MAGENTA, nonewline=True)
         if report is None:
-            print('NO REPORT')
+            aux.printout(indent + 'NO REPORT', aux.RED)
         elif raw:
             print yaml.safe_dump(report)
         else:
+            aux.printout('REPORT', aux.WHITE)
             # trying to print in pretty order
             for key in ['name', 'role', 'check_status', 'check_time', 'parameters_failures']:
                 if key in report:
                     val = report[key]
                     if key == 'role' and isinstance(val, list):
-                        print(key + ', ' + ', '.join(val))
+                        printkey(key)
+                        print(', '.join(val))
                     else:
-                        print(key + ', ' + str(report[key]))
+                        printkey(key)
+                        print(str(report[key]))
                     del report[key]
             # print all others, scalars only
             for key in report:
                 val = report[key]
                 if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                    print(key + ', ' + str(val))
+                    printkey(key)
+                    print(str(val))
             if 'expect' in report:
-                print('  Expectations')
+                aux.printout(indent + '  == Expectations ==', aux.WHITE)
                 for e in report['expect']:
-                    print(e + ', ' + report['expect'][e])
+                    printkey(e)
+                    print(report['expect'][e])
             if 'parameters' in report:
-                print('  Parameters')
+                aux.printout(indent + '  == Parameters ==', aux.WHITE)
                 parameters = copy.deepcopy(report['parameters'])
                 # trying to print in pretty order
                 skip_keys = ['OS_SP', 'updates_number', 'umask', 'time_utc',
@@ -200,20 +209,22 @@ class Report(object):
                     if key in parameters:
                         val = parameters[key]
                         if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                            print(key + ', ' + str(val))
+                            printkey(key)
+                            print(str(val))
                         elif key == 'processors':
                             count = val['count']
                             frequency = val['frequency(GHz)']
-                            print('processors, ' + count + 'x' + frequency + 'GHz')
+                            printkey('processors')
+                            print(count + 'x' + frequency + 'GHz')
                         elif key == 'partitions':
-                            print('partitions, ' + 
-                                  ' | '.join(p['device'] + ' ' +
+                            printkey(key)
+                            print(' | '.join(p['device'] + ' ' +
                                              p['fs_type'] + ' ' + 
                                              p['mountpoint'] + ' ' + 
                                              p['size(GB)'] + 'GB' for p in val))
                         elif key == 'blockdevs':
-                            print('blockdevs, ' + 
-                                  ' | '.join(d['type'] + ' ' +
+                            printkey(key)
+                            print(' | '.join(d['type'] + ' ' +
                                              d['name'] + ' ' + 
                                              d['size(GB)'] + 'GB' for d in val))
                         else:
@@ -225,15 +236,17 @@ class Report(object):
                         continue
                     val = parameters[key]
                     if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                        print(key + ', ' + str(val))
+                        printkey(key)
+                        print(str(val))
                 if 'network' in parameters:
-                    print('  Network parameters')
+                    aux.printout(indent + '  == Network parameters ==', aux.WHITE)
                     network = parameters['network']
                     # print scalars
                     for key in network:
                         val = network[key]
                         if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                            print(key + ', ' + str(val))
+                            printkey(key)
+                            print(str(val))
                     if 'network_interfaces' in network:
                         nic_ips = []
                         network_interfaces = network['network_interfaces']
@@ -243,15 +256,16 @@ class Report(object):
                                 if ip['address'].find(':') == -1:  # filter out IPv6 addresses
                                     res_str += ' ' + ip['address'] + '/' + ip['network']
                             nic_ips.append(res_str)
-                        print('nics, ' + ' | '.join(nic_ips))
+                        printkey('nics')
+                        print(' | '.join(nic_ips))
             if 'requirement_failures' in report:
-                print('  Requirement FAILURES (role:req: reason)')
+                aux.printout(indent + '  == Requirement FAILURES (role:req: reason) ==', aux.RED)
                 for failure in report['requirement_failures']:
-                    print failure
+                    print(indent + failure)
             if 'requirement_successes' in report:
-                print('  Requirement successes (role:req)')
+                aux.printout(indent + '  == Requirement successes (role:req) ==', aux.WHITE)
                 for success in report['requirement_successes']:
-                    print success
+                    print(indent + success)
   
     @staticmethod
     def print_diff(oldr, newr):
