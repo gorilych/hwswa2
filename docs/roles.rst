@@ -88,6 +88,9 @@ In a server report it will look like this::
     uptime: ' 22:42:57 up 16:30,  5 users,  load average: 0.12, 0.09, 0.07'
     architecture: x86_64
 
+For windows roles you can specify prefix 'ps|' to indicate that the command
+should be executed in PowerShell    
+
 
 Complex parameters
 ------------------
@@ -106,7 +109,8 @@ is a *dictionary*.
 
 ``_script`` key is an alternative to a ``_command``: HWSWA2 will create
 temporary executable file and will use output of this script's execution to
-obtain parameter's value.
+obtain parameter's value. This key does not work for windows roles and
+CAN BE DROPPED IN FUTURE VERSIONS
 
 Dictionary parameter
 ++++++++++++++++++++
@@ -324,21 +328,31 @@ Requirement properties are:
 
 parameter
   Specifies which parameter from **parameters** is a subject to this requirement
-  If parameter is not specified, HWSWA2 assumes it equals to requirement **name**
+  If **parameter** is not specified, HWSWA2 assumes it equals to requirement **name**
   Subparameter can be specified with a colon: ``param:subparam``.
 
 value
-  value to compare with. If value is not specified, this requirement is treated
+  value to compare with. If **value** is not specified, this requirement is treated
   by HWSWA2 as a requirement template which can be used in roles which include
   this one (see short notation below).
 
 type
-  Determines how requiement value is compared against parameter value. Type can 
-  be *eq* (equal), *neq* (not equal), *regex* (matches pattern), *lt* (less 
-  than), *le* (less or equal), *gt* (greater than), *ge* (greater or equal), or
-  *disk* (parameter name is a path and requirement value is a minimum disk space
-  in GB). Default: *eq*. Also HWSWA2 can guess **type**: for parameters which
-  start with '/' it will set **type** = *disk*
+  Determines how requiement *value* is compared against parameter value. Type can 
+  be *eq* (equal), *neq* (not equal), *regex* (matches pattern), *lt* (less than),
+  *le* (less or equal), *gt* (greater than), *ge* (greater or equal), *manual*,
+  *networks* or *disk*. Default: *eq*.
+
+  For type *disk*: **parameter** is a path and **value** is a minimum disk space in GB.
+
+  Requirements of type *manual* will always fail with warning specified in **value**.
+  This is useful in case some requirement check cannot be automated and should be
+  checked manually.
+
+  Requirement of type *networks* checks if server has nics with IP address from
+  networks, specied as a list in a **value**.
+
+  Also HWSWA2 can guess **type** as *disk* if **parameter** starts with '/'
+  or 'C:', 'D:', etc.
 
 join-rule
   Roles including this role can specify its own requirements with the same name.
@@ -353,23 +367,13 @@ join-rule
 Example::
 
   requirements:
-    OS:
-      type: regex
-      value: '(CentOS|RedHat).* 6\.'
-      join-rule: and
-    ram(GB):
-      type: ge
-      value: 0.5
-      join-rule: sum
-    swap(GB):
-      type: ge
-      value: 1
-      join-rule: sum
-    cpu-cores:
-      parameter: processors:count
-      type: ge
-      value: 1
-      join-rule: max
+    OS: { type: regex, value: '(CentOS|RedHat).* 6\.', join-rule: and }
+    ram(GB): { type: ge, value: 0.5, join-rule: sum }
+    swap(GB): { type: ge, value: 1, join-rule: sum }
+    cpu-cores: { parameter: processors:count, type: ge, value: 1, join-rule: max }
+    root_partition: { parameter: /, value: 10 }
+    networks: { type: networks, value: [backnet, frontnet] }
+    checkSAN: { type: manual, value: "In case of cluster heartbeat is needed, check manually" }
 
 Also HWSWA2 allows short notation for requirements, like this::
 
@@ -381,6 +385,7 @@ Also HWSWA2 allows short notation for requirements, like this::
     cpu-cores: 2
     cpu-frequency: 2
     /: 10
+    networks: [backnet, frontnet]
 
-In this case only value is specified and other properties are taken from
+In this case only **value** is specified and other properties are taken from
 included requirement templates (or defaults are taken, or guessed).
