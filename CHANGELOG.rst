@@ -14,6 +14,7 @@ Version History
     - Added: updated requirements in roles
     - Added: ostype field in role file
     - Added: new requirement types: manual and networks
+    - Added: password strength check based on zxcvbn library
     - Improvement: merged subcommands check and checkall
     - Improvement: command execution made via remote agent now
     - Improvement: logging reworked, now important messages are recorded
