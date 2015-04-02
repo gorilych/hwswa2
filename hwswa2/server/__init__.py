@@ -6,6 +6,7 @@ import hwswa2.auxiliary as aux
 import hwswa2
 from hwswa2.server.report import Report, ReportException
 from hwswa2.server.role import RoleCollection
+from zxcvbn import password_strength
 
 __all__ = ['Server', 'TIMEOUT', 'REBOOT_TIMEOUT', 'ServerException',
            'TunnelException', 'TimeoutException', 'FirewallException']
@@ -336,6 +337,11 @@ class Server(object):
             self.param_check_status = "FAILED with ServerException: %s" % se
             self.parameters = {}
         else:
+            if 'password' in self.account:
+                self.parameters['password_strength'] = password_strength(
+                    self.account['password'], user_inputs=[])['score']
+            else:
+                self.parameters['password_strength'] = 4
             self.param_check_status = "finished"
 
     def prepare_and_save_report(self, rtime=None):

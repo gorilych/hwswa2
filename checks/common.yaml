@@ -89,61 +89,22 @@ requirements:
   #Actual value is determined by composing requirement with requirements 
   #from included roles by join-rule.
   #
-  networks:
-    type: networks
-    value-example: [backnet, frontnet]
+  networks: { type: networks, value-example: [backnet, frontnet] }
   OS:
     type: regex
     value-example: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
     join-rule: and
   architecture: x86_64
-  ram(GB):
-    type: ge
-    value-example: 0.5
-    join-rule: sum
-  swap(GB):
-    type: ge
-    value-example: 1
-    join-rule: sum
-  cpu-cores:
-    parameter: processors:count
-    type: ge
-    value: 1
-    join-rule: max
-  cpu-frequency:
-    parameter: processors:frequency(GHz)
-    type: ge
-    value-example: 1
-    join-rule: max
-  /:
-    type: disk
-    value-example: 5
-  /usr:
-    type: disk
-    value-example: 5
-  /usr/local:
-    type: disk
-    value-example: 5
-  /var:
-    type: disk
-    value-example: 5
-  /var/log:
-    type: disk
-    value-example: 5
-  /tmp:
-    type: disk
-    value-example: 5
-  /opt:
-    type: disk
-    value-example: 5
-  /home:
-    type: disk
-    value-example: 5
-  yum_repos:
-    type: neq
-    value: ''
+  ram(GB): { type: ge, value-example: 0.5, join-rule: sum }
+  swap(GB): { type: ge, value-example: 1, join-rule: sum }
+  cpu-cores: { parameter: 'processors:count', type: ge,
+               value-example: 1, join-rule: max }
+  cpu-frequency: { parameter: 'processors:frequency(GHz)', type: ge,
+                   value-example: 1, join-rule: max }
+  /: { type: disk, value-example: 5 }
+  /usr: { type: disk, value-example: 5 }
+  /var: { type: disk, value-example: 5 }
+  yum_repos: { type: neq, value: '' }
   tmp_noexec: OK
-  dns:
-    type: eq
-    parameter: network:dns_check
-    value: OK
+  dns: { type: eq, parameter: 'network:dns_check', value: OK }
+  password_strength: { type: gt, value: 2 }

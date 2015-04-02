@@ -137,3 +137,4 @@ requirements:
   cpu-cores: {parameter: 'processors:count', type: ge, value-example: 1, join-rule: max}
   cpu-frequency: {parameter: 'processors:frequency(GHz)', type: ge, value-example: 1, join-rule: max}
   'C:': {type: disk, value-example: 5}
+  password_strength: { type: gt, value: 2 }
