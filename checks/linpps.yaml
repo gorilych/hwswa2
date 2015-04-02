@@ -32,7 +32,7 @@ firewall:
     connect_with:
       hosts: [apscatalog.com]
 requirements:
-  OS: '(CentOS|RedHat).* 6\.'
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
   ram(GB): 0.5
   swap(GB): 1
   cpu-cores: 1

@@ -3,7 +3,7 @@ description: Checks for LINPGH role, linux external provisioning gateway host
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common, poa.managed.fw ]
 requirements:
-  OS: '(CentOS|RedHat).* 6\.'
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
   ram(GB): 2
   swap(GB): 4
   cpu-cores: 2

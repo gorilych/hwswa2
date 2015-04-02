@@ -3,7 +3,7 @@ description: Checks for MYSQL role, linux mysql server
 # includes: [ first, second ] - checks from first will override checks from second
 includes: [ common, poa.managed.fw ]
 requirements:
-  OS: '(CentOS|RedHat).* 6\.'
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
   ram(GB): 4
   swap(GB): 8
   cpu-cores: 2

@@ -32,7 +32,7 @@ firewall:
     connect_with:
       hosts: any
 requirements:
-  OS: '(CentOS|RedHat).* 6\.5'
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.5'
   ram(GB): 1
   swap(GB): 2
   cpu-frequency: 2.3
