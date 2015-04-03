@@ -11,4 +11,10 @@ firewall:
     type: infra
     connect_with:
       roles: [hewsl]
-
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
+  virtualization: 'bare metal'
+  ram(GB): 16
+  swap(GB): 32
+  /: 80
+  networks: [backnet, frontnet]

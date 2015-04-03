@@ -27,4 +27,12 @@ firewall:
     type: internet
     connect_with:
       hosts: any
-
+requirements:
+  OS_LP: "^Microsoft Windows Server 2008 ((Standard|Enterprise|Datacenter)|R2 (Enterprise|Datacenter) Service Pack 1)$"
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 4
+  'C:': 40
+  'D:': 100
+  networks: [backnet]
