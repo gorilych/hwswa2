@@ -1,0 +1,39 @@
+description: Checks for WINCPNLB role,  Branding Servers in Windows NLB Cluster
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+firewall:
+  - name: gr_tcp_out_backnet
+    description: Group for outgoing TCP connections in backnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 80, 443
+        connect_with: {roles: [pbalinos, pbawinos]}
+      - ports: 8080
+        connect_with: {roles: [linpps, winpps]}
+      - ports: 1433
+        connect_with: {roles: [wpedb, wpedbcl ]}
+      - ports: 80 
+        connect_with: {roles: [wincpnlb]}
+  - name: gr_tcp_out_frontnet
+    description: Group for outgoing TCP connections in frontnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [frontnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 80
+        connect_with: {roles: [awstats, mssqldataadm]}
+      - ports: 443
+        connect_with: {roles: [wm, winsslpr, pbalinfe, pbawinfe]}
+      - ports: 1299 
+        connect_with: {roles: [helb, wsng, winfm, hewsl ]}
+      - ports: 9114,9113
+        connect_with: {roles: [helb, wsng, hewsl ]}

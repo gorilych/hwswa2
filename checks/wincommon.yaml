@@ -1,0 +1,140 @@
+description: Common checks for all windows roles
+ostype: windows
+parameters:
+  hostname: ps|hostname
+  sid: ps|(gwmi Win32_UserAccount
+             -Filter 'LocalAccount=true and sid like "S-1-5-21%-500"').SID -replace "-500$"
+  time: ps|get-date -Format "ddd, dd MMM yyyy HH':'mm':'ss ('UTC'z)"
+  uptime: ps|$lastboottime = (gwmi Win32_OperatingSystem).LastBootUpTime;
+             $sysuptime = (Get-Date) – [System.Management.ManagementDateTimeconverter]::ToDateTime($lastboottime);
+             Write-Host $sysuptime.days "days" $sysuptime.hours "hours"
+                        $sysuptime.minutes "minutes" $sysuptime.seconds "seconds"
+  OS: ps|(gwmi Win32_OperatingSystem).Caption
+  SP_level: ps|(gwmi Win32_OperatingSystem).CSDVersion
+  OS_SP: ps|(gwmi Win32_OperatingSystem).Caption + (gwmi Win32_OperatingSystem).CSDVersion
+  OSLanguage: ps|[System.Globalization.CultureInfo]::InstalledUICulture.Name
+  architecture: ps|(gwmi Win32_OperatingSystem).OSArchitecture
+  Activation: ps|Function ActivationStatus($code) {switch($code)
+                     { 0 {"Unlicensed"}; 1 {"Licensed"}; 2 {"Out-Of-Box Grace Period"};
+                       3 {"Out-Of-Tolerance Grace Period"}; 4 {"Non-Genuine Grace Period"};
+                       5 {"Notification"}; 6 {"Extended Grace"}; default {"Unknown value"}}};
+                 $wpa = gwmi SoftwareLicensingProduct | Where {$_.LicenseStatus -eq "1"};
+                 if($wpa){ foreach($item in $wpa)
+                               { $OSActivationStatus = ActivationStatus($item.LicenseStatus) }}
+                 else{ $OSActivationStatus = "Unlicensed" };
+                 Write-Host $OSActivationStatus;
+  ram(GB): ps|[math]::round(((gwmi Win32_ComputerSystem).TotalPhysicalMemory/1gb), 2)
+  swap(GB): ps|$AutomaticManagedPagefile = (gwmi Win32_ComputerSystem).AutomaticManagedPagefile;
+               $size = 0;
+               if ($AutomaticManagedPagefile -eq "True") {
+                 $PFs = gwmi Win32_PageFileUsage;
+                 foreach ($pf in $PFs) {$size += $pf.AllocatedBaseSize}}
+               else {
+                 $PFs = gwmi Win32_PageFileSetting;
+                 foreach ($pf in $PFs) {
+                   $size += $(gwmi Win32_PageFileUsage
+                              | Where {$_.name -eq $pf.Name}).AllocatedBaseSize}}
+               [math]::round($size/1024, 2)
+  processors:
+    count: ps|(gwmi Win32_Processor).NumberOfLogicalProcessors
+    model: ps|(gwmi Win32_Processor).Name
+    frequency(GHz): ps|[math]::round((gwmi Win32_Processor).MaxClockSpeed/1000, 2)
+  blockdevs:
+    _type: table
+    _fields: [name, type, size(GB), model]
+    _separator: '|'
+    _command: ps|$drives = gwmi Win32_DiskDrive;
+                 foreach($d in $drives) {
+                   $size = [math]::round($d.size/1024/1024/1024);
+                   Write-Host -Separator "|" $d.Name $d.MediaType $size $d.Model}
+  partitions:
+    _type: table
+    _fields: [device, size(GB), mountpoint, fs_type]
+    _separator: '|'
+    _command: ps|$ps = gwmi Win32_DiskPartition;
+                 foreach($p in $ps){
+                   $size = [math]::round($p.size/1024/1024/1024,2);
+                   $mountpoint = "";
+                   $fs_type = "";
+                   $ld_query = 'ASSOCIATORS OF {Win32_DiskPartition.DeviceID="' +
+                               $p.DeviceID +
+                               '"} WHERE AssocClass=Win32_LogicalDiskToPartition';
+                   $lds = @(get-wmiobject -query $ld_query);
+                   foreach($ld in $lds){
+                     $fs_type = $ld.FileSystem;
+                     $mountpoint = $ld.Name}
+                   Write-Host -Separator "|" $p.Name $size $mountpoint $fs_type}
+  volumes:
+    _type: table
+    _fields: [caption, label, filesystem, size(GB), free(GB)]
+    _separator: '|'
+    _command: ps|$TotalGB = @{Name=”Capacity”;expression={[math]::round(($_.Capacity / 1GB),2)}};
+                 $FreeGB = @{Name=”Free”;expression={[math]::round(($_.FreeSpace / 1GB),2)}};
+                 $volumes = gwmi Win32_Volume -Filter DriveType=3
+                            | Select-Object -Property Caption, Label, FileSystem, $TotalGB, $FreeGB;
+                 foreach($v in $volumes) {
+                   Write-Host -Separator "|" $v.Caption $v.Label $v.FileSystem $v.Capacity $v.Free}
+  updates_number: ps|@(gwmi win32_quickfixengineering).count
+  updates:
+    _type: table
+    _fields: [id, description, install_date]
+    _separator: '|'
+    _command: ps|$updates = gwmi win32_quickfixengineering;
+                 foreach($u in $updates){
+                   Write-Host -Separator "|" $u.HotfixID $u.Description $u.InstalledOn}
+  network:
+    _type: dictionary
+    dns_check: ps|Try { [System.Net.DNS]::GetHostByName('ya.ru') | out-null; Write-Host "OK"}
+                  Catch {Write-Host "NOT OK"}
+    network_interfaces:
+      _type: list
+      _generator: {index: index}
+      index: ps|$adapters = gwmi win32_networkadapterconfiguration
+                           | Where { $_.IPAddress -and
+                                     $_.Description -ne "WAN Miniport (Network Monitor)"};
+               foreach($a in $adapters){$a.Index}
+      name: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
+               $adapter.Description
+      hwaddr: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
+                 $adapter.MACAddress
+      gateway: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
+                  $adapter.DefaultIPGateway[0]
+      DHCPEnabled: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
+                      $adapter.DHCPEnabled
+      ip:
+        _type: table
+        _fields: [address, prefix]
+        _separator: '|'
+        _command: ps|$adapter = gwmi win32_networkadapterconfiguration | where { $_.Index -eq "%(index)s"};
+                     $ips = @($adapter.IPAddress);
+                     $subnets = @($adapter.IPSubnet);
+                     0..($ips.count-1) | foreach {
+                       $i = $ips[$_];
+                       $s = $subnets[$_];
+                       $prefix = [int] 0;
+                       if ($s.contains(".")) {
+                         $mask = $s.split(".");
+                         $octet = [int] 0;
+                         foreach ($octet in $mask){
+                           if ($octet -eq 255){$prefix += 8};
+                           if ($octet -eq 254){$prefix += 7};
+                           if ($octet -eq 252){$prefix += 6};
+                           if ($octet -eq 248){$prefix += 5};
+                           if ($octet -eq 240){$prefix += 4};
+                           if ($octet -eq 224){$prefix += 3};
+                           if ($octet -eq 192){$prefix += 2};
+                           if ($octet -eq 128){$prefix += 1};}}
+                       else {$prefix = $s}
+                       Write-Host -Separator "|" $i $prefix}
+requirements:
+  networks: { type: networks, value-example: [backnet, frontnet] }
+  OS_SP: {type: regex, value-example: 'Microsoft Windows Server', join-rule: and}
+  Activation: Licensed
+  dns_check: {parameter: 'network:dns_check', type: eq, value: OK}
+  architecture: 64-bit
+  ram(GB): {type: ge, value-example: 0.5, join-rule: sum}
+  swap(GB): {type: ge, value-example: 1, join-rule: sum}
+  cpu-cores: {parameter: 'processors:count', type: ge, value-example: 1, join-rule: max}
+  cpu-frequency: {parameter: 'processors:frequency(GHz)', type: ge, value-example: 1, join-rule: max}
+  'C:': {type: disk, value-example: 5}
+  password_strength: { type: gt, value: 2 }

@@ -12,8 +12,9 @@ requirements:
   /vz:
     type: disk
     value: 100
-  OS: '((CentOS|RedHat).* (5|6)\.)'
+  OS: '((CentOS|Red Hat Enterprise Linux Server).* (5|6)\.)'
   cpu-cores: 2
   ram(GB): 2
   swap(GB): 8
-  
+  networks: [backnet, frontnet]
+ 

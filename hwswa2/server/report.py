@@ -2,6 +2,12 @@ import logging
 import yaml
 import copy
 import os
+from ipcalc import Network
+
+import hwswa2
+import hwswa2.auxiliary as aux
+
+__all__ = ['Report', 'ReportException']
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +28,14 @@ class Report(object):
         if data is None and yamlfile is None:
             raise ReportException("Report(None, None) is not allowed. Specify at least one arg")
         self.yamlfile = yamlfile
-        if data is None:
-            self._read()
-        else:
-            self.data = data
+        self._data = data
         self.time = time
+
+    @property
+    def data(self):
+        if not self._data:
+            self._read()
+        return self._data
 
     def _read(self, yamlfile=None):
         if yamlfile is None:
@@ -36,7 +45,7 @@ class Report(object):
         else:
             self.yamlfile = yamlfile
         try:
-            self.data = yaml.load(open(yamlfile))
+            self._data = yaml.load(open(yamlfile))
         except IOError as ie:
             raise ReportException("Error opening file %s: %s" % (yamlfile, ie))
         except yaml.YAMLError as ye:
@@ -49,31 +58,36 @@ class Report(object):
         """Returns file name of report file"""
         return os.path.basename(self.yamlfile)
 
-    def fix_networks(self, networks):
+    def fix_networks(self):
         """Substitutes network name for network address in report
 
         1.2.3.0/24 -> frontnet
-
-        @param networks: list of dicts: [ {'network': nw, 'address': addr, 'prefix': px}, ... ]
         """
         report = self.data
+        networks = hwswa2.config.get('networks')
+        if not networks:
+            return
         try:
             nics = report['parameters']['network']['network_interfaces']
         except (TypeError, KeyError):
             pass
         else:
-            for nic in nics:
-                ips = nic['ip']
-                for ip in ips:
-                    nw = ip['network']
-                    nwname = next((n['name'] for n in networks if nw == n['address'] + '/' + str(n['prefix'])), None)
-                    if nwname is not None:
-                        ip['network'] = nwname
+            if hasattr(nics, '__iter__'):
+                for nic in nics:
+                    ips = nic['ip']
+                    if hasattr(ips, '__iter__'):
+                        for ip in ips:
+                            ip_a = ip['address']
+                            ip_p = ip['prefix']
+                            n_a = "%s" % Network(ip_a + '/' + ip_p).network()
+                            ip['network'] = next((n['name'] for n in networks 
+                                                  if "%s" % n['prefix'] == ip_p
+                                                  and n['address'] == n_a),
+                                                 n_a + '/' + ip_p)
 
-    def get_nw_ips(self, networks=None):
+    def get_nw_ips(self):
         """Obtains network -> ip dict from report"""
-        if networks is not None:
-            self.fix_networks(networks)
+        self.fix_networks()
         try:
             nics = self.data['parameters']['network']['network_interfaces']
         except KeyError:
@@ -97,9 +111,13 @@ class Report(object):
         except KeyError:
             pass
         else:
-            for nic in interfaces:
-                for ip in nic['ip']:
-                    ip_nw_nic.append({'ip': ip['address'], 'nw': ip['network'], 'nic': nic['name']})
+            if hasattr(interfaces, '__iter__'):
+                for nic in interfaces:
+                    if hasattr(nic['ip'], '__iter__'):
+                        for ip in nic['ip']:
+                            ip_nw_nic.append({'ip': ip['address'],
+                                              'nw': ip['network'],
+                                              'nic': nic['name']})
         return ip_nw_nic
 
     def check_expect(self, expect=None):
@@ -146,9 +164,12 @@ class Report(object):
             raise ReportException("Error writing to file %s: %s" % (yamlfile, e))
 
     def show(self, raw=False):
+        indent = '    '
         report = copy.deepcopy(self.data)
+        def printkey(key):
+            aux.printout(indent + key + ', ', aux.MAGENTA, nonewline=True)
         if report is None:
-            print('NO REPORT')
+            aux.printout(indent + 'NO REPORT', aux.RED)
         elif raw:
             print yaml.safe_dump(report)
         else:
@@ -157,44 +178,52 @@ class Report(object):
                 if key in report:
                     val = report[key]
                     if key == 'role' and isinstance(val, list):
-                        print(key + ', ' + ', '.join(val))
+                        printkey(key)
+                        print(', '.join(val))
                     else:
-                        print(key + ', ' + str(report[key]))
+                        printkey(key)
+                        print(str(report[key]))
                     del report[key]
             # print all others, scalars only
             for key in report:
                 val = report[key]
                 if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                    print(key + ', ' + str(val))
+                    printkey(key)
+                    print(str(val))
             if 'expect' in report:
-                print('  Expectations')
+                aux.printout(indent + '  == Expectations ==', aux.WHITE)
                 for e in report['expect']:
-                    print(e + ', ' + report['expect'][e])
+                    printkey(e)
+                    print(report['expect'][e])
             if 'parameters' in report:
-                print('  Parameters')
+                aux.printout(indent + '  == Parameters ==', aux.WHITE)
                 parameters = copy.deepcopy(report['parameters'])
                 # trying to print in pretty order
-                for key in ['hostname', 'OS', 'architecture', 'processors', 'ram(GB)', 'swap(GB)',
-                            'partitions', 'blockdevs', 'time', 'time_utc',
-                            'ntp_service_status', 'uptime', 'iptables', 'selinux',
-                            'yum_repos', 'umask']:
+                skip_keys = ['OS_SP', 'updates_number', 'umask', 'time_utc',
+                             'ntp_service_status', 'uptime', 'tmp_noexec']
+                for key in ['hostname', 'OS', 'SP_level', 'OSLanguage',
+                            'Activation', 'architecture', 'processors',
+                            'ram(GB)', 'swap(GB)', 'partitions', 'blockdevs',
+                            'time', 'iptables', 'selinux', 'yum_repos']:
                     if key in parameters:
                         val = parameters[key]
                         if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                            print(key + ', ' + str(val))
+                            printkey(key)
+                            print(str(val))
                         elif key == 'processors':
                             count = val['count']
                             frequency = val['frequency(GHz)']
-                            print('processors, ' + count + 'x' + frequency + 'GHz')
+                            printkey('processors')
+                            print(count + 'x' + frequency + 'GHz')
                         elif key == 'partitions':
-                            print('partitions, ' + 
-                                  ' | '.join(p['device'] + ' ' +
+                            printkey(key)
+                            print(' | '.join(p['device'] + ' ' +
                                              p['fs_type'] + ' ' + 
                                              p['mountpoint'] + ' ' + 
                                              p['size(GB)'] + 'GB' for p in val))
                         elif key == 'blockdevs':
-                            print('blockdevs, ' + 
-                                  ' | '.join(d['type'] + ' ' +
+                            printkey(key)
+                            print(' | '.join(d['type'] + ' ' +
                                              d['name'] + ' ' + 
                                              d['size(GB)'] + 'GB' for d in val))
                         else:
@@ -202,42 +231,48 @@ class Report(object):
                         del parameters[key]
                 # print all the rest (scalars only)
                 for key in parameters:
+                    if key in skip_keys:
+                        continue
                     val = parameters[key]
                     if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                        print(key + ', ' + str(val))
+                        printkey(key)
+                        print(str(val))
                 if 'network' in parameters:
-                    print('  Network parameters')
+                    aux.printout(indent + '  == Network parameters ==', aux.WHITE)
                     network = parameters['network']
                     # print scalars
                     for key in network:
                         val = network[key]
                         if isinstance(val, (type(None), str, unicode, int, float, bool)):
-                            print(key + ', ' + str(val))
+                            printkey(key)
+                            print(str(val))
                     if 'network_interfaces' in network:
                         nic_ips = []
                         network_interfaces = network['network_interfaces']
                         for nic in network_interfaces:
                             res_str = nic['name']
                             for ip in nic['ip']:
-                                res_str += ' ' + ip['address'] + '/' + ip['network']
+                                if ip['address'].find(':') == -1:  # filter out IPv6 addresses
+                                    res_str += ' ' + ip['address'] + '/' + ip['network']
                             nic_ips.append(res_str)
-                        print('nics, ' + ' | '.join(nic_ips))
+                        printkey('nics')
+                        print(' | '.join(nic_ips))
             if 'requirement_failures' in report:
-                print('  Requirement FAILURES')
+                aux.printout(indent + '  == Requirement FAILURES (role:req: reason) ==', aux.RED)
                 for failure in report['requirement_failures']:
-                    print failure
+                    print(indent + failure)
             if 'requirement_successes' in report:
-                print('  Requirement successes')
+                aux.printout(indent + '  == Requirement successes (role:req) ==', aux.WHITE)
                 for success in report['requirement_successes']:
-                    print success
+                    print(indent + success)
   
     @staticmethod
     def print_diff(oldr, newr):
         """Prints reports differences: oldr->newr"""
         diff = _deepdiff(oldr.data, newr.data)
-        print("       ###DIFF NEW###")
+        aux.printout("NEW", aux.WHITE)
         Report(data=diff['new']).show()
-        print("       ###DIFF OLD###")
+        aux.printout("OLD", aux.WHITE)
         Report(data=diff['old']).show()
         
 

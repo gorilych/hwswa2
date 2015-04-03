@@ -1,0 +1,35 @@
+description: Checks for PBALINFE role, Windows PBA application server
+includes: [ wincommon ]
+parameters:
+  pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
+firewall:
+  - name: Outgoing_to_LINMN
+    description: Allow access from PBA to POA API
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    protos: [TCP]
+    ports: 8440
+    type: infra
+    connect_with:
+      roles: [linmn,winmn]
+  - name: Outgoing_to_branding
+    description: access to hosting services
+    direction: outgoing
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443,21,49152-65534
+    type: infra
+    connect_with:
+      roles: [branding]
+  - name: Incoming_to_PBAWINOS
+    description: Allow access to Online Store
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 443
+    type: internet
+    connect_with:
+      hosts: any
+

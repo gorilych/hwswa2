@@ -1,0 +1,12 @@
+description: Checks for LYNCWAC role
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ wincommon ]
+requirements:
+  OS_LP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 (Standard|Datacenter))$"
+  OSLanguage: en-US
+  cpu-cores: 16
+  cpu-frequency: 2
+  ram(GB): 24
+  'C:': 60
+  networks: [backnet]

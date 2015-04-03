@@ -1,0 +1,35 @@
+description: Checks for MSSQLDATAADM role, SQL Server Web Data Administrator
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+firewall:
+  - name: gr_tcp_out_backnet
+    description: Group for outgoing TCP connections in backnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 1433
+        connect_with: {roles: [mssqlcluster, mssql]}
+  - name: Incoming_from_public
+    description: "Allow access from Internet"
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 80
+    type: internet
+    connect_with:
+      hosts: any
+requirements:
+  OS_LP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 4
+  'C:': 40
+  'D:': 40
+  networks: [backnet, frontnet]

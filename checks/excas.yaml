@@ -1,0 +1,35 @@
+description: Checks for EXCAS role,  Exchange 2013 Client Access Server
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+firewall:
+  - name: gr_tcp_out_frontnet
+    description: Group for outgoing TCP connections in frontnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - ports: 80, 443
+        connect_with: {roles: [exmbx, excas]}
+  - name: Incoming_from_public
+    description: "Allow access to hosting services from Internet"
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 80,443,110,995,143,993,25,587 
+    type: internet
+    connect_with:
+      hosts: any
+requirements:
+  OS_LP: "^Microsoft Windows Server 2012 (Standard|Datacenter)$"
+  OSLanguage: en-US
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  ram(GB): 8
+  'C:': 150
+  'D:': 150
+  networks: [backnet, frontnet]

@@ -1,0 +1,29 @@
+description: Checks for EXMBX role,  Exchange 2013 Exchange 2013 Mailbox Server 
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+firewall:
+  - name: gr_tcp_out_frontnet
+    description: Group for outgoing TCP connections in frontnet
+    group: yes
+    policy: allow
+    type: infra
+    networks: [backnet]
+    direction: incoming
+    protos: [tcp]
+    rules:
+      - ports: 81, 444
+        connect_with: {roles: [wpesrv] }
+      - ports: 80, 443
+        connect_with: {roles: [exmbx, excas]}
+requirements:
+  OS_LP: "^Microsoft Windows Server 2012 (Standard|Datacenter)$"
+  OSLanguage: en-US
+  cpu-cores: 8
+  cpu-frequency: 2.3
+  ram(GB): 32
+  'C:': 146
+  'D:': 292
+  MDB_and_PDF: { type: manual, value: 'Disks for mailbox databases, check manually' }
+  HA: { type: manual, value: 'ReplicationNet for HA, check manually' }
+  networks: [backnet]

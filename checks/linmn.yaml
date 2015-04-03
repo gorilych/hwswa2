@@ -37,3 +37,13 @@ firewall:
     type: internet
     ports: 80,443
     connect_with: {hosts: [download.pa.parallels.com]}
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.5'
+  ram(GB): 8
+  swap(GB): 16
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  /: 5
+  /usr: 20
+  /var: 90
+  networks: [backnet]

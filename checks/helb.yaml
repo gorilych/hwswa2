@@ -1,8 +1,9 @@
 description: Checks for HELB role, linux NG load balancer
 includes: [ common, poa.managed.fw, webserver.pub.fw ]
 requirements:
-  OS: '(CentOS|RedHat).* 6\.'
-  yum_repos:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
+  epel_repo:
+    parameter: yum_repos
     type: regex
     value: 'epel'
   virtualization: 'bare metal'
@@ -11,3 +12,4 @@ requirements:
   cpu-frequency: 2
   /: 5
   /var/log: 10
+  networks: [backnet, frontnet]

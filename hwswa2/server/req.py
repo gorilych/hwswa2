@@ -1,3 +1,9 @@
+import logging
+
+__all__ = ['reqs_factory']
+
+logger = logging.getLogger(__name__)
+
 def reqs_factory(role, body, incl_reqs):
     """Generate list of requirements for role from requirements body and join 
     with requirements from included roles
@@ -62,7 +68,9 @@ def _req_factory(name, role, body, incl_reqs):
         parameter = body.get('parameter', None)
         value = body.get('value', None)
         (t_compare_type, t_join_rule, t_parameter) = _find_template(name, incl_reqs)
-        if t_compare_type is not None and compare_type != t_compare_type:
+        if t_compare_type == 'manual':
+            compare_type = 'manual'
+        if compare_type != 'manual' and t_compare_type is not None and compare_type != t_compare_type:
             raise ReqException("different compare types for req %s exist: %s and %s" % (name, compare_type, t_compare_type))
         if join_rule is not None:
             if t_join_rule is not None and join_rule != t_join_rule:
@@ -95,11 +103,20 @@ def _find_template(name, reqs):
                 if jr.name == name:
                     rs.append(jr)
     if not rs:
-        return (None, None, None)
+        #guessing compare type by name as disk
+        if (name.startswith('/') or  # /, /usr, /var
+            name[1] == ':'):         # C:, D:, E:, C:\logs
+            return ('disk', None, None)
+        else:
+            return (None, None, None)
     compare_type = rs[0].compare_type
     join_rule = rs[0].join_rule
     parameter = rs[0].parameter
+    if compare_type == 'manual':
+        return (compare_type, None, None)
     for r in rs:
+        if r.compare_type == 'manual':
+            return ('manual', None, None)
         if r.compare_type != compare_type:
             raise ReqException("different compare types for req %s exist" % name)
         if r.join_rule != join_rule:
@@ -122,11 +139,11 @@ class _BaseReq(object):
 
     def __str__(self):
         if self.istemplate():
-            return "req tmpl: %s %s X" % (self.name, self.compare_type)
+            return "tmpl: %s %s X" % (self.name, self.compare_type)
         elif self.joined:
-            return "req: %s %s %s (joined from %s)" % (self.name, self.compare_type, self.value, map(str, self.joined_from))
+            return "%s %s %s (joined from %s)" % (self.name, self.compare_type, self.value, map(str, self.joined_from))
         else:
-            return "req: %s:%s %s %s" % (self.role, self.name, self.compare_type, self.value)
+            return "%s:%s %s %s" % (self.role, self.name, self.compare_type, self.value)
 
     def __repr__(self):
         return "<Req " + self.name + ">"
@@ -256,14 +273,78 @@ class _BaseReq(object):
         if self.compare_result_reason is None:
             self.compare_result_reason = str(self)
         return (result, self.compare_result_reason)
-    
+
+
+class ManualReq(_BaseReq):
+
+    compare_type = 'manual'
+
+    def __str__(self):
+        return "%s:%s %s" % (self.role, self.name, self.compare_type)
+
+    def istemplate(self):
+        return False
+
+    def check(self, parameters):
+        self.compare_result_reason = self.value or "Check manually, too complex to automate"
+        return (False, self.compare_result_reason)
+
+
+class NetworksReq(_BaseReq):
+
+    compare_type = 'networks'
+
+    def __init__(self, *args, **kargs):
+        super(NetworksReq, self).__init__(*args, **kargs)
+        self.networks = self.value
+        self.join_rule = 'set'
+
+    def __str__(self):
+        if self.istemplate():
+            return "tmpl: %s" % self.compare_type
+        elif self.joined:
+            networks = ', '.join(self.networks)
+            return "%s(%s), joined from %s" % (self.compare_type, networks, map(str, self.joined_from))
+        else:
+            networks = ', '.join(self.networks)
+            return "%s:%s(%s)" % (self.role, self.compare_type, networks)
+
+    def check(self, parameters):
+        networks_in_p = []
+        try:  # can fail if no nics
+            for nic in parameters['network']['network_interfaces']:
+                try:  # can fail if no ips
+                    for ip in nic['ip']:
+                        try:  # can fail if no network
+                            networks_in_p.append(ip['network'])
+                        except Exception:
+                            logger.debug("found no network in %s" % ip)
+                            pass
+                except Exception:
+                    logger.debug("found no ips in %s" % nic)
+                    pass
+        except Exception:
+            logger.debug("found no network interfaces in %s" % parameters)
+            pass
+        not_found_networks = [network for network in self.networks if not network in networks_in_p]
+        if len(not_found_networks) > 0:
+            self.compare_result_reason = "not found: %s" % ', '.join(not_found_networks)
+            return (False, self.compare_result_reason)
+        else:
+            self.compare_result_reason = "all networks found"
+            return (True, self.compare_result_reason)
 
 
 class EqualReq(_BaseReq):
+
     compare_type = 'eq'
 
     def _compare(self, value):
-        return value == self.value
+        if not value == self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class NotEqualReq(_BaseReq):
@@ -271,7 +352,11 @@ class NotEqualReq(_BaseReq):
     compare_type = 'neq'
 
     def _compare(self, value):
-        return value != self.value
+        if not value != self.value:
+            self.compare_result_reason = "actual value: %s" % value 
+            return False
+        else:
+            return True
 
 
 class LessThenReq(_BaseReq):
@@ -279,7 +364,11 @@ class LessThenReq(_BaseReq):
     compare_type = 'lt'
 
     def _compare(self, value):
-        return value < self.value
+        if not value < self.value:
+            self.compare_result_reason = "actual value: %s" % value 
+            return False
+        else:
+            return True
 
 
 class LessEqualReq(_BaseReq):
@@ -287,7 +376,11 @@ class LessEqualReq(_BaseReq):
     compare_type = 'le'
 
     def _compare(self, value):
-        return value <= self.value
+        if not value <= self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class GreaterThenReq(_BaseReq):
@@ -295,7 +388,11 @@ class GreaterThenReq(_BaseReq):
     compare_type = 'gt'
 
     def _compare(self, value):
-        return value > self.value
+        if not value > self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class GreaterEqualReq(_BaseReq):
@@ -303,7 +400,11 @@ class GreaterEqualReq(_BaseReq):
     compare_type = 'ge'
 
     def _compare(self, value):
-        return value >= self.value
+        if not value >= self.value:
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class RegexReq(_BaseReq):
@@ -320,7 +421,11 @@ class RegexReq(_BaseReq):
         return param_value
 
     def _compare(self, value):
-        return self.pattern.match(value)
+        if not self.pattern.match(value):
+            self.compare_result_reason = "actual value: %s" % value
+            return False
+        else:
+            return True
 
 
 class DiskReq(_BaseReq):
@@ -350,7 +455,7 @@ class DiskReq(_BaseReq):
         # parameters['partitions'] is table with fields [device, size(GB), mountpoint, fs_type]
         # we need to return dict{mountpoint->size}
         parts = parameters['partitions']
-        mount_size = dict([(part['mountpoint'], part['size(GB)']) for part in parts])
+        mount_size = dict([(part['mountpoint'], float(part['size(GB)'])) for part in parts])
         return mount_size
 
     def _convert(self, param_value):
@@ -362,7 +467,12 @@ class DiskReq(_BaseReq):
 
         Example: _find_mount4path('/var/log', ['/', '/var', '/usr']) -> '/var'
         """
-        return max([m for m in mounts if path.startswith(m)], key=len)
+        def under_mount(path, mount):
+            return (mount == '/' or
+                    path == mount or
+                    (path.startswith(mount) and (path[len(mount)] == '/'
+                                                 or path[len(mount)] == '\\')))
+        return max([m for m in mounts if under_mount(path,m)], key=len)
 
     def _compare(self, mount_size):
         path_size = self.path_size
@@ -376,16 +486,19 @@ class DiskReq(_BaseReq):
             mount_req_size[m] += psize
             mount_paths.setdefault(m, [])
             mount_paths[m].append(p)
+        self.compare_result_reason = ''
+        result = True
         for (m, req_size) in mount_req_size.iteritems():
             msize = mount_size[m]
             if req_size >= msize:
-                self.compare_result_reason = (
-                    "disk space: required: " +
-                    ' '.join(["{}({})".format(p,path_size[p]) 
+                if len(self.compare_result_reason) > 0:
+                    self.compare_result_reason += ' | '
+                self.compare_result_reason += (
+                    '+'.join(["{0}({1})".format(p,path_size[p]) 
                               for p in mount_paths[m]]) +
-                    " > actual: {}({})".format(m,msize))
-                return False
-        return True
+                    " > actual: {0}({1})".format(m,msize))
+                result = False
+        return result
                 
 
     @classmethod
@@ -500,6 +613,11 @@ def _join_max(values):
     return max(values)
 
 
+@_join_values
+def _join_set(values):
+    return reduce(lambda set1,set2: list(set(set1+set2)), values, [])
+
+
 for cls in _BaseReq.__subclasses__():
     _register_req_class(cls)
 _default_compare_type = EqualReq.compare_type
@@ -512,229 +630,7 @@ _register_join_function('min', _join_min)
 _register_join_function('max', _join_max)
 _register_join_function('and', _join_and)
 _register_join_function('or', _join_or)
+_register_join_function('set', _join_set)
 _default_join_rule = 'override'
 
 
-
-
-
-
-
-
-'''
-
-class Req(object):
-    def __str__(self):
-        if self.istemplate():
-            return "req tmpl: " + self.name + " " + self.compare_type + " <X>"
-        else:
-            return "req: " + self.name + " " + self.compare_type + " " + self.value
-
-    def __repr__(self):
-        return "<Req " + self.name + ">"
-    
-    def __init__(self, name, value=None, param_path=None, role=None, compare_type=None, join_rule=None, joined=None, joined_from=None, orig_cmp_type=None):
-        # allowed values: eq, neq, regex, lt (less-then), le (less-or-equal), gt, ge, or disk
-        self.compare_type = compare_type or 'eq'
-        # compare_type can be changed while joining, that's why we have orig_cmp_type
-        self.orig_cmp_type = orig_cmp_type or self.compare_type
-        # allowed values: override, and, or, sum, mul, avg, min, max
-        if self.orig_cmp_type == 'disk':
-            self.join_rule = 'sum'
-        else:
-            self.join_rule = join_rule or 'override'
-        self.joined = joined or False
-        self.joined_from = joined_from or []
-        self.param_path = param_path or name
-        self.name = name
-        # if value is None, this requirement is a template for other requirements
-        self.value = value
-        self.role = role
-
-    def istemplate(self):
-        return self.value is None
-
-    @staticmethod
-    def _findtemplate(name, reqs):
-        """Find tuple (compare_type, join_rule, param_path) from reqs - should be the same for all reqs"""
-        rs = [r for r in reqs if r.name == name]
-        if not rs:
-            return (None, None, None)
-        compare_type = rs[0].orig_cmp_type
-        join_rule = rs[0].join_rule
-        param_path = rs[0].param_path
-        for r in rs:
-            if r.orig_cmp_type != compare_type:
-                raise ReqException("different compare types for req %s exist" % name)
-            if r.join_rule != join_rule:
-                raise ReqException("different join rules for req %s exist" % name)
-            if r.param_path != param_path:
-                raise ReqException("different parameters for req %s exist" % name)
-        return (compare_type, join_rule, param_path)
-
-    @staticmethod
-    def _findbasereqs(reqs):
-        """Decompose all joined reqs and filter out duplicates
-
-        [req1, req2(joined from req3, req4, req6), req5, req6] -> 
-        [req1, req3, req4, req6, req5]
-        """
-        joined_reqs = [r for r in reqs if r.joined]
-        base_reqs = ([r for r in reqs if not r.joined] + 
-                     [r for jr in joined_reqs for r in jr.joined_from])
-        #filter out duplicates with the same role and name
-        role_names = []
-        result = []
-        for r in base_reqs:
-            if (r.role, r.name) not in role_names:
-                roles.append((r.role, r.name))
-                result.append(r)
-        return result
-        
-    @staticmethod
-    def _join(req, reqs):
-        """Join requirement with requirements"""
-        # filter out templates
-        reqs = [r for r in reqs if not r.istemplate()]
-        name = req.name
-        orig_cmp_type = compare_type = req.orig_cmp_type
-        if compare_type == 'disk':
-            reqs = [r for r in reqs if r.compare_type == 'disk']
-        else:
-            reqs = [r for r in reqs if r.name == name]
-        if not reqs:
-            return req
-        role = req.role
-        param_path = req.param_path
-        join_rule = req.join_rule
-        value = joined = joined_from = None
-        if compare_type == 'disk':
-            joined = True
-            same_path_reqs = [req]
-            other_path_reqs = []
-            for r in reqs:
-                if r.compare_type == 'disk':
-                    if r.param_path == param_path:
-                        same_path_reqs.append(r)
-                    else:
-                        other_path_reqs.append(r)
-            same_path_reqs = [r for r in Req._findbasereqs(same_path_reqs) if r.param_path == param_path]
-            joined_from = same_path_reqs + other_path_reqs
-            value = reduce(lambda x,y: x+y, [r.value for r in same_path_reqs])
-        elif join_rule == 'override':
-            return req
-        elif join_rule == 'max':
-            value = max(req.value, max([r.value for r in reqs]))
-        elif join_rule == 'min':
-            value = min(req.value, min([r.value for r in reqs]))
-        elif join_rule in ['and', 'or']:
-            compare_type = join_rule
-            joined = True
-            value = joined_from = [req] + Req._findbasereqs(reqs)
-        elif join_rule in ['sum', 'mul', 'avg']:
-            joined = True
-            joined_from = [req] + Req._findbasereqs(reqs)
-            if join_rule == 'sum':
-                value = reduce(lambda x,y: x+y, [r.value for r in joined_from])
-            elif join_rule == 'mul':
-                value = reduce(lambda x,y: x+y, [r.value for r in joined_from], 1)
-            elif join_rule == 'avg':
-                value = reduce(lambda x,y: x+y, [r.value for r in joined_from])
-                value /= len(joined_from)
-        return Req(name, value, param_path, role, compare_type, join_rule, joined, joined_from, orig_cmp_type)
-
-    @staticmethod
-    def _convert(val, compare_type=None, join_rule=None, inherited_reqs=None, role=None):
-        """Convert requiement value to comparable value"""
-        if val is None or compare_type is None:
-            return val
-        elif compare_type in ['regex']:
-            return val
-        elif compare_type in ['le', 'lt', 'ge', 'gt', 'disk']:
-            return float(val)
-        elif compare_type in ['eq', 'neq']:
-            if join_rule in ['sum', 'mul', 'min', 'max', 'avg']:
-                return float(val)
-            else:
-                return val
-        elif compare_type in ['and', 'or']:
-            return dict((req, Req.factory(req, body, inherited_reqs, role)) for (req, body) in val.iteritems()) 
-        else:
-            raise ReqException("not valid compare type: %s value=%s" % (compare_type, val))
-
-    @staticmethod
-    def _findparam(param_path, parameters, compare_type):
-        # process special types first
-        if compare_type == 'disk':
-            # parameters['partitions'] is table with fields [device, size(GB), mountpoint, fs_type]
-            # we need to return dict{mountpoint->size}
-            parts = parameters['partitions']
-            mount_size = dict([(part[2], part[1]) for part in parts])
-            return mount_size
-            # find mountpoint for path param_path
-            # f.e. max([path for path in ['/', '/usr', '/var'] if '/usr/test'.startswith(path)], key=len) = '/usr'
-            #mountpoint = max([path for path in mount_size if param_path.startswith(path)], key=len)
-            #param = mount_size[mountpoint]
-        else:
-            param = None
-            for key in param_path.split(':'):
-                if param:
-                    param = param[key]
-                else:
-                    param = parameters[key]
-        return Req._convert(param, compare_type)
-                
-    @classmethod
-    def factory(cls, name, body, inherited_reqs=None, role=None):
-        """Create requirement object from requirement body"""
-        if isinstance(body, dict) and 'type' in body:
-            compare_type = body['type']
-            join_rule = body.get('join-rule', None)
-            param_path = body.get('parameter', None)
-            val = body.get('value', None)
-        else:
-            (compare_type, join_rule, param_path) = Req._findtemplate(name, inherited_reqs)
-            val = body
-        value = Req._convert(val, compare_type, join_rule, inherited_reqs, role)
-        pure_req = Req(name, value, param_path, role, compare_type, join_rule)
-        return Req._join(pure_req, inherited_reqs)
-
-    def check(self, parameters=None):
-        """Check requirement against particular value"""
-        if self.value is None:
-            raise ReqException("trying to check template requirement %s" % self)
-        elif self.compare_type == 'and':
-            for req in self.value:
-                if not req.check(parameters):
-                    return False
-            return True
-        elif self.compare_type == 'or':
-            for req in self.value:
-                if req.check(parameters):
-                    return True
-            return False
-        param = Req._findparam(req.param_path, parameters, req.compare_type)
-        if self.compare_type in ['eq', 'neq']:
-            #neq, eq can be used both for strings and numbers
-            #first we try to compare as strings then as numbers
-            test = (self.value == param) or (float(self.value) == float(param))
-            if self.compare_type == 'eq':
-                return test
-            else:
-                return not test
-        elif self.compare_type == 'regex':
-            return re.match(self.value, param)
-        elif self.compare_type == 'le':
-            return self.value <= param
-        elif self.compare_type == 'lt':
-            return self.value < param
-        elif self.compare_type == 'ge':
-            return self.value >= param
-        elif self.compare_type == 'gt':
-            return self.value > param
-        elif self.compare_type == 'disk':
-            mountpoints = param.keys
-        else:
-            raise ReqException("Unknown compare type for req %s" % self)
-            
-'''

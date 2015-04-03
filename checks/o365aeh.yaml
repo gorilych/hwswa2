@@ -1,0 +1,52 @@
+escription: Checks for Office 365 Application End-point Host
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ wincommon ]
+firewall:
+  - name: outgoing
+    description: Outgoing connections
+    group: yes
+    policy: allow
+    type: infra
+    networks: [frontnet]
+    direction: outgoing
+    protos: [tcp]
+    rules:
+      - networks: [frontnet]
+        ports: 443
+        connect_with: {roles: [branding]}
+      - networks: [backnet]
+        ports: 6308
+        connect_with: {roles: [pbalinfe]}
+      - networks: [backnet]
+        ports: 5224
+        connect_with: {roles: [linmn]}
+      - networks: [backnet]
+        ports: 1433
+        connect_with: {roles: [o365mssql]}
+  - name: incoming
+    description: incoming
+    policy: allow
+    direction: incoming
+    networks: [frontnet]
+    protos: [TCP]
+    ports: 433
+    type: infra
+    connect_with: {roles: [linmn]}
+  - name: mosi
+    description: allow access to mosi
+    policy: allow
+    direction: outgoing
+    networks: [backnet]
+    protos: [TCP]
+    type: internet
+    ports: 443
+    connect_with: {hosts: [mosi.microsoftonline.com]}
+requirements:
+  OS_LP: "^Microsoft Windows Server 2008 R2 Web Edition Service Pack 1$"
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 4
+  'C:': 80
+  networks: [backnet, frontnet]

@@ -1,0 +1,13 @@
+description: Checks for BES role, BlackBerry Server
+# includes: from more specific to less specific
+# includes: [ first, second ] - checks from first will override checks from second
+includes: [ wincommon, win.poa.managed.fw ]
+requirements:
+  OS_SP: "^Microsoft Windows Server 2008 (Standard Service Pack 2|R2 Standard)$"
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 4
+  'C:': 46
+  'E:\BESLogs': 18
+  networks: [backnet, frontnet]

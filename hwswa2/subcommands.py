@@ -6,12 +6,16 @@ import sys
 import glob
 import os
 
-from hwswa2.globals import config
+import hwswa2
 from hwswa2.server.factory import get_server, server_names
 from hwswa2.server import FirewallException
 from hwswa2.server.report import Report
 from hwswa2.server.role import Role
 
+__all__ = ['show_firewall', 'firewall', 'check', 'checkall', 'prepare',
+           'prepareall', 'shell', 'reboot', 'exec_cmd', 'ni_exec_cmd', 'put',
+           'get', 'lastreport', 'show_report', 'reports', 'reportdiff',
+           'list_roles', 'agent_console']
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +23,9 @@ logger = logging.getLogger(__name__)
 def show_firewall():
     """Show firewall requirements"""
     servers = []
-    for name in config['servernames']:
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
             logger.error("Cannot find server %s in servers list" % name)
@@ -46,12 +52,12 @@ def show_firewall():
                                    'ports': inet_rules[address],
                                    'network': ''})
     all_rules = intranet_rules + internet_rules
-    if config['csv']:
+    if hwswa2.config['csv']:
         import csv
         dw = csv.DictWriter(sys.stdout, all_rules[0].keys())
         dw.writeheader()
         dw.writerows(all_rules)
-    elif config['compact']:
+    elif hwswa2.config['compact']:
         print("=============BEGIN======================")
         # sort intranet_rules by source to have the same order as in servers
         for rule in (rule for s in servers for rule in intranet_rules if rule['source'] == s.name):
@@ -74,7 +80,7 @@ def show_firewall():
                         print("%s incoming:" % network)
                         for rule in incoming:
                             print(" from {source} {proto}:{ports}".format(**rule))
-    if not config['csv']:
+    if not hwswa2.config['csv']:
         print("===== Internet access requirements =====")
         for rule in internet_rules:
             print("{source} -> {destination}:{ports}".format(**rule))
@@ -84,18 +90,20 @@ def show_firewall():
 def firewall():
     """Check connections between servers"""
     start_time = time.time()
-    port_timeout = config['firewall']['send_timeout']
-    report_period = config['firewall']['report_period']
-    max_failures = config['firewall']['max_failures']
-    max_closed_ports = config['firewall']['max_closed_ports']
+    port_timeout = hwswa2.config['firewall']['send_timeout']
+    report_period = hwswa2.config['firewall']['report_period']
+    max_failures = hwswa2.config['firewall']['max_failures']
+    max_closed_ports = hwswa2.config['firewall']['max_closed_ports']
     servers = []
-    for name in config['servernames']:
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
             logger.error("Cannot find server %s in servers list" % name)
             sys.exit(1)
         elif not server.nw_ips:
-            if server.get_ips(config['networks']):
+            if server.get_ips(hwswa2.config['networks']):
                 servers.append(server)
             else:
                 logger.error("Cannot find IPs for server %s" % name)
@@ -110,7 +118,8 @@ def firewall():
     for s in servers:
         results[s.name] = {}
         for other_s in servers:
-            if not other_s.name == s.name:
+            if (not other_s.name == s.name and
+                not (s.dontcheck and other_s.dontcheck)):
                 logger.info("Checking %s <- %s" % (s.name, other_s.name))
                 try:
                     for res in s.check_firewall_with(other_s,
@@ -183,12 +192,14 @@ def firewall():
 
 
 def check():
-    """Check only specified servers"""
+    """Check servers"""
     check_time = time.localtime()
-    report_period = config['check']['report_period']
-    logger.info("Checking servers: %s" % config['servernames'])
+    report_period = hwswa2.config['check']['report_period']
     servers = []
-    for name in config['servernames']:
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    logger.info("Checking servers: %s" % hwswa2.config['servernames'])
+    for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
             logger.error("Cannot find server %s in servers list" % name)
@@ -223,7 +234,7 @@ def check():
         print("Progress: %s" % status)
         time.sleep(report_period)
     for server in servers:
-        server.prepare_and_save_report(config['networks'], check_time)
+        server.prepare_and_save_report(check_time)
         logger.info("%s status: %s, report file: %s" %
                     (server.name, server.last_report().data['check_status'], server.last_report().yamlfile))
 
@@ -234,18 +245,13 @@ def _check(server, resultsqueue):
         resultsqueue.put({'name': name, 'progress': progress})
 
 
-def checkall():
-    """Check all servers"""
-    logger.debug("Checking all servers")
-    config['servernames'] = server_names()
-    check()
-
-
 def prepare():
-    """Prepare only specified servers"""
-    logger.debug("Preparing servers: %s" % config['servernames'])
+    """Prepare servers"""
+    logger.debug("Preparing servers: %s" % hwswa2.config['servernames'])
     servers = []
-    for name in config['servernames']:
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
             logger.error("Cannot find server %s in servers list" % name)
@@ -257,16 +263,9 @@ def prepare():
                 servers.append(server)
 
 
-def prepareall():
-    """Prepare all servers"""
-    logger.debug("Preparing all servers")
-    config['servernames'] = server_names()
-    prepare()
-
-
 def shell():
     """Open interactive shell to specific server"""
-    servername = config['servername']
+    servername = hwswa2.config['servername']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
@@ -281,9 +280,11 @@ def shell():
 
 def reboot():
     """Reboots specified servers"""
-    logger.info("Rebooting servers: %s" % config['servernames'])
+    logger.info("Rebooting servers: %s" % hwswa2.config['servernames'])
     servers = []
-    for name in config['servernames']:
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
             logger.error("Cannot find server %s in servers list" % name)
@@ -321,35 +322,35 @@ def reboot():
 
 def exec_cmd():
     """Exec command on specified server interactively"""
-    servername = config['servername']
+    servername = hwswa2.config['servername']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
-    sshcmd = " ".join(config['sshcmd'])
-    get_pty = config['tty']
+    sshcmd = " ".join(hwswa2.config['sshcmd'])
+    get_pty = hwswa2.config['tty']
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     if server.accessible():
         exitstatus = server.exec_cmd_i(sshcmd, get_pty=get_pty)
-        logger.debug("exitstatus = %s" % exitstatus)
+        sys.exit(exitstatus)
     else:
         logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
-        sys.exit(1)
+        sys.exit(255)
 
 
 def ni_exec_cmd():
     """Exec command on specified server non-interactively"""
-    servername = config['servername']
+    servername = hwswa2.config['servername']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
         sys.exit(1)
-    sshcmd = " ".join(config['sshcmd'])
+    sshcmd = " ".join(hwswa2.config['sshcmd'])
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     if server.accessible():
         stdout, stderr, exitstatus = server.exec_cmd(sshcmd)
-        print("stdout = %s" % stdout)
-        print("stderr = %s" % stderr)
+        print(" = stdout = \n%s" % stdout)
+        print(" = stderr = \n%s" % stderr)
         print("exitstatus = %s" % exitstatus)
     else:
         logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
@@ -358,9 +359,9 @@ def ni_exec_cmd():
 
 def put():
     """Copy file to server"""
-    servername = config['servername']
-    localpath = config['localpath']
-    remotepath = config['remotepath']
+    servername = hwswa2.config['servername']
+    localpath = hwswa2.config['localpath']
+    remotepath = hwswa2.config['remotepath']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
@@ -375,9 +376,9 @@ def put():
 
 def get():
     """Copy file from server"""
-    servername = config['servername']
-    localpath = config['localpath']
-    remotepath = config['remotepath']
+    servername = hwswa2.config['servername']
+    localpath = hwswa2.config['localpath']
+    remotepath = hwswa2.config['remotepath']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
@@ -391,8 +392,8 @@ def get():
 
 
 def lastreport():
-    servername = config['servername']
-    raw = config['raw']
+    servername = hwswa2.config['servername']
+    raw = hwswa2.config['raw']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
@@ -405,9 +406,9 @@ def lastreport():
 
 
 def show_report():
-    servername = config['servername']
-    reportname = config['reportname']
-    raw = config['raw']
+    servername = hwswa2.config['servername']
+    reportname = hwswa2.config['reportname']
+    raw = hwswa2.config['raw']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
@@ -420,18 +421,25 @@ def show_report():
 
 
 def reports():
-    servername = config['servername']
-    server = get_server(servername)
-    if server is None:
-        logger.error("Cannot find server %s in servers list" % servername)
-        sys.exit(1)
-    server.list_reports()
+    servers = []
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    for name in hwswa2.config['servernames']:
+        server = get_server(name)
+        if server is None:
+            logger.error("Cannot find server %s in servers list" % name)
+            sys.exit(1)
+        else:
+            servers.append(server)
+    for server in servers:
+        print "==== %s" % server
+        server.list_reports()
 
 
 def reportdiff():
-    servername = config['servername']
-    r1name = config['oldreport']
-    r2name = config['newreport']
+    servername = hwswa2.config['servername']
+    r1name = hwswa2.config['oldreport']
+    r2name = hwswa2.config['newreport']
     server = get_server(servername)
     if server is None:
         logger.error("Cannot find server %s in servers list" % servername)
@@ -449,12 +457,12 @@ def reportdiff():
 
 def list_roles(roles_dir=None):
     if roles_dir is None:
-        roles_dir = config['checksdir']
+        roles_dir = hwswa2.config['checksdir']
     roles = []
     role_names = []
     for role_file in glob.glob(os.path.join(roles_dir, '*.yaml')):
         role_name = os.path.basename(role_file)[:-5].lower()
-        roles.append(Role(role_name, roles_dir))
+        roles.append(Role(role_name))
         role_names.append(role_name)
     aux_role_names = []
     for role in roles:
@@ -464,3 +472,18 @@ def list_roles(roles_dir=None):
     aux_role_names.sort()
     print("==== Roles ====\n" + ', '.join(role_names))
     print("==== Auxiliary roles (no yaml files, but mentioned in firewall rules) ====\n" + ', '.join(aux_role_names))
+
+
+def agent_console():
+    """Open interactive shell to specific server"""
+    servername = hwswa2.config['servername']
+    server = get_server(servername)
+    if server is None:
+        logger.error("Cannot find server %s in servers list" % servername)
+        sys.exit(1)
+    logger.info("Opening agent console for server %s" % servername)
+    if server.accessible():
+        server.agent_console()
+    else:
+        logger.error("Failed to connect to %s: %s" % (server, server.last_connection_error()))
+        sys.exit(1)

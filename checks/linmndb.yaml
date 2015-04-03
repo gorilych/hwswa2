@@ -1,4 +1,4 @@
-description: Checks for LINMNDB role, PostgreSQL database server for POA database
+description: Checks for LINMNDB role, PostgreSQL database server for POA database, requirements are copied from pbalinbe
 includes: [ common ]
 firewall:
   - name: Incoming_from_LinMN
@@ -11,4 +11,12 @@ firewall:
     type: infra
     connect_with:
       roles: [linmn]
-
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.5'
+  ram(GB): 8
+  swap(GB): 16
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  /boot: 0.2
+  /: 130
+  networks: [backnet]

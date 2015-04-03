@@ -11,6 +11,6 @@ requirements:
   cpu-frequency: 2.2
   /: 5
   /var/log: 10
-  /var/www/vhosts:
-    type: disk
-    value: 500
+  /var/www/vhosts: 500
+  networks: [backnet, frontnet]
+
