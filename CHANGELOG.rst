@@ -10,7 +10,7 @@ Version History
     - Added: option --all for subcommands firewall, show-firewall, reboot, reports
     - Added: reports subcommand can show reports for several servers
     - Added: subcommand agent to run agent console
-    - Added: support for windows, with numerous (~50) windows roles
+    - Added: support for windows, with numerous (~50) windows roles. Without possibility to check firewall.
     - Added: updated requirements in roles
     - Added: ostype field in role file
     - Added: new requirement types: manual and networks
