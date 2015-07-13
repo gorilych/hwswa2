@@ -1,0 +1,10 @@
+description: Checks for BAWINBE role, Windows BA database server
+includes: [ wincommon ]
+requirements:
+  OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 R2 (Standard|Datacenter))$"
+  OSLanguage: en-US
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  ram(GB): 8
+  'C:': 200
+  networks: [backnet]

@@ -1,8 +1,8 @@
 description: Checks for WINPPS role, windows privacy proxy server
-includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
 firewall:
-  - name: incoming_from_POA
-    description: POA MN should be able to connect to privoxy service
+  - name: incoming_from_OA
+    description: OA MN should be able to connect to privoxy service
     policy: allow
     direction: incoming
     networks: [backnet]
@@ -11,8 +11,8 @@ firewall:
     protos: [TCP]
     connect_with:
         roles: [linmn,winmn]
-  - name: Outgoing_to_PBA
-    description: Allow access to HTTPS on PBA
+  - name: Outgoing_to_BA
+    description: Allow access to HTTPS on BA
     policy: allow
     direction: outgoing
     networks: [frontnet]
@@ -20,7 +20,7 @@ firewall:
     ports: 443
     type: infra
     connect_with:
-      roles: [pbalinfe,pbawinfe]
+      roles: [balinfe,bawinfe]
   - name: apscatalog
     description: "connection to (http://apscatalog.com)"
     policy: allow

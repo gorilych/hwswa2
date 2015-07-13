@@ -1,49 +1,14 @@
 description: Checks for LINMN role, linux management node
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common ]
-firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [backnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 5224
-        connect_with: {roles: [pbalinfe]}
-      - ports: 3306
-        connect_with: {roles: [mysql]}
-      - ports: 5432
-        connect_with: {roles: [pgsql, poadb]}
-      - ports: 8008
-        connect_with: {roles: [linpps]}
-      - ports: 389
-        connect_with: {roles: [linmailldap]}
-      - ports: 4433-4435
-        connect_with: {roles: [pvclin, pvclinbu, pvcwin, pvcwinbu]}
-      - ports: 4432,4465
-        connect_with: {roles: [paci_im]}
-      - ports: 48480
-        connect_with: {roles: [wpesrvdb, wpesrv]}
-  - name: pa_download
-    description: allow access to pa.download.parallels.com repo
-    policy: allow
-    direction: outgoing
-    networks: [backnet]
-    protos: [TCP]
-    type: internet
-    ports: 80,443
-    connect_with: {hosts: [download.pa.parallels.com]}
+includes: [ lincommon, mn.fw ]
 requirements:
-  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.5'
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.[567]'
   ram(GB): 8
   swap(GB): 16
   cpu-cores: 4
   cpu-frequency: 2.3
   /: 5
   /usr: 20
-  /var: 90
+  /var: 150
   networks: [backnet]

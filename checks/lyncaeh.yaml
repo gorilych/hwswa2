@@ -1,7 +1,7 @@
 description: Checks for LYNCAEH role,  Application Endpoint Host for Lync Server 2013
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, win.poa.managed.fw ]
+includes: [ wincommon, win.oa.managed.fw ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet

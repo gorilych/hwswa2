@@ -1,8 +1,8 @@
-description: Checks for LINMNDB role, PostgreSQL database server for POA database, requirements are copied from pbalinbe
-includes: [ common ]
+description: Checks for LINMNDB role, PostgreSQL database server for OA database, requirements are copied from balinbe
+includes: [ lincommon ]
 firewall:
   - name: Incoming_from_LinMN
-    description: Allow access to PostgreSQL from POA MN
+    description: Allow access to PostgreSQL from OA MN
     policy: allow
     direction: incoming
     networks: [backnet]
@@ -18,5 +18,5 @@ requirements:
   cpu-cores: 4
   cpu-frequency: 2.3
   /boot: 0.2
-  /: 130
+  /: 150
   networks: [backnet]

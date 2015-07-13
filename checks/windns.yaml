@@ -1,7 +1,7 @@
 description: Checks for WINDNS role, MS DNS Servers
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
 firewall:
   - name: Incoming_from_public
     description: "Allow access to DNS service"

@@ -1,7 +1,7 @@
 description: Checks for O365WINPGH role, Provisioning Gateway Host for Office 365 Integration
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.poa.managed.fw ]
+includes: [ wincommon, win.oa.managed.fw ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet
@@ -16,6 +16,7 @@ firewall:
         connect_with: {roles: [o365gh]}
 rements:
   OS: "^Microsoft Windows Server 2008"
+  arch_os: { type: manual, value: 'Architecture depends on OS, check manually' }
   SP_level: ''
   OSLanguage: en-US
   cpu-cores: 2

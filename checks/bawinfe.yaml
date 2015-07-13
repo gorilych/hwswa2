@@ -1,10 +1,8 @@
-description: Checks for PBALINFE role, Windows PBA application server
+description: Checks for BAWINFE role, Windows BA application server
 includes: [ wincommon ]
-parameters:
-  pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
 firewall:
-  - name: Outgoing_to_LINMN
-    description: Allow access from PBA to POA API
+  - name: Outgoing_to_MN
+    description: Allow access from BA to OA API
     policy: allow
     direction: outgoing
     networks: [backnet]
@@ -12,7 +10,7 @@ firewall:
     ports: 8440
     type: infra
     connect_with:
-      roles: [linmn,winmn]
+      roles: [linmn, winmn]
   - name: Outgoing_to_branding
     description: access to hosting services
     direction: outgoing
@@ -22,7 +20,7 @@ firewall:
     type: infra
     connect_with:
       roles: [branding]
-  - name: Incoming_to_PBAWINOS
+  - name: Incoming_to_BAWINOS
     description: Allow access to Online Store
     policy: allow
     direction: incoming
@@ -32,4 +30,11 @@ firewall:
     type: internet
     connect_with:
       hosts: any
-
+requirements:
+  OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 R2 (Standard|Datacenter))$"
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 4
+  'C:': 200
+  networks: [backnet, frontnet]

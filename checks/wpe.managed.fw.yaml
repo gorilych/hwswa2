@@ -1,7 +1,7 @@
 description: Checks for WPE managed role
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common ]
+includes: [ lincommon ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet

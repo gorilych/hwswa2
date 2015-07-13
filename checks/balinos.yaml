@@ -1,8 +1,8 @@
-description: Checks for PBALINOS role, linux PBA online store
-includes: [ common ]
+description: Checks for BALINOS role, linux BA online store
+includes: [ lincommon, lin.oa.managed.fw ]
 firewall:
-  - name: Outgoing_to_PBA
-    description: Allow access from Online Store to PBA API
+  - name: Outgoing_to_BA
+    description: Allow access from Online Store to BA API
     policy: allow
     direction: outgoing
     networks: [backnet]
@@ -10,9 +10,9 @@ firewall:
     ports: 5224
     type: infra
     connect_with:
-      roles: [pbalinfe]
-  - name: Incoming_from_PBA
-    description: Allow access to Online Store from PBA
+      roles: [balinfe]
+  - name: Incoming_from_BA
+    description: Allow access to Online Store from BA
     policy: allow
     direction: incoming
     networks: [backnet]
@@ -20,8 +20,8 @@ firewall:
     ports: 80,443
     type: infra
     connect_with:
-      roles: [pbalinfe]
-  - name: Incoming_to_PBALINOS
+      roles: [balinfe]
+  - name: Incoming_to_BALINOS
     description: Allow access to Online Store
     policy: allow
     direction: incoming
@@ -32,7 +32,7 @@ firewall:
     connect_with:
       hosts: any
 requirements:
-  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.5'
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.[567]'
   ram(GB): 1
   swap(GB): 2
   cpu-frequency: 2.3

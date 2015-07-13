@@ -1,0 +1,13 @@
+description: Firewall rules for OA managed linux server
+include: [ oa.managed.fw ]
+firewall:
+- name: Incoming_from_LinMN
+  description: Allow SSH connections from MN
+  policy: allow
+  direction: incoming
+  networks: [backnet]
+  protos: [TCP]
+  ports: 22
+  type: infra
+  connect_with:
+    roles: [linmn]

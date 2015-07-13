@@ -1,10 +1,10 @@
-description: Checks for SYSBU role, server for POA and PBA and other system backups
+description: Checks for SYSBU role, server for OA and BA and other system backups
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common ]
+includes: [ lincommon ]
 firewall:
   - name: SSH
-    description: POA MN, PBADB, IM, IMDB should be able to put backups over SSH
+    description: OA MN, BALINFE, IM, IMDB should be able to put backups over SSH
     policy: allow
     direction: incoming
     networks: [backnet]
@@ -12,5 +12,5 @@ firewall:
     type: infra
     protos: [TCP]
     connect_with:
-        roles: [linmn, pbalinbe, paci_im, paci_imdb]
+        roles: [linmn, balinbe, oaci_im, oaci_imdb]
 

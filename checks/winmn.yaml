@@ -1,4 +1,14 @@
 description: Checks for WINMN role, windows management node
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ linmn ]
+includes: [ wincommon, mn.fw ]
+requirements:
+  OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  OSLanguage: en-US
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  ram(GB): 8
+  'C:': 40
+  'D:': 150
+  networks: [backnet]
+

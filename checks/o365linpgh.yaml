@@ -1,7 +1,7 @@
 description: Provisioning Gateway Host on Linux for Office 365 integration
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, poa.managed.fw ]
+includes: [ linpgh ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet
@@ -14,12 +14,3 @@ firewall:
     rules:
       - ports: 443
         connect_with: {roles: [o365gh]}
-requirements:
-  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
-  ram(GB): 2
-  swap(GB): 4
-  cpu-cores: 2
-  cpu-frequency: 2.3
-  /usr: 70
-  /: 5
-  networks: [backnet, frontnet]

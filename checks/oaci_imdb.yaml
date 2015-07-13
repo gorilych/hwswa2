@@ -1,0 +1,11 @@
+description: Checks for PACI Instance Manager Database role
+includes: [ lincommon, lin.oa.managed.fw ]
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
+  ram(GB): 8
+  swap(GB): 16
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  /var: 125
+  /: 4
+  networks: [backnet]

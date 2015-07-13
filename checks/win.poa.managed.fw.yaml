@@ -1,7 +1,7 @@
-description: Firewall rules for POA managed server
+description: Firewall rules for OA managed server
 firewall:
   - name: Incoming_from_MN
-    description: Allow connections to pleskd from POA MN
+    description: Allow connections to pleskd from OA MN
     # policy: allow/deny
     policy: allow
     # direction: incoming/outgoing

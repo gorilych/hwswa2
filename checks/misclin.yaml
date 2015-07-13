@@ -1,2 +1,6 @@
 description: Checks for MISCLIN role
-includes: [ common, pcs.fw ]
+includes: [ lincommon, vz.fw ]
+requirements:
+  OS: 'Parallels Cloud Server 6\.'
+  virtualization: 'bare metal'
+  resources: { type: manual, value: 'Check manually RAM/CPU/Disk/network/etc according to reqs for hosted VMs' }

@@ -1,7 +1,7 @@
 description: Checks for PGSQL role, linux postgresql server
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, poa.managed.fw ]
+includes: [ lincommon, lin.oa.managed.fw ]
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
   ram(GB): 4

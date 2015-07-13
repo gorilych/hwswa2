@@ -1,7 +1,7 @@
 description: Checks for WINBR role,  Branding Server on Windows
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, win.poa.managed.fw, wpe.poa.managed.fw ]
+includes: [ lincommon, win.oa.managed.fw, wpe.managed.fw ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet
@@ -13,7 +13,7 @@ firewall:
     protos: [tcp]
     rules:
       - ports: 80, 443
-        connect_with: {roles: [pbalinos, pbawinos]}
+        connect_with: {roles: [balinos, bawinos]}
       - ports: 8080
         connect_with: {roles: [winui]}
       - ports: 1433
@@ -30,7 +30,7 @@ firewall:
       - ports: 80
         connect_with: {roles: [awstats, mssqldataadm]}
       - ports: 443
-        connect_with: {roles: [wm, winsslpr, pbalinfe, pbawinfe]}
+        connect_with: {roles: [wm, winsslpr, balinfe, bawinfe]}
       - ports: 1299 
         connect_with: {roles: [helb, wsng, winfm, hewsl ]}
       - ports: 9114,9113

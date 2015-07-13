@@ -1,10 +1,10 @@
-description: Checks for PBALINFE role, linux PBA application server
-includes: [ common ]
+description: Checks for BALINFE role, linux BA application server
+includes: [ lincommon, lin.oa.managed.fw ]
 parameters:
-  pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
+  no_pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
 firewall:
   - name: Outgoing_to_LINMN
-    description: Allow access from PBA to POA API
+    description: Allow access from BA to OA API
     policy: allow
     direction: outgoing
     networks: [backnet]
@@ -22,7 +22,7 @@ firewall:
     type: infra
     connect_with:
       roles: [branding]
-  - name: Incoming_to_PBALINOS
+  - name: Incoming_to_BALINOS
     description: Allow access to Online Store
     policy: allow
     direction: incoming
@@ -33,8 +33,8 @@ firewall:
     connect_with:
       hosts: any
 requirements:
-  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.5'
-  pba_account:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.[567]'
+  no_pba_account:
     type: regex
     value: '^OK'
   ram(GB): 4
@@ -42,5 +42,5 @@ requirements:
   cpu-cores: 2
   cpu-frequency: 2.3
   /boot: 0.2
-  /: 130
+  /: 180
   networks: [backnet, frontnet]

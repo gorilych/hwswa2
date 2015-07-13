@@ -1,35 +1,42 @@
-description: Firewall rules for POA managed server
+description: Firewall rules for OA managed server
 firewall:
-  - name: Incoming_from_LinMN
-    description: Allow SSH access and connections to pleskd from POA LinMN
-    # policy: allow/deny
-    policy: allow
-    # direction: incoming/outgoing
-    direction: incoming
-    networks: [backnet]
-    # proto: TCP/UDP/ICMP
-    protos: [TCP]
-    # ports: 22,53,80,443,2000-2100 - comma-separated, no spaces
-    ports: 22,8352-8439,8441-8500
-    # type: infra/internet
-    type: infra
-    connect_with:
-      # roles are for type = infra
-      roles: [linmn]
-      # hosts are for type = internet, host can be IP/FQDN, like 8.8.8.8 or ya.ru
-      hosts: []
-      # smtprelay, dnsresolver, hwswa_host: yes/no, no by default
-      #smtprelay: no
-      #dnsresolver: no
-      #hwswa_host: no
-  - name: Outgoing_to_LinMN
-    description: Allow connecting to LinMN, repos on LinMN
-    policy: allow
-    direction: outgoing
-    networks: [backnet]
-    protos: [TCP]
-    ports: 8352-8439,8441-8500,80,16384
-    type: infra
-    connect_with:
-      roles: [linmn]
-
+- name: Incoming_from_MN
+  description: Allow connections to pleskd from MN
+  policy: allow
+  direction: incoming
+  networks: [backnet]
+  protos: [TCP]
+  ports: 8352-8439,8441-8500
+  type: infra
+  connect_with:
+    roles: [linmn, winmn]
+- name: Outgoing_to_MN
+  description: Allow connecting to MN
+  policy: allow
+  direction: outgoing
+  networks: [backnet]
+  protos: [TCP]
+  ports: 8352-8439,8441-8500
+  type: infra
+  connect_with:
+    roles: [linmn, winmn]
+- name: Outgoing_to_LinMN
+  description: Allow connecting to LinMN, PPM mirror on LinMN
+  policy: allow
+  direction: outgoing
+  networks: [backnet]
+  protos: [TCP]
+  ports: 80,16384
+  type: infra
+  connect_with:
+    roles: [linmn]
+- name: Outgoing_to_WinMN
+  description: Allow connecting to WinMN on port 8082
+  policy: allow
+  direction: outgoing
+  networks: [backnet]
+  protos: [TCP]
+  ports: 8082
+  type: infra
+  connect_with:
+    roles: [winmn]

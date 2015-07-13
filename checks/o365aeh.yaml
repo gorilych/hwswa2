@@ -17,7 +17,7 @@ firewall:
         connect_with: {roles: [branding]}
       - networks: [backnet]
         ports: 6308
-        connect_with: {roles: [pbalinfe]}
+        connect_with: {roles: [balinfe]}
       - networks: [backnet]
         ports: 5224
         connect_with: {roles: [linmn]}

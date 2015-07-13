@@ -1,0 +1,22 @@
+description: Checks for BALINBE role, linux BA database server
+includes: [ lincommon, lin.oa.managed.fw ]
+firewall:
+  - name: Incoming_from_BA
+    description: Allow access to PostgreSQL from BA App
+    policy: allow
+    direction: incoming
+    networks: [backnet]
+    protos: [TCP, UDP]
+    ports: 5432
+    type: infra
+    connect_with:
+      roles: [balinfe]
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.[567]'
+  ram(GB): 8
+  swap(GB): 16
+  cpu-cores: 4
+  cpu-frequency: 2.3
+  /boot: 0.2
+  /: 180
+  networks: [backnet]

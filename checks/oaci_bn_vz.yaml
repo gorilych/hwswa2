@@ -1,5 +1,5 @@
-description: Checks for PACI Parallels Cloud Server role
-includes: [ common, poa.managed.fw, pcs.fw ]
+description: Checks for PACI Parallels Cloud Server Storage Node role
+includes: [ lincommon, lin.oa.managed.fw, vz.fw ]
 firewall:
   - name: Outgoing_rules
     group: yes
@@ -10,15 +10,12 @@ firewall:
     type: infra
     rules:
       - ports: 64000,22
-        connect_with: {roles: [paci_sn, paci_pcs]}
+        connect_with: {roles: [oaci_bn_vz, oaci_vz]}
 requirements:
   OS: 'Parallels Cloud Server 6\.'
-  virtualization: 'bare metal'
   ram(GB): 2
   swap(GB): 4
   cpu-frequency: 1.5
   /: 12
-  /vz:
-    type: disk
-    value: 500
-  networks: [backnet, frontnet]
+  /vz: 500
+  networks: [backnet]
