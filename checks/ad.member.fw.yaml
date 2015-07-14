@@ -1,0 +1,20 @@
+description: Firewall rules for AD member
+firewall:
+- name: out_to_ad
+  description: TCP connections in backnet to AD controllers
+  group: yes
+  policy: allow
+  direction: outgoing
+  type: infra
+  networks: [backnet]
+  protos: [tcp]
+  ports: 135,4000-4999
+  connect_with: {roles: [ad]}
+  rules:
+  - protos: [udp]
+    ports: 123
+  - protos: [tcp,udp]
+    ports: 53,88,389
+  - protos: [tcp]
+    ports: 3268,3269
+

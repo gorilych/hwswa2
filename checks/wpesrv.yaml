@@ -1,20 +1,14 @@
 description: Checks for WPESRV role,  Windows Provisioning Engine Server
 # includes: from more specific to less specific
 # includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.oa.managed.fw ]
+includes: [ wincommon, win.oa.managed.fw, ad.member.fw ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
+  - name: tcp_out_backnet_wpedb
+    description: Connections to WPE MSSQL DB
     policy: allow
     type: infra
     networks: [backnet]
     direction: outgoing
     protos: [tcp]
-    rules:
-      - ports: 135,4000-4999
-        connect_with: {roles: [windns, winbr, wincpnlb]}
-      - ports: 5985, 5986 
-        connect_with: {roles: [ad, excas, exmbx]}
-      - ports: 1433
-        connect_with: {roles: [wpedb, wpedbcl ]}
+    ports: 1433
+    connect_with: {roles: [wpedb, wpedbcl ]}

@@ -1,15 +1,28 @@
-description: Checks for AD role, Active Directory server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
+description: >
+  Active Directory Domain Controller.
+    
+  This server is responsible for running the Active Directory required for
+  Windows hosting infrastructure.
 includes: [ wincommon, win.oa.managed.fw ]
+firewall:
+- name: tcp_out_backnet_wpe
+  description: Incoming connections from WPE to remote powershell
+  policy: allow
+  type: infra
+  networks: [backnet]
+  direction: incoming
+  protos: [tcp]
+  ports: 5985,5986
+  connect_with: {roles: [wpesrv, wpesrvdb]}
 requirements:
   OS_SP: "^Microsoft Windows Server ((2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1)|2012.*(Standard|Datacenter))$"
   OSLanguage: en-US
+  architecture: 64-bit
+  networks: [backnet]
   cpu-cores: 4
   cpu-frequency: 2
   ram(GB): 2
   'C:': 40
   'D:': 30
   'E:': 2
-  networks: [backnet]
 

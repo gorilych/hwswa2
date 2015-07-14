@@ -1,16 +1,16 @@
-description: Checks for WPE managed role
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ lincommon ]
+description: Firewall rules for WPE managed role
+include: [ ad.member.fw ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [backnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 135,4000-4999
-        connect_with: {roles: [wpesrv]}
+- name: tcp_out_backnet
+  description: TCP connections in backnet to WPE
+  group: yes
+  policy: allow
+  type: infra
+  networks: [backnet]
+  protos: [tcp]
+  ports: 135,4000-4999
+  connect_with: {roles: [wpesrv, wpesrvdb]}
+  rules:
+  - direction: outgoing
+  - direction: incoming
+
