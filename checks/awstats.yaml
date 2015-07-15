@@ -1,14 +1,45 @@
-description: Checks for AWSTATS role, AWSTATS Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.oa.managed.fw ]
+description: >
+  AWStats Web Statistics Server.
+
+  This server hosts AWStats web-statistics application and stores customer
+  statistics databases.
+includes: [ wincommon, wpe.managed.fw ]
+firewall:
+- name: tcp_out_backnet_web_servers
+  description: TCP connections in backnet to web servers
+  policy: allow
+  type: infra
+  direction: outgoing
+  networks: [backnet]
+  protos: [tcp]
+  ports: 21,1024-65535
+  connect_with: {roles: [wsng, hewsl, winweb, cf, wssfe]}
+- name: tcp_out_frontnet_web_servers
+  description: TCP connections in frontnet to web servers
+  policy: allow
+  type: infra
+  direction: outgoing
+  networks: [frontnet]
+  protos: [tcp]
+  ports: 80
+  connect_with: {roles: [wsng, hewsl, winbr, wincpnlb]}
+- name: tcp_in_frontnet
+  description: TCP connections in frontnet to web servers
+  policy: allow
+  direction: incoming
+  type: internet
+  networks: [frontnet]
+  protos: [tcp]
+  ports: 80,443
+  connect_with: {hosts: [any]}
 requirements:
   OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
   OSLanguage: en-US
+  architecture: 64-bit
+  networks: [backnet, frontnet]
   cpu-cores: 2
   cpu-frequency: 2.3
   ram(GB): 2
   'C:': 40
   'D:': 100
-  networks: [backnet, frontnet]
 
