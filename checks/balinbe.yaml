@@ -1,4 +1,4 @@
-description: Checks for BALINBE role, linux BA database server
+description: Business Automation Database Server on Linux
 includes: [ lincommon, lin.oa.managed.fw ]
 firewall:
   - name: Incoming_from_BA
@@ -6,7 +6,7 @@ firewall:
     policy: allow
     direction: incoming
     networks: [backnet]
-    protos: [TCP, UDP]
+    protos: [TCP]
     ports: 5432
     type: infra
     connect_with:
