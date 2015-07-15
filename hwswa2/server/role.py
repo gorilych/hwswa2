@@ -180,9 +180,7 @@ class Role(object):
         return roles
 
     def _init_firewall(self):
-        firewall = []
-        if 'firewall' in self.data:
-            firewall = self.data['firewall']
+        firewall = self.data.get('firewall', [])
         for role in self.includes:
             rf = copy.deepcopy(role.firewall)
             firewall.extend(rf)
@@ -194,6 +192,10 @@ class Role(object):
                 pass
             else:
                 rule['connect_with']['roles'] = [role.lower() for role in roles]
+            rule.setdefault('policy', 'allow')
+            rule.setdefault('direction', 'incoming')
+            rule.setdefault('protos', ['TCP'])
+            rule.setdefault('type', 'infra')
         self._firewall = firewall
 
     @staticmethod
