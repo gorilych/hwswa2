@@ -6,11 +6,7 @@ firewall:
   - name: gr_tcp_out_frontnet
     description: Group for outgoing TCP connections in frontnet
     group: yes
-    policy: allow
-    type: infra
     networks: [backnet]
-    direction: incoming
-    protos: [tcp]
     rules:
       - ports: 81, 444
         connect_with: {roles: [wpesrv] }

@@ -3,21 +3,15 @@ description: Firewall checks for branding
 # includes: [ first, second ] - checks from first will override checks from second
 firewall:
   - name: to_online_store
-    policy: allow
     direction: outgoing
     networks: [backnet]
     ports: 80,443
-    type: infra
-    protos: [TCP]
     connect_with:
         roles: [balinos]
   - name: from_branding
-    policy: allow
     group: yes
     direction: outgoing
     networks: [frontnet]
-    type: infra
-    protos: [TCP]
     rules:
       - name: to_file_manager 
         ports: 1299

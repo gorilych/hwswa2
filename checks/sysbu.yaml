@@ -5,12 +5,8 @@ includes: [ lincommon ]
 firewall:
   - name: SSH
     description: OA MN, BALINFE, IM, IMDB should be able to put backups over SSH
-    policy: allow
-    direction: incoming
     networks: [backnet]
     ports: 22
-    type: infra
-    protos: [TCP]
     connect_with:
         roles: [linmn, balinbe, oaci_im, oaci_imdb]
 

@@ -6,22 +6,15 @@ firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet
     group: yes
-    policy: allow
-    type: infra
     networks: [backnet]
     direction: outgoing
-    protos: [tcp]
     rules:
       - ports: 80,443
         connect_with: {roles: [lyncpoolfe]}
   - name: gr_tcp_in_backnet
     description: Group for incoming TCP connections in backnet
     group: yes
-    policy: allow
-    type: infra
     networks: [backnet]
-    direction: incoming
-    protos: [tcp]
     rules:
       - ports: 443 
         connect_with: {roles: [winmn,linmn]}

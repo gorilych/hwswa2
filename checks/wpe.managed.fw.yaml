@@ -4,13 +4,9 @@ firewall:
 - name: tcp_out_backnet
   description: TCP connections in backnet to WPE
   group: yes
-  policy: allow
-  type: infra
   networks: [backnet]
-  protos: [tcp]
   ports: 135,4000-4999
   connect_with: {roles: [wpesrv, wpesrvdb]}
   rules:
   - direction: outgoing
-  - direction: incoming
 

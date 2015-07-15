@@ -3,21 +3,14 @@ description: Firewall checks and requirements for UI
 # includes: [ first, second ] - checks from first will override checks from second
 firewall:
   - name: to_privoxy
-    policy: allow
     direction: outgoing
     networks: [backnet]
     ports: 8008
-    type: infra
-    protos: [TCP]
     connect_with:
         roles: [linpps]
   - name: from_branding
-    policy: allow
-    direction: incoming
     networks: [backnet]
     ports: 8080
-    type: infra
-    protos: [TCP]
     connect_with:
         roles: [branding]
 requirements:

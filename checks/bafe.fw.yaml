@@ -2,12 +2,9 @@ description: Common firewall rules for BALINFE and BAWINFE
 firewall:
 - name: outgoing_backnet
   description: outgoing connections in backnet
-  policy: allow
   group: yes
   direction: outgoing
   networks: [backnet]
-  protos: [TCP]
-  type: infra
   rules:
   - ports: 8440
     connect_with: { roles: [linmn, winmn] }
@@ -16,10 +13,7 @@ firewall:
 - name: outgoing_frontnet
   description: outgoing connections in frontnet
   group: yes
-  policy: allow
   direction: outgoing
-  type: infra
-  protos: [TCP]
   networks: [frontnet]
   rules:
   - ports: 21,443,8443,60000-65534
@@ -28,20 +22,13 @@ firewall:
     connect_with: { roles: [winbr, wincpnlb] }
 - name: incoming_backnet
   description: incoming connections in backnet
-  policy: allow
   direction: outgoing
-  type: infra
-  protos: [TCP]
   networks: [backnet]
   ports: 5224
   connect_with: 
     roles: [linmn, winmn, balinos, bawinos]
 - name: incoming_frontnet
   description: incoming connections in frontnet
-  policy: allow
-  direction: incoming
-  type: infra
-  protos: [TCP]
   networks: [frontnet]
   ports: 443,8443
   connect_with:

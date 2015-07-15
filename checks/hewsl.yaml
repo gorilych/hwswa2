@@ -3,12 +3,10 @@ includes: [ lincommon, lin.oa.managed.fw, ngwebserver.fw ]
 firewall:
   - name: Outgoing_to_HELB
     description: Allow access to Ganglia
-    policy: allow
     direction: outgoing
     networks: [backnet]
     protos: [UDP]
     ports: 8649
-    type: infra
     connect_with:
       roles: [helb]
 requirements:

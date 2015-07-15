@@ -3,12 +3,8 @@ includes: [ lincommon, lin.oa.managed.fw ]
 firewall:
   - name: Incoming_from_BA
     description: Allow access to PostgreSQL from BA App
-    policy: allow
-    direction: incoming
     networks: [backnet]
-    protos: [TCP]
     ports: 5432
-    type: infra
     connect_with:
       roles: [balinfe]
 requirements:

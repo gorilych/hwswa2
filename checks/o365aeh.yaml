@@ -6,11 +6,8 @@ firewall:
   - name: outgoing
     description: Outgoing connections
     group: yes
-    policy: allow
-    type: infra
     networks: [frontnet]
     direction: outgoing
-    protos: [tcp]
     rules:
       - networks: [frontnet]
         ports: 443
@@ -26,19 +23,13 @@ firewall:
         connect_with: {roles: [o365mssql]}
   - name: incoming
     description: incoming
-    policy: allow
-    direction: incoming
     networks: [frontnet]
-    protos: [TCP]
     ports: 433
-    type: infra
     connect_with: {roles: [linmn]}
   - name: mosi
     description: allow access to mosi
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    protos: [TCP]
     type: internet
     ports: 443
     connect_with: {hosts: [mosi.microsoftonline.com]}

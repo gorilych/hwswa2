@@ -5,10 +5,7 @@ includes: [ wincommon, win.oa.managed.fw, ad.member.fw ]
 firewall:
   - name: tcp_out_backnet_wpedb
     description: Connections to WPE MSSQL DB
-    policy: allow
-    type: infra
     networks: [backnet]
     direction: outgoing
-    protos: [tcp]
     ports: 1433
     connect_with: {roles: [wpedb, wpedbcl ]}

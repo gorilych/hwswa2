@@ -3,12 +3,9 @@ includes: [ lincommon ]
 firewall:
   - name: Incoming_from_LinMN
     description: Allow access to PostgreSQL from OA MN
-    policy: allow
-    direction: incoming
     networks: [backnet]
     protos: [TCP, UDP]
     ports: 5432
-    type: infra
     connect_with:
       roles: [linmn]
 requirements:

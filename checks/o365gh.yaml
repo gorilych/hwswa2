@@ -5,10 +5,8 @@ includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
 firewall:
   - name: mosi
     description: allow access to mosi
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    protos: [TCP]
     type: internet
     ports: 443
     connect_with: {hosts: [mosi.microsoftonline.com]}

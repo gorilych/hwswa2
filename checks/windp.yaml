@@ -5,10 +5,7 @@ includes: [ wincommon, win.oa.managed.fw ]
 firewall:
   - name: Incoming_from_public
     description: "Allow access from Internet"
-    policy: allow
-    direction: incoming
     networks: [frontnet]
-    protos: [TCP]
     ports: 80
     type: internet
     connect_with:

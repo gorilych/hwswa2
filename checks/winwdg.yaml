@@ -2,11 +2,8 @@ description: Checks for WINWDG role, server for watchdog
 includes: [ wincommon ]
 firewall:
   - name: outgoing
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    type: infra
-    protos: [TCP]
     group: yes
     rules:
       - ports: 53

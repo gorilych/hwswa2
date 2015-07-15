@@ -2,24 +2,17 @@ description: Firewall rules for OA managed server
 firewall:
 - name: with_MN
   description: Allow connections to/from pleskd from MN
-  policy: allow
   group: yes
   networks: [backnet]
-  protos: [TCP]
   ports: 8352-8439,8441-8500
-  type: infra
   connect_with: roles: [linmn, winmn]
   rules:
-  - direction: incoming
   - direction: outgoing
 - name: Outgoing_to_LinMN_WinMN
   description: Specific connections to lin/win MN
-  policy: allow
   group: yes
   direction: outgoing
   networks: [backnet]
-  protos: [TCP]
-  type: infra
   rules:
   - ports: 80,16384
     connect_with: roles: [linmn]

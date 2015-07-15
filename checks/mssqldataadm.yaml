@@ -6,20 +6,14 @@ firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet
     group: yes
-    policy: allow
-    type: infra
     networks: [backnet]
     direction: outgoing
-    protos: [tcp]
     rules:
       - ports: 1433
         connect_with: {roles: [mssqlcluster, mssql]}
   - name: Incoming_from_public
     description: "Allow access from Internet"
-    policy: allow
-    direction: incoming
     networks: [frontnet]
-    protos: [TCP]
     ports: 80
     type: internet
     connect_with:

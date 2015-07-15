@@ -7,11 +7,7 @@ includes: [ wincommon, win.oa.managed.fw ]
 firewall:
 - name: tcp_out_backnet_wpe
   description: Incoming connections from WPE to remote powershell
-  policy: allow
-  type: infra
   networks: [backnet]
-  direction: incoming
-  protos: [tcp]
   ports: 5985,5986
   connect_with: {roles: [wpesrv, wpesrvdb]}
 requirements:

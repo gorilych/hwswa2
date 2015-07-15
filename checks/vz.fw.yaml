@@ -1,10 +1,8 @@
 description: Firewall rules for PCS server
 firewall:
   - name: Outgoing_to_Internet
-    policy: allow
     direction: outgoing
     networks: [frontnet]
-    protos: [TCP]
     type: internet
     group: yes
     rules:

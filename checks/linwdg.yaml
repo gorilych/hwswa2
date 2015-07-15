@@ -2,11 +2,8 @@ description: Checks for LINWDG role, server for watchdog
 includes: [ lincommon ]
 firewall:
   - name: outgoing
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    type: infra
-    protos: [TCP]
     group: yes
     rules:
       - { ports: 53, protos: [TCP, UDP], connect_with: { roles: [lindns] } }

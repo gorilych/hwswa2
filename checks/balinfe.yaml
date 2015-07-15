@@ -8,20 +8,13 @@ parameters:
 firewall:
 - name: incoming_from_wdg
   description: Allow access to from watchdog
-  policy: allow
-  direction: incoming
   networks: [frontnet]
-  protos: [TCP]
   ports: 22,443,8443
-  type: infra
   connect_with:
     roles: [linwdg, winwdg]
 - name: incoming_from_internet
   description: Allow access to the panel
-  policy: allow
-  direction: incoming
   networks: [frontnet]
-  protos: [TCP]
   ports: 443,8443
   type: intranet
   connect_with:

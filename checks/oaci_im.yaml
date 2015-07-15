@@ -3,11 +3,8 @@ includes: [ lincommon, lin.oa.managed.fw ]
 firewall:
   - name: Outgoing_rules
     group: yes
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    protos: [TCP]
-    type: infra
     rules:
       - ports: 8082
         connect_with: {roles: [winmn]}

@@ -4,11 +4,8 @@ firewall:
   - name: Outgoing_connections
     group: yes
     description: Allow access to SQL, LB, etc
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    protos: [TCP]
-    type: infra
     rules:
       - name: to_redis
         ports: 6380-6430

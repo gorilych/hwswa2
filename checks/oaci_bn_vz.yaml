@@ -3,11 +3,8 @@ includes: [ lincommon, lin.oa.managed.fw, vz.fw ]
 firewall:
   - name: Outgoing_rules
     group: yes
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    protos: [TCP]
-    type: infra
     rules:
       - ports: 64000,22
         connect_with: {roles: [oaci_bn_vz, oaci_vz]}

@@ -3,30 +3,20 @@ includes: [ lincommon, lin.oa.managed.fw ]
 firewall:
   - name: Outgoing_to_BA
     description: Allow access from Online Store to BA API
-    policy: allow
     direction: outgoing
     networks: [backnet]
-    protos: [TCP]
     ports: 5224
-    type: infra
     connect_with:
       roles: [balinfe]
   - name: Incoming_from_BA
     description: Allow access to Online Store from BA
-    policy: allow
-    direction: incoming
     networks: [backnet]
-    protos: [TCP]
     ports: 80,443
-    type: infra
     connect_with:
       roles: [balinfe]
   - name: Incoming_to_BALINOS
     description: Allow access to Online Store
-    policy: allow
-    direction: incoming
     networks: [frontnet]
-    protos: [TCP]
     ports: 443
     type: internet
     connect_with:

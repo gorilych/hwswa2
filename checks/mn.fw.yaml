@@ -3,11 +3,8 @@ firewall:
 - name: gr_tcp_out_backnet
   description: Group for outgoing TCP connections in backnet
   group: yes
-  policy: allow
-  type: infra
   networks: [backnet]
   direction: outgoing
-  protos: [tcp]
   rules:  
   - ports: 443
     connect_with: {roles: [aeh]}
@@ -31,10 +28,8 @@ firewall:
     connect_with: {roles: [wpesrvdb, wpesrv]}
 - name: pa_download
   description: allow access to pa.download.parallels.com repo
-  policy: allow
   direction: outgoing
   networks: [backnet]
-  protos: [TCP]
   type: internet
   ports: 80,443
   connect_with: {hosts: [download.pa.parallels.com]}
