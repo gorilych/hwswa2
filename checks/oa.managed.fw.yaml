@@ -8,6 +8,7 @@ firewall:
   connect_with: roles: [linmn, winmn]
   rules:
   - direction: outgoing
+  - direction: incoming
 - name: Outgoing_to_LinMN_WinMN
   description: Specific connections to lin/win MN
   group: yes

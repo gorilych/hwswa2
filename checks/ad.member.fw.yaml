@@ -12,5 +12,5 @@ firewall:
     ports: 123
   - protos: [tcp,udp]
     ports: 53,88,389
-    ports: 3268,3269
+  - ports: 3268,3269
 

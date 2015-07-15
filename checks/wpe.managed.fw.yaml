@@ -9,4 +9,5 @@ firewall:
   connect_with: {roles: [wpesrv, wpesrvdb]}
   rules:
   - direction: outgoing
+  - direction: incoming
 
