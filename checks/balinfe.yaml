@@ -12,13 +12,6 @@ firewall:
   ports: 22,443,8443
   connect_with:
     roles: [linwdg, winwdg]
-- name: incoming_from_internet
-  description: Allow access to the panel
-  networks: [frontnet]
-  ports: 443,8443
-  type: intranet
-  connect_with:
-    hosts: [any]
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.[567]'
   no_pba_account: { type: regex, value: '^OK' }

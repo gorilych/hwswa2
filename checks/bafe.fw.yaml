@@ -33,4 +33,11 @@ firewall:
   ports: 443,8443
   connect_with:
     roles: [branding, winbr, wincpnlb, linpps, winpps]
+- name: incoming_from_internet
+  description: Allow access to the panel
+  networks: [frontnet]
+  ports: 443,8443
+  type: intranet
+  connect_with:
+    hosts: [any]
 
