@@ -27,10 +27,10 @@ firewall:
   - ports: 48480
     connect_with: {roles: [wpesrvdb, wpesrv]}
 - name: pa_download
-  description: allow access to pa.download.parallels.com repo
+  description: allow access to pa repo
   direction: outgoing
   networks: [backnet]
   type: internet
   ports: 80,443
-  connect_with: {hosts: [download.pa.parallels.com]}
+  connect_with: {hosts: [download.automation.odin.com]}
 
