@@ -1,7 +1,8 @@
-description: Checks for BES role, BlackBerry Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.oa.managed.fw ]
+description: >
+  BlackBerry™ Enterprise Server.
+  
+  Runs BlackBerry™ Administration Service.
+includes: [ wincommon, wpe.oa.managed.fw ]
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 (Standard Service Pack 2|R2 Standard)|2003 (R2 |)Standard Service Pack 2)$"
   arch_os: { type: manual, value: 'Architecture depends on OS, check manually' }
