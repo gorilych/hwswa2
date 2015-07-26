@@ -1,5 +1,5 @@
 description: Checks for BES role, BlackBerry Server
-includes: [ wincommon, win.oa.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 requirements:
   OS_SP: "^Microsoft Windows Server 200[38] (Standard Service Pack 2|R2 Standard)$"
   arch_os: { type: manual, value: 'Architecture depends on OS, check manually' }
@@ -7,6 +7,7 @@ requirements:
   cpu-cores: 2
   cpu-frequency: 2.3
   ram(GB): 4
-  'C:': 46
+  'C:': 18
   'E:\BESLogs': 18
   networks: [backnet]
+  add_fw: { type: manual, value: 'Firewall or proxy has to be configured to permit the BES to initiate and maintain an outbound connection to the Internet on TCP port 3101 to connect BlackBerry Infrastructure. Also, if you have array of CASes, BES server should have access to it by MAPI protocol. There are the following options: connect the BES host to the FrontNet network or configure the BES service to use a proxy server to connect to the Internet from the BackNet network.' }

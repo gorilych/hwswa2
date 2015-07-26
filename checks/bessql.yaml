@@ -1,5 +1,5 @@
-description: Checks for BESSQL role, BlackBerry SQL Server
-includes: [ wincommon, win.oa.managed.fw ]
+description: MSSQL server carrying BlackBerry™ Configuration Database.
+includes: [ wincommon, ad.member.fw ]
 requirements:
   OS_SP: { type: manual, value: 'OS depends if SQL is clustered or not, check manually' }
   arch_os: { type: manual, value: 'Architecture depends on OS, check manually' }
