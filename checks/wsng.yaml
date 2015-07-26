@@ -1,6 +1,4 @@
 description: Checks for WSNG role, linux NG standalone webserver
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ lincommon, lin.oa.managed.fw, ngwebserver.fw ]
 requirements:
   OS: 'Cloud Linux 6\.'

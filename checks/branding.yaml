@@ -1,6 +1,4 @@
 description: Firewall checks for branding
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 firewall:
   - name: to_online_store
     direction: outgoing

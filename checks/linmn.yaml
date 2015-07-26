@@ -1,6 +1,4 @@
 description: Checks for LINMN role, linux management node
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ lincommon, mn.fw ]
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.[567]'

@@ -1,6 +1,4 @@
 escription: Checks for Office 365 Application End-point Host
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ wincommon ]
 firewall:
   - name: outgoing

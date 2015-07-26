@@ -1,6 +1,4 @@
 description: Checks for WINWEB role,  Windows Web Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
 firewall:
   - name: gr_tcp_out_backnet

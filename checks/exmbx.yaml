@@ -1,6 +1,4 @@
 description: Checks for EXMBX role,  Exchange 2013 Exchange 2013 Mailbox Server 
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
 firewall:
   - name: gr_tcp_out_frontnet

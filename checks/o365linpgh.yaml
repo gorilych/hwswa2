@@ -1,6 +1,4 @@
 description: Provisioning Gateway Host on Linux for Office 365 integration
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ linpgh ]
 firewall:
   - name: gr_tcp_out_backnet

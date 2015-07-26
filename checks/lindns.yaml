@@ -1,6 +1,4 @@
 description: Checks for LINDNS role, linux DNS server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ lincommon, lin.oa.managed.fw ]
 firewall:
   - name: Incoming_from_internet_to_LINDNS

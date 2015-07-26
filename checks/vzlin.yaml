@@ -1,6 +1,4 @@
 description: Checks for PVCLIN role
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ lincommon ]
 parameters:
   vz_partition: mount | grep --silent '[[:space:]]/vz[[:space:]]' 
