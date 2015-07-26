@@ -1,30 +1,12 @@
-description: Checks for BAWINFE role, Windows BA application server
-includes: [ wincommon ]
-firewall:
-  - name: Outgoing_to_MN
-    description: Allow access from BA to OA API
-    direction: outgoing
-    networks: [backnet]
-    ports: 8440
-    connect_with:
-      roles: [linmn, winmn]
-  - name: Outgoing_to_branding
-    description: access to hosting services
-    direction: outgoing
-    networks: [frontnet]
-    ports: 443,21,49152-65534
-    connect_with:
-      roles: [branding]
-  - name: Incoming_to_BAWINOS
-    description: Allow access to Online Store
-    networks: [frontnet]
-    ports: 443
-    type: internet
-    connect_with:
-      hosts: any
+description: >
+  Business Automation Application Server on Windows.
+ 
+  Server runs Business Automation components and UI.
+includes: [ wincommon, bafe.fw ]
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 R2 (Standard|Datacenter))$"
   OSLanguage: en-US
+  architecture: 64-bit
   cpu-cores: 2
   cpu-frequency: 2.3
   ram(GB): 4

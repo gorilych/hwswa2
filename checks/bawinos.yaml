@@ -1,29 +1,9 @@
-description: Checks for BALINOS role, Windows BA online store
-includes: [ wincommon ]
-firewall:
-  - name: Outgoing_to_BA
-    description: Allow access from Online Store to BA API
-    direction: outgoing
-    networks: [backnet]
-    ports: 5224
-    connect_with:
-      roles: [balinfe,bawinfe]
-  - name: Incoming_from_BA
-    description: Allow access to Online Store from BA
-    networks: [backnet]
-    ports: 80,443
-    connect_with:
-      roles: [balinfe,bawinfe]
-  - name: Incoming_to_BAWINOS
-    description: Allow access to Online Store
-    networks: [frontnet]
-    ports: 443
-    type: internet
-    connect_with:
-      hosts: any
+description: Business Automation Online Store server on Windows.
+includes: [ wincommon, baos.fw ]
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 R2 (Standard|Datacenter))$"
   OSLanguage: en-US
+  architecture: 64-bit
   cpu-cores: 1
   cpu-frequency: 2.3
   ram(GB): 3
