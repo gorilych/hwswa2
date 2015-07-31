@@ -201,8 +201,8 @@ class Report(object):
                 # trying to print in pretty order
                 skip_keys = ['OS_SP', 'updates_number', 'umask', 'time_utc',
                              'ntp_service_status', 'uptime', 'tmp_noexec']
-                for key in ['hostname', 'OS', 'SP_level', 'OSLanguage',
-                            'Activation', 'architecture', 'processors',
+                for key in ['hostname', 'hw_id', 'OS', 'SP_level', 'OSLanguage',
+                            'Activation', 'sid', 'architecture', 'processors',
                             'ram(GB)', 'swap(GB)', 'partitions', 'blockdevs',
                             'time', 'iptables', 'selinux', 'yum_repos']:
                     if key in parameters:

@@ -1,6 +1,7 @@
 description: Common checks for all linux roles
 ostype: linux
 parameters:
+  hw_id:              cat /sys/class/dmi/id/product_uuid
   hostname:           hostname -f 2>/dev/null || hostname
   time_utc:           LANG=C date --utc
   time:               LANG=C date

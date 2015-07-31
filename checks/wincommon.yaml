@@ -2,6 +2,7 @@ description: Common checks for all windows roles
 ostype: windows
 parameters:
   hostname: ps|hostname
+  hw_id: ps|(gwmi Win32_ComputerSystemProduct).UUID
   sid: ps|(gwmi Win32_UserAccount
              -Filter 'LocalAccount=true and sid like "S-1-5-21%-500"').SID -replace "-500$"
   time: ps|get-date -Format "ddd, dd MMM yyyy HH':'mm':'ss ('UTC'z)"
