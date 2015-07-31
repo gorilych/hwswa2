@@ -10,3 +10,4 @@ requirements:
   /usr: 20
   /var: 150
   networks: [backnet]
+  disable_ipv6: { type: eq, parameter: 'network:disable_ipv6', value: "1" }

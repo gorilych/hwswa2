@@ -43,7 +43,8 @@ parameters:
     _command: lsblk.sh
   virtualization: virt-what.py
   network:
-    _type: dictionary 
+    _type: dictionary
+    disable_ipv6: cat /proc/sys/net/ipv6/conf/all/disable_ipv6
     name_servers: awk '$1=="nameserver"{print $2}' /etc/resolv.conf | xargs
     dns_check: getent hosts ya.ru >/dev/null 2>&1 && echo OK || echo NOT OK
     network_interfaces:
