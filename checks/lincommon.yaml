@@ -25,6 +25,7 @@ parameters:
   tmp_noexec: grep -q '/tmp[^/]*noexec' /proc/mounts
               && echo NOK noexec found
               || echo OK
+  is_admin: test $(id -u) == "0" && echo true || echo false
   processors:
     _type: dictionary
     count:     grep --fixed-strings processor -c /proc/cpuinfo

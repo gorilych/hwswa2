@@ -15,6 +15,8 @@ parameters:
   OS_SP: ps|(gwmi Win32_OperatingSystem).Caption + (gwmi Win32_OperatingSystem).CSDVersion
   OSLanguage: ps|[System.Globalization.CultureInfo]::InstalledUICulture.Name
   architecture: ps|(gwmi Win32_OperatingSystem).OSArchitecture
+  is_admin: ps|@( [System.Security.Principal.WindowsIdentity]::GetCurrent().groups 
+                  | foreach-object { $_.value } ) -Contains 'S-1-5-32-544'
   Activation: ps|Function ActivationStatus($code) {switch($code)
                      { 0 {"Unlicensed"}; 1 {"Licensed"}; 2 {"Out-Of-Box Grace Period"};
                        3 {"Out-Of-Tolerance Grace Period"}; 4 {"Non-Genuine Grace Period"};
