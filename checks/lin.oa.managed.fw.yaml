@@ -1,5 +1,5 @@
 description: Firewall rules for OA managed linux server
-include: [ oa.managed.fw ]
+includes: [ oa.managed.fw ]
 firewall:
 - name: Incoming_from_LinMN
   description: Allow SSH connections from MN
