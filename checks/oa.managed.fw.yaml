@@ -5,7 +5,7 @@ firewall:
   group: yes
   networks: [backnet]
   ports: 8352-8439,8441-8500
-  connect_with: roles: [linmn, winmn]
+  connect_with: { roles: [linmn, winmn] }
   rules:
   - direction: outgoing
   - direction: incoming
@@ -16,6 +16,6 @@ firewall:
   networks: [backnet]
   rules:
   - ports: 80,16384
-    connect_with: roles: [linmn]
+    connect_with: { roles: [linmn] }
   - ports: 8082
-    connect_with: roles: [winmn]
+    connect_with: { roles: [winmn] }
