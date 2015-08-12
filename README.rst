@@ -59,7 +59,8 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
       (env)$ which rst2pdf >/dev/null && \
              { for d in README.rst CHANGELOG.rst docs/*rst;
                  do rst2pdf $d; done; }
-      (env)$ pyinstaller --distpath=pyinstaller/hwswa2/ \
+      (env)$ rm -rf pyinstaller/hwswa2 && \
+             pyinstaller --distpath=pyinstaller/hwswa2/ \
                          --workpath=pyinstaller/build/ \
                          --clean pyinstaller/hwswa2.spec && \
              \cp -af README* LICENSE CHANGELOG* config/ checks/ docs/ \
