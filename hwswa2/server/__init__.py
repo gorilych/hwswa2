@@ -22,7 +22,7 @@ class Server(object):
 
     time_format = '%Y-%m-%d.%Hh%Mm%Ss'
 
-    def __init__(self, name, account, address,
+    def __init__(self, name, account=None, address=None,
                  role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None):
         self.name = name
         self.ostype = ostype

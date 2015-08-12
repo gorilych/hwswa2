@@ -89,6 +89,7 @@ class Role(object):
         if not hasattr(self, '_includes'):
             logger.debug("Postponed initialization of included roles for %s started" % self)
             self._init_includes()
+            logger.debug("Included roles for %s: %s" % (self, self._includes))
         return self._includes
 
     @property
