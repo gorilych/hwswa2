@@ -94,6 +94,9 @@ def read_configuration():
     subparser = subparsers.add_parser('list-roles', help='show available roles')
     subparser.set_defaults(subcommand=subcommands.list_roles)
 
+    subparser = subparsers.add_parser('list-servers', help='list servers', aliases=('ls',))
+    subparser.set_defaults(subcommand=subcommands.list_servers)
+
     subparser = subparsers.add_parser('check', help='check servers',
                                       aliases=('ck',))
     servergroup = subparser.add_mutually_exclusive_group()

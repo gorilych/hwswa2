@@ -102,7 +102,10 @@ class Server(object):
         return cls(**initargs)
 
     def __str__(self):
-        return "server %s" % self.name
+        s = "server %s" % self.name
+        if self.role: s += ", role %s" % self.role
+        if self.address: s += ", %s" % self.address
+        return s
 
     def last_connection_error(self):
         return self._last_connection_error

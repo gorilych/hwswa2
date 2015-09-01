@@ -20,6 +20,11 @@ __all__ = ['show_firewall', 'firewall', 'check', 'checkall', 'prepare',
 logger = logging.getLogger(__name__)
 
 
+def list_servers():
+    for name in server_names():
+        print(get_server(name))
+
+
 def show_firewall():
     """Show firewall requirements"""
     servers = []
