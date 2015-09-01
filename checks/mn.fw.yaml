@@ -1,4 +1,5 @@
 description: Firewall rules for OA management node (common lin/win)
+internal: yes
 firewall:
 - name: gr_tcp_out_backnet
   description: Group for outgoing TCP connections in backnet

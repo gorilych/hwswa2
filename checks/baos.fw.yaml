@@ -1,4 +1,5 @@
 description: Common firewall rules for BALINOS and BAWINOS
+internal: yes
 firewall:
 - name: Outgoing_to_BA
   description: Allow access from Online Store to BA API

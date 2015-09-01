@@ -1,4 +1,5 @@
 description: Firewall rules for OA managed linux server
+internal: yes
 includes: [ oa.managed.fw ]
 firewall:
 - name: Incoming_from_LinMN

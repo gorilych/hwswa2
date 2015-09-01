@@ -1,4 +1,5 @@
 description: Firewall rules for web hosting services
+internal: yes
 firewall:
   - name: Incoming_from_public
     description: "Allow access to hosting services: websites, ftp, ssh, filemanager, sql managers"

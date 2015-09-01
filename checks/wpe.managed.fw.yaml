@@ -1,4 +1,5 @@
 description: Firewall rules for WPE managed role
+internal: yes
 includes: [ win.oa.managed.fw, ad.member.fw ]
 firewall:
 - name: tcp_out_backnet

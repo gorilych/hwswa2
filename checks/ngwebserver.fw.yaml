@@ -1,4 +1,5 @@
 description: Firewall for NG webservers HEWSL, WSNG
+internal: yes
 includes: [ webserver.pub.fw ]
 firewall:
   - name: Outgoing_connections

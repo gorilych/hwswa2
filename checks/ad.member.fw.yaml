@@ -1,4 +1,5 @@
 description: Firewall rules for AD member
+internal: yes
 firewall:
 - name: out_to_ad
   description: TCP connections in backnet to AD controllers

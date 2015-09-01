@@ -70,6 +70,14 @@ class Role(object):
         return self._data
 
     @property
+    def internal(self):
+        if not hasattr(self, '_internal'):
+            self._internal = self.data.get('internal')
+            # if internal flag is not mentioned in data - it is None
+            # this is ok, because internal is False by default
+        return self._internal
+
+    @property
     def description(self):
         return self.data.get('description')
 

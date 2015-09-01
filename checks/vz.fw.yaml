@@ -1,4 +1,5 @@
 description: Firewall rules for PCS server
+internal: yes
 firewall:
   - name: Outgoing_to_Internet
     direction: outgoing

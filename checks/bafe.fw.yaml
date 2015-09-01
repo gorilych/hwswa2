@@ -1,4 +1,5 @@
 description: Common firewall rules for BALINFE and BAWINFE
+internal: yes
 firewall:
 - name: outgoing_backnet
   description: outgoing connections in backnet

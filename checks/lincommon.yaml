@@ -1,4 +1,5 @@
 description: Common checks for all linux roles
+internal: yes
 ostype: linux
 parameters:
   hw_id:              cat /sys/class/dmi/id/product_uuid

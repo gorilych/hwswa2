@@ -1,4 +1,5 @@
 description: Common checks for all windows roles
+internal: yes
 ostype: windows
 parameters:
   hostname: ps|hostname

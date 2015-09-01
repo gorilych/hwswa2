@@ -465,18 +465,26 @@ def list_roles(roles_dir=None):
         roles_dir = hwswa2.config['checksdir']
     roles = []
     role_names = []
+    # Read all roles from role files
     for role_file in glob.glob(os.path.join(roles_dir, '*.yaml')):
         role_name = os.path.basename(role_file)[:-5].lower()
         roles.append(Role(role_name))
         role_names.append(role_name)
+    # Find roles which are mentioned in firewall rules but do not have role file
     aux_role_names = []
     for role in roles:
         new_names = [r for r in role.connects_with_roles() if r not in role_names and r not in aux_role_names]
         aux_role_names.extend(new_names)
-    role_names.sort()
+    # find role names for non-internal roles
+    noninternal_role_names = [r.name for r in roles if not r.internal]
+    noninternal_role_names.sort()
+    # find role names for internal roles
+    internal_role_names = [r.name for r in roles if r.internal]
+    internal_role_names.sort()
     aux_role_names.sort()
-    print("==== Roles ====\n" + ', '.join(role_names))
+    print("==== Roles ====\n" + ', '.join(noninternal_role_names))
     print("==== Auxiliary roles (no yaml files, but mentioned in firewall rules) ====\n" + ', '.join(aux_role_names))
+    print("==== Internal roles ====\n" + ', '.join(internal_role_names))
 
 
 def agent_console():
