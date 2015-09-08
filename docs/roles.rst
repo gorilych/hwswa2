@@ -132,6 +132,17 @@ In a report::
 
   processors: {count: '1', frequency(GHz): '0.8', model: AMD Athlon(tm) II Neo K125 Processor}
 
+Also it is possible to pass additional subparameter names in ``_keys``.
+In this case parameter should also contain ``_command`` or ``script``.
+Optionally you can define ``_separator`` which is a single space character
+by default. Generated output will be splitted by this separator and saved to the 
+specified keys. Example (fake)::
+  
+  bootoptions:
+    _type: dictionary
+    _keys: [ option1, option2, rest ]
+    _command: cat /proc/cmdline
+
 .. note::
    Subparameter names should not start with underscore!
 
