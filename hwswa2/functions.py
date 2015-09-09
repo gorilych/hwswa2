@@ -62,6 +62,13 @@ def _network(string):
         return {'name': match.group(1), 'address': match.group(2), 'prefix': match.group(3)}
 
 
+def int_above_one(value):
+    ivalue = int(value)
+    if ivalue < 2:
+        raise argparse.ArgumentTypeError("%s is not integer > 1" % value)
+    return ivalue
+
+
 def read_configuration():
     """Reads configuration from command line args and main.cfg"""
     global hwswa2
@@ -216,6 +223,15 @@ def read_configuration():
     subparser.add_argument('oldreport')
     subparser.add_argument('newreport')
     subparser.set_defaults(subcommand=subcommands.reportdiff)
+
+    subparser = subparsers.add_parser('reports-history',
+        help='show history of reports, by diffs',
+        aliases=('rh',))
+    subparser.add_argument('servername', metavar='server')
+    subparser.add_argument('-n', '--reports-number',
+            type=int_above_one, default=5, dest='reportsnumber',
+            help='compare last <n> reports, 5 by default')
+    subparser.set_defaults(subcommand=subcommands.reportshistory)
 
     subparser = subparsers.add_parser('agent', help="open agent console")
     subparser.add_argument('servername', metavar='server')

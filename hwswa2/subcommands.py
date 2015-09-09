@@ -460,6 +460,28 @@ def reportdiff():
     Report.print_diff(report1, report2)
 
 
+def reportshistory():
+    servername = hwswa2.config['servername']
+    max_reports = hwswa2.config['reportsnumber']
+    server = get_server(servername)
+    if server is None:
+        logger.error("Cannot find server %s in servers list" % servername)
+        sys.exit(1)
+    last_reports = server.reports[:max_reports]
+    if len(last_reports) == 0:
+        print "%s has no reports" % server
+    elif len(last_reports) == 1:
+        print "%s has one report only" % server
+        last_reports[0].show()
+    else:
+        newer_report = last_reports[0]
+        for report in last_reports[1:]:
+            print("### DIFF %s -> %s ###" % (report.filename(), newer_report.filename()) )
+            Report.print_diff(report, newer_report)
+            newer_report = report
+        print("###############")
+
+
 def list_roles(roles_dir=None):
     if roles_dir is None:
         roles_dir = hwswa2.config['checksdir']
