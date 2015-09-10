@@ -495,7 +495,7 @@ def list_roles(roles_dir=None):
     # Find roles which are mentioned in firewall rules but do not have role file
     aux_role_names = []
     for role in roles:
-        new_names = [r for r in role.connects_with_roles() if r not in role_names and r not in aux_role_names]
+        new_names = [r for r in role.connects_with_roles if r not in role_names and r not in aux_role_names]
         aux_role_names.extend(new_names)
     # find role names for non-internal roles
     noninternal_role_names = [r.name for r in roles if not r.internal]

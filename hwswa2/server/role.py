@@ -177,16 +177,19 @@ class Role(object):
                 rules.append(r)
         return rules
 
+    @property
     def connects_with_roles(self):
-        roles = []
-        for rule in self.firewall:
-            try:
-                add_roles = [role for role in rule['connect_with']['roles'] if role not in roles]
-            except KeyError:
-                pass
-            else:
-                roles.extend(add_roles)
-        return roles
+        if not hasattr(self, '_connects_with_roles'):
+            roles = []
+            for rule in self.firewall:
+                try:
+                    add_roles = [role for role in rule['connect_with']['roles'] if role not in roles]
+                except KeyError:
+                    pass
+                else:
+                    roles.extend(add_roles)
+            self._connects_with_roles = roles
+        return self._connects_with_roles
 
     def _init_firewall(self):
         firewall = self.data.get('firewall', [])
