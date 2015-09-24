@@ -1,24 +1,12 @@
 description: Checks for MSSQL role, MSSQL Database Server
 includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    networks: [backnet]
-    direction: outgoing
-    rules:
-      - ports: 8352
-        connect_with: {roles: [custbackup]}
-      - ports: 3306
-        protos: [udp]
-        connect_with: {roles: [mssqlcluster]}
-  - name: Incoming_from_public
-    description: "Allow access to hosting services"
-    networks: [frontnet]
-    ports: 1433
-    type: internet
-    connect_with:
-      hosts: any
+- name: Incoming_from_public
+  description: "Allow access to hosting services"
+  networks: [frontnet]
+  ports: 1433
+  type: internet
+  connect_with: { hosts: any }
 requirements:
   OS_LP: "^Microsoft Windows Server (2008 ((Standard|Enterprise|Datacenter)|R2 (Enterprise|Datacenter) Service Pack 1)|2012 R2 Enterprise)$"
   arch_os: { type: manual, value: 'Architecture depends on OS, check manually' }

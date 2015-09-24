@@ -7,8 +7,6 @@ firewall:
     networks: [backnet]
     direction: outgoing
     rules:
-      - ports: 8352
-        connect_with: {roles: [custbackup]}
       - ports: 3306
         connect_with: {roles: [mysql]}
       - ports: 5432

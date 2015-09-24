@@ -1,11 +1,2 @@
 description: Checks for WINCUSTBACKUP,  Windows Backup Server
-includes: [ wincommon, win.oa.managed.fw ]
-firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    networks: [backnet]
-    direction: outgoing
-    rules:
-      - ports: 8352
-        connect_with: {roles: [winweb,mssql,linmailsh,linmailcl,mysql,pgsql,hewsl,wsng] }
+includes: [ wincommon, win.oa.managed.fw, custbackup ]

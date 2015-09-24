@@ -1,0 +1,23 @@
+description: firewall rules for custbackup servers
+firewall:
+- name: with_custbackup
+  description: connections from and to custbackup servers
+  group: yes
+  networks: [backnet]
+  ports: 8352
+  connect_with: 
+    roles: 
+    - pgsql
+    - mysql
+    - mssql
+    - mssqlcluster
+    - hewsl
+    - wsng
+    - winweb
+    - cf
+    - linmailsh
+    - linmailcl
+  rules:
+  - direction: outgoing
+  - direction: incoming
+
