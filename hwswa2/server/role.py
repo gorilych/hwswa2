@@ -137,6 +137,7 @@ class Role(object):
         self._includes = []
         for name in self.data.get('includes', list()):
             # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
+            logger.debug("Role %s is included into %s" % (name, self))
             r = role_factory(name)
             self._includes.append(r)
 
