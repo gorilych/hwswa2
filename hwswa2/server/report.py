@@ -250,12 +250,12 @@ class Report(object):
                         nic_ips = []
                         network_interfaces = network['network_interfaces']
                         for nic in network_interfaces:
-                            if nic['slaveof']:  # do not show slave nics
+                            if nic.get('slaveof'):  # do not show slave nics
                                 continue
                             name = nic['name']
                             res_str = name
                             slaves = [n['name'] for n in network_interfaces 
-                                    if n['slaveof'] == name]
+                                    if n.get('slaveof') == name]
                             if slaves:
                                 res_str += '(' + ','.join(slaves) + ')'
                             for ip in nic['ip']:
