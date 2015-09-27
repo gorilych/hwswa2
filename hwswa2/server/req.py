@@ -472,20 +472,46 @@ class DiskReq(_BaseReq):
                     path == mount or
                     (path.startswith(mount) and (path[len(mount)] == '/'
                                                  or path[len(mount)] == '\\')))
-        return max([m for m in mounts if under_mount(path,m)], key=len)
+        try:
+            mount = max([m for m in mounts if under_mount(path,m)], key=len)
+        except ValueError:  # max will fail for empty sequence
+            return None
+        else:
+            return mount
 
     def _compare(self, mount_size):
-        path_size = self.path_size
-        mounts = [m for m in mount_size]
+        path_size = self.path_size  # { path1: req_size1, ..
+        logger.debug("Comparing req %s with actual %s" %(path_size, mount_size))
+        # mount_size = { mount1: its_size, .. }
+        mounts = mount_size.keys()
+        paths = path_size.keys()
         # required size for mountpoints
         mount_req_size = {}
         mount_paths = {}
+        # for each path with requirement we shall find
+        # under which mountpoint it is located
+        # and add its required size into total requirement
+        # for the mountpoint
         for (p, psize) in path_size.iteritems():
             m = self._find_mount4path(p, mounts)
             mount_req_size.setdefault(m, 0)
             mount_req_size[m] += psize
+            # also we save where requirement came from
             mount_paths.setdefault(m, [])
             mount_paths[m].append(p)
+        # for mountpoints which do not include any of paths
+        # we shall find under which path it is located and
+        # set this path requirement as requirement for the
+        # mountpoint. F.e. if we require /usr to be at least
+        # 20, have no specific requirement for path /usr/local
+        # and have mountpoint /usr/local then it should be at least 20 too
+        for m in mounts:
+            if m in mount_req_size.keys() or m == '-':  # '-' means non-mounted
+                continue
+            p = self._find_mount4path(m, paths)
+            if p:
+                mount_req_size[m] = path_size[p]
+                mount_paths[m] = [p]
         self.compare_result_reason = ''
         result = True
         for (m, req_size) in mount_req_size.iteritems():
