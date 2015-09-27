@@ -372,6 +372,69 @@ def ni_exec_cmd():
         sys.exit(1)
 
 
+def bulk_exec_cmd():
+    """Exec command on specified server(s) non-interactively"""
+    sshcmd = " ".join(hwswa2.config['sshcmd'])
+    servers = []
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    for name in hwswa2.config['servernames']:
+        server = get_server(name)
+        if server is None:
+            log_error_and_print("Cannot find server %s in servers list" % name)
+            sys.exit(1)
+        else:
+            servers.append(server)
+    logger.debug("Will execute %s on servers %s" % (sshcmd, servers))
+    results = Queue.Queue()
+    exec_results = {}
+    cth = {}
+    status = {}
+    def _exec(server, resultsqueue):
+        name = server.name
+        if server.accessible():
+            stdout, stderr, exitstatus = server.exec_cmd(sshcmd)
+            logger.info("%s\n  = stdout = \n%s-------\n  = stderr = \n%s-------\nexitstatus = %s"
+                    % (server, stdout, stderr, exitstatus))
+            resultsqueue.put({'name': name,
+                'accessible': True, 'stdout': stdout, 'stderr': stderr,
+                'exitstatus': exitstatus})
+        else:
+            resultsqueue.put({'name': name,
+                'accessible': False,
+                'conn_err': server.last_connection_error()})
+    for server in servers:
+        cth[server.name] = threading.Thread(name=server.name, target=_exec, args=(server, results))
+        cth[server.name].start()
+        status[server.name] = 'waiting'
+    def there_is_alive_check_thread():
+        for name in cth:
+            if cth[name].is_alive():
+                return True
+        return False
+    while there_is_alive_check_thread() or not results.empty():
+        if not results.empty():
+            result = results.get()
+            name = result['name']
+            if result['accessible']:
+                status[name] = 'executed'
+            else:
+                status[name] = 'not accessible'
+            exec_results[name] = result
+        if there_is_alive_check_thread():
+            print("Progress: %s" % status)
+            #FIXME replace with configurable value
+            time.sleep(2)
+    print "============== FINISHED ================"
+    print "Server\tExit code"
+    for name, result in exec_results.items():
+        if result['accessible']:
+            print("%s\t%s" %(name, result['exitstatus']))
+        else:
+            print("%s\t%s" %(name, result['conn_err']))
+    print "See log file for stdout and stderr"
+
+
 def put():
     """Copy file to server"""
     servername = hwswa2.config['servername']

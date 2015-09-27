@@ -69,6 +69,10 @@ def int_above_one(value):
     return ivalue
 
 
+def comma_separated_list(string):
+    return string.split(',')
+
+
 def read_configuration():
     """Reads configuration from command line args and main.cfg"""
     global hwswa2
@@ -150,6 +154,18 @@ def read_configuration():
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
     subparser.set_defaults(subcommand=subcommands.ni_exec_cmd)
+
+    subparser = subparsers.add_parser('bulk_exec',
+        help='execute command non-interactively on few servers in parallel',
+        aliases=('be',))
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames',
+        type=comma_separated_list, help='specific server(s)',
+        metavar='server1,server2,..')
+    subparser.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
+    subparser.set_defaults(subcommand=subcommands.bulk_exec_cmd)
 
     subparser = subparsers.add_parser('put', help='copy file to server',
                                       aliases=('p',))
