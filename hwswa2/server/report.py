@@ -250,7 +250,14 @@ class Report(object):
                         nic_ips = []
                         network_interfaces = network['network_interfaces']
                         for nic in network_interfaces:
-                            res_str = nic['name']
+                            if nic['slaveof']:  # do not show slave nics
+                                continue
+                            name = nic['name']
+                            res_str = name
+                            slaves = [n['name'] for n in network_interfaces 
+                                    if n['slaveof'] == name]
+                            if slaves:
+                                res_str += '(' + ','.join(slaves) + ')'
                             for ip in nic['ip']:
                                 if ip['address'].find(':') == -1:  # filter out IPv6 addresses
                                     res_str += ' ' + ip['address'] + '/' + ip['network']

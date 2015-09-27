@@ -66,6 +66,9 @@ parameters:
               | grep --only-matching --extended-regexp ' link/.*'
               | awk '{print $2}'
       gateway: /sbin/ip route list dev %(name)s | grep ^default | awk '{print $3}'
+      slaveof: /sbin/ip --oneline link show dev %(name)s
+              | grep --only-matching --extended-regexp ' master [^ ]* '
+              | awk '{print $2}'
       ip:
         _type: table
         _fields: [address, prefix]
