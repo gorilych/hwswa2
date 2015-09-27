@@ -167,7 +167,7 @@ class Report(object):
         indent = '    '
         report = copy.deepcopy(self.data)
         def printkey(key):
-            aux.printout(indent + key + ', ', aux.MAGENTA, nonewline=True)
+            aux.printout(indent + key + ' ', aux.MAGENTA, nonewline=True)
         if report is None:
             aux.printout(indent + 'NO REPORT', aux.RED)
         elif raw:
