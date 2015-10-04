@@ -19,3 +19,4 @@ requirements:
     type: disk
     value: 500
   networks: [backnet, frontnet]
+  vz_storage_check: { type: manual, value: 'Do not forget to check VZ storage reqs, use vzstorage roles' }
