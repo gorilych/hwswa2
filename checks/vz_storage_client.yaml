@@ -1,0 +1,7 @@
+description: Client of VZ storage cluster
+includes: [ lincommon ]
+requirements:
+  ram(GB): 1
+  /var/log/pstorage: 1.5
+  cpu_storage_client: { type: manual, value: 'CPU req is 1 core per 30,000 IOPS' }
+  networks: [storagenet]

@@ -1,0 +1,10 @@
+description: VZ node running MDS (metadata server) service
+includes: [ lincommon ]
+requirements:
+  OS: 'Parallels Cloud Server 6\.'
+  ram(GB): 1
+  /var/log/pstorage: 1.5
+  /pstorage/mds: 3
+  ram_disk_mds: { type: manual, value: 'RAM (1GB) and /pstorage/mds (3GB) reqs are per 100 TB of data in the cluster' }
+  recomm_mds: { type: manual, value: 'It is recommended to place the MDS journal on SSD, either dedicated or shared with CS and client caches, or at least on a dedicated HDD which has no CS services on it.' }
+  networks: [storagenet]
