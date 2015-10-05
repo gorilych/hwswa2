@@ -6,12 +6,14 @@ firewall:
   group: yes
   direction: outgoing
   networks: [backnet]
-  ports: 135,4000-4999
   connect_with: {roles: [ad]}
   rules:
-  - protos: [udp]
+  - name: NTP
+    protos: [udp]
     ports: 123
-  - protos: [tcp,udp]
+  - name: DNS, Kerberos auth, LDAP
+    protos: [tcp,udp]
     ports: 53,88,389
-  - ports: 3268,3269
+  - name: Microsoft Global Catalog
+    ports: 3268,3269
 

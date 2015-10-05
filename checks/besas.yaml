@@ -12,3 +12,4 @@ requirements:
   ram(GB): 4
   'C:': 36
   networks: [backnet]
+  bes_lic: { type: manual, value: 'Software and license for BES are to be provided' }

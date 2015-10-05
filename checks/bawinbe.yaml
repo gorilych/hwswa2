@@ -16,3 +16,4 @@ requirements:
   ram(GB): 8
   'C:': 200
   networks: [backnet]
+  sql_ba: { type: manual, value: 'License and software distribution for MS SQL Standard 2014 or 2008 Standard R2 are required' }

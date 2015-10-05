@@ -1,18 +1,17 @@
-description: Firewall checks and requirements for UI
+description: Firewall for UI
 firewall:
+- name: from_ui
+  direction: outgoing
+  networks: [backnet]
+  group: yes
+  rules:
+  - name: to_apsc
+    ports: 6308
+    connect_with: { roles: [linmn, winmn] }
   - name: to_privoxy
-    direction: outgoing
-    networks: [backnet]
     ports: 8008
-    connect_with:
-        roles: [linpps]
-  - name: from_branding
-    networks: [backnet]
-    ports: 8080
-    connect_with:
-        roles: [branding]
-requirements:
-  /usr: 10
-  ram(GB): -16
-
-
+    connect_with: { roles: [linpps, winpps] }
+- name: to_ui
+  networks: [backnet]
+  ports: 8080
+  connect_with: { roles: [branding, winbr, linwdg, winwdg, webmail_login] }

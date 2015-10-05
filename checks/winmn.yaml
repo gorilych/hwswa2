@@ -9,4 +9,4 @@ requirements:
   'C:': 40
   'D:': 150
   networks: [backnet]
-
+  cert_oa: { type: manual, value: 'SSL certificate is needed for control panel' }

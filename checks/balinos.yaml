@@ -8,4 +8,4 @@ requirements:
   /boot: 0.2
   /: 100
   networks: [backnet, frontnet]
-
+  cert_baos: { type: manual, value: 'SSL certificate is needed for online store' }

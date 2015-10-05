@@ -12,3 +12,4 @@ requirements:
   ram(GB): 4
   'C:': 200
   networks: [backnet, frontnet]
+  cert_ba: { type: manual, value: 'SSL certificate is needed for billing panel' }

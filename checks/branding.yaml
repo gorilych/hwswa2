@@ -1,25 +1,41 @@
 description: Firewall checks for branding
 firewall:
-  - name: to_online_store
-    direction: outgoing
-    networks: [backnet]
-    ports: 80,443
-    connect_with:
-        roles: [balinos]
-  - name: from_branding
-    group: yes
-    direction: outgoing
-    networks: [frontnet]
-    rules:
-      - name: to_file_manager 
-        ports: 1299
-        connect_with: {roles: [filemanager]}
-      - name: to_phppgadm
-        ports: 9114
-        connect_with: {roles: [phppgadm]}
-      - name: to_webmail_sslpr_pba
-        ports: 443
-        connect_with: {roles: [atmail, impwebmail, winsslpr, balinfe, bawinfe]}
-      - name: to_awstats_mssqladm
-        ports: 80
-        connect_with: {roles: [awstats, mssqldataadm]}
+- name: to_online_store
+  direction: outgoing
+  networks: [backnet]
+  ports: 80,443,8443
+  connect_with:
+    roles: [balinos,bawinos]
+- name: from_branding
+  group: yes
+  direction: outgoing
+  networks: [frontnet]
+  rules:
+  - name: to_file_manager 
+    ports: 1299
+    connect_with: {roles: [winfm, filemanager]}
+  - name: to_phppgadm
+    ports: 9114
+    connect_with: {roles: [phppgadm]}
+  - name: to_phpmyadm
+    ports: 9113
+    connect_with: {roles: [phpmyadm]}
+  - name: to_webmail_sslpr_pba
+    ports: 443
+    connect_with: {roles: [wm, winsslpr]}
+  - name: to_ba
+    ports: 443,8443
+    connect_with: {roles: [balinfe, bawinfe]}
+  - name: to_awstats_mssqladm
+    ports: 80
+    connect_with: {roles: [awstats, mssqldataadm]}
+- name: to_branding
+  networks: [frontnet]
+  group: yes
+  rules:
+  - name: from_ba
+    ports: 21,443,8443,60000-65535
+    connect_with: {roles: [balinfe, bawinfe]}
+  - name: from_wdg
+    ports: 21,80,443,60000-65535
+    connect_with: {roles: [linwdg, winwdg]}

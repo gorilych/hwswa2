@@ -11,3 +11,4 @@ requirements:
   /var: 150
   networks: [backnet]
   disable_ipv6: { type: eq, parameter: 'network:disable_ipv6', value: "1" }
+  cert_oa: { type: manual, value: 'SSL certificate is needed for control panel' }
