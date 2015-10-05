@@ -1,17 +1,27 @@
-description: Checks for EXMBX role,  Exchange 2013 Exchange 2013 Mailbox Server 
+description: >
+  Exchange 2013 Mailbox Server
+
+  Mailbox Servers store the mailbox data, perform processing and rendering for
+  connections from Client Access Servers. Also, they handle Unified Messaging
+  requests.
 includes: [ wincommon, wpe.managed.fw ]
 firewall:
-  - name: gr_tcp_out_frontnet
-    description: Group for outgoing TCP connections in frontnet
-    group: yes
-    networks: [backnet]
-    rules:
-      - ports: 81, 444
-        connect_with: {roles: [wpesrv] }
-      - ports: 80, 443
-        connect_with: {roles: [exmbx, excas]}
+- name: with_ad
+  group: yes
+  networks: [backnet]
+  protos: [tcp,udp]
+  ports: 1-65535
+  connect_with: {roles: [ad]}
+  rules:
+  - direction: outgoing
+  - direction: incoming
+- name: from_wpe
+  networks: [backnet]
+  ports: 81, 444
+  connect_with: {roles: [wpesrv, wpesrvdb]}
 requirements:
   OS_LP: "^Microsoft Windows Server 2012 (Standard|Datacenter)$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 8
   cpu-frequency: 2.3
@@ -21,3 +31,4 @@ requirements:
   MDB_and_PDF: { type: manual, value: 'Disks for mailbox databases, check manually' }
   HA: { type: manual, value: 'ReplicationNet for HA, check manually' }
   networks: [backnet]
+  exch2013_distr: { type: manual, value: 'License and distribution for Exchange Server 2013 and Cumulative Update 1 are required' }
