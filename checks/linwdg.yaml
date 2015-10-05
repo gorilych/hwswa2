@@ -22,7 +22,7 @@ firewall:
       - { ports: 80, connect_with: { roles: [mssqldataadm] } }
       - { ports: 1299, connect_with: { roles: [filemanager] } }
       - { ports: 8080, connect_with: { roles: [ui] } }
-      - { ports: 22, connect_with: { roles: [common] } }
+      - { ports: 22, connect_with: { roles: [lincommon] } }
       - { ports: 3306, connect_with: { roles: [mysql] } }
       - { ports: 5432, connect_with: { roles: [linmn,pgsql] } }
       - { ports: 1433, connect_with: { roles: [winmn,mssql] } }

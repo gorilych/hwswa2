@@ -30,7 +30,7 @@ firewall:
       - ports: 8080
         connect_with: { roles: [ui] }
       - ports: 22
-        connect_with: { roles: [common] }
+        connect_with: { roles: [lincommon] }
       - ports: 3306
         connect_with: { roles: [mysql] }
       - ports: 5432
