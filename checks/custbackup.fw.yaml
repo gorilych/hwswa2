@@ -1,4 +1,5 @@
 description: firewall rules for custbackup servers
+internal: yes
 firewall:
 - name: with_custbackup
   description: connections from and to custbackup servers

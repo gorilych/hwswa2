@@ -1,5 +1,5 @@
 description: Checks for O365GH role, Office 365 Gateway Host
-includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
   - name: mosi
     description: allow access to mosi

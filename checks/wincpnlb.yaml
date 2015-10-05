@@ -1,5 +1,5 @@
 description: Checks for WINCPNLB role,  Branding Servers in Windows NLB Cluster
-includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet

@@ -1,5 +1,5 @@
 description: Checks for EXMBX role,  Exchange 2013 Exchange 2013 Mailbox Server 
-includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
   - name: gr_tcp_out_frontnet
     description: Group for outgoing TCP connections in frontnet

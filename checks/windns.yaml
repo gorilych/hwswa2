@@ -1,5 +1,5 @@
 description: Checks for WINDNS role, MS DNS Servers
-includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
   - name: Incoming_from_public
     description: "Allow access to DNS service"

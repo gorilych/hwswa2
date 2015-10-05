@@ -1,5 +1,5 @@
 description: Checks for WINWEB role,  Windows Web Server
-includes: [ wincommon, win.oa.managed.fw, wpe.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
   - name: gr_tcp_out_backnet
     description: Group for outgoing TCP connections in backnet

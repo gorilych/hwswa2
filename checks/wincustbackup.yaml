@@ -1,2 +1,2 @@
 description: Checks for WINCUSTBACKUP,  Windows Backup Server
-includes: [ wincommon, win.oa.managed.fw, custbackup ]
+includes: [ wincommon, win.oa.managed.fw, custbackup.fw ]
