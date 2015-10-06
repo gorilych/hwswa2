@@ -1,4 +1,5 @@
 description: Firewall rules for watchdog
+internal: yes
 firewall:
 - name: outgoing_frontnet
   direction: outgoing

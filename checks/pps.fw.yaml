@@ -1,4 +1,5 @@
 description: Firewall rules for privacy proxy server
+internal: yes
 firewall:
 - name: incoming
   networks: [backnet]
