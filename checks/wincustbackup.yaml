@@ -1,2 +1,11 @@
 description: Checks for WINCUSTBACKUP,  Windows Backup Server
 includes: [ wincommon, win.oa.managed.fw, custbackup.fw ]
+requirements:
+  OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  architecture: 64-bit
+  OSLanguage: en-US
+  cpu-frequency: 2
+  ram(GB): 0.5
+  'C:': 40
+  'D:': 260
+  networks: [backnet]
