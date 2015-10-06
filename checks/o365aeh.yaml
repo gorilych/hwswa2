@@ -32,7 +32,7 @@ firewall:
     ports: 443
     connect_with: {hosts: [mosi.microsoftonline.com]}
 requirements:
-  OS_LP: "^Microsoft Windows Server 2008 R2 Web Edition Service Pack 1$"
+  OS_SP: "^Microsoft Windows Server 2008 R2 Web Edition Service Pack 1$"
   OSLanguage: en-US
   cpu-cores: 2
   cpu-frequency: 2.3

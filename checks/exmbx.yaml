@@ -20,7 +20,7 @@ firewall:
   ports: 81, 444
   connect_with: {roles: [wpesrv, wpesrvdb]}
 requirements:
-  OS_LP: "^Microsoft Windows Server 2012 (Standard|Datacenter)$"
+  OS_SP: "^Microsoft Windows Server 2012 (Standard|Datacenter)$"
   architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 8

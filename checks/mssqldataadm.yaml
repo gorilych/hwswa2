@@ -17,7 +17,7 @@ firewall:
     connect_with:
       hosts: any
 requirements:
-  OS_LP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
   OSLanguage: en-US
   cpu-cores: 2
   cpu-frequency: 2.3
