@@ -2,6 +2,7 @@ description: Checks for LYNCSQLBECL
 includes: [ wincommon ]
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 (Standard|Datacenter))$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 32
   cpu-frequency: 2
@@ -11,3 +12,4 @@ requirements:
   'Q:': 2
   'E:': 1200
   networks: [backnet, heartbeat]
+  sql_lync: { type: manual, value: 'Distribution for MS SQL 2012/2008R2 Standard/Enterprise is required' }

@@ -2,6 +2,7 @@ description: Checks for WINMN role, windows management node
 includes: [ wincommon, mn.fw ]
 requirements:
   OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 4
   cpu-frequency: 2.3

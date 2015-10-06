@@ -2,9 +2,11 @@ description: Checks for LYNCEDGE role
 includes: [ wincommon ]
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 (Standard|Datacenter))$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 8
   cpu-frequency: 2
   ram(GB): 16
   'C:': 70
   networks: [backnet, frontnet]
+  lync2013_distr: { type: manual, value: 'Distribution for Lync Server 2013 is required' }

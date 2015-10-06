@@ -2,9 +2,11 @@ description: Checks for LYNCWAC role
 includes: [ wincommon ]
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 (Standard|Datacenter))$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 16
   cpu-frequency: 2
   ram(GB): 24
   'C:': 60
   networks: [backnet]
+  wac2013_distr: { type: manual, value: 'Distribution for Office Web Apps Server is required' }

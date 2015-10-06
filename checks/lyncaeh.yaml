@@ -1,26 +1,28 @@
 description: Checks for LYNCAEH role,  Application Endpoint Host for Lync Server 2013
-includes: [ wincommon, win.oa.managed.fw ]
+includes: [ wincommon, ad.member.fw ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    networks: [backnet]
-    direction: outgoing
-    rules:
-      - ports: 80,443
-        connect_with: {roles: [lyncpoolfe]}
-  - name: gr_tcp_in_backnet
-    description: Group for incoming TCP connections in backnet
-    group: yes
-    networks: [backnet]
-    rules:
-      - ports: 443 
-        connect_with: {roles: [winmn,linmn]}
+- name: to_lyncpoolfe
+  networks: [backnet]
+  direction: outgoing
+  ports: 80,443
+  connect_with: {roles: [lyncpoolfe]}
+- name: from_mn
+  networks: [backnet]
+  ports: 443
+  connect_with: {roles: [winmn,linmn]}
+- name: to_mn_apsc
+  networks: [backnet]
+  direction: outgoing
+  ports: 6308,8440
+  connect_with: {roles: [winmn,linmn]}
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012.*(Standard|Datacenter))$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 4
   cpu-frequency: 2
   ram(GB): 4
   'C:': 70
   networks: [backnet]
+  lync2013_distr: { type: manual, value: 'Distribution for Lync Server 2013 is required' }
+  lync2013_cert: { type: manual, value: 'Check http://download.automation.odin.com/poa/Lync2013HP_APS2/doc/ for certificate requirements' }
