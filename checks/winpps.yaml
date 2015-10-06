@@ -1,24 +1,11 @@
 description: Checks for WINPPS role, windows privacy proxy server
-includes: [ wincommon, wpe.managed.fw ]
-firewall:
-  - name: incoming_from_OA
-    description: OA MN should be able to connect to privoxy service
-    networks: [backnet]
-    ports: 8008
-    connect_with:
-        roles: [linmn,winmn]
-  - name: Outgoing_to_BA
-    description: Allow access to HTTPS on BA
-    direction: outgoing
-    networks: [frontnet]
-    ports: 443
-    connect_with:
-      roles: [balinfe,bawinfe]
-  - name: apscatalog
-    description: "connection to (http://apscatalog.com)"
-    direction: outgoing
-    networks: [frontnet]
-    ports: 80
-    type: internet
-    connect_with:
-      hosts: [apscatalog.com]
+includes: [ wincommon, wpe.managed.fw, pps.fw ]
+requirements:
+  OS_SP: "^Microsoft Windows Server 2008 R2 (Web|Standard)$"
+  architecture: 64-bit
+  OSLanguage: en-US
+  cpu-frequency: 2
+  ram(GB): 0.5
+  'C:': 40
+  networks: [backnet, frontnet]
+

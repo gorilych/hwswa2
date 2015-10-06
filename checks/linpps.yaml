@@ -1,27 +1,5 @@
 description: Checks for LINPPS role, linux privacy proxy server
-includes: [ lincommon, lin.oa.managed.fw ]
-firewall:
-  - name: incoming_from_OA
-    description: OA MN should be able to connect to privoxy service
-    networks: [backnet]
-    ports: 8008
-    connect_with:
-        roles: [linmn]
-  - name: Outgoing_to_BA
-    description: Allow access to HTTPS on BA
-    direction: outgoing
-    networks: [frontnet]
-    ports: 443
-    connect_with:
-      roles: [balinfe]
-  - name: apscatalog
-    description: "connection to (http://apscatalog.com)"
-    direction: outgoing
-    networks: [frontnet]
-    ports: 80
-    type: internet
-    connect_with:
-      hosts: [apscatalog.com]
+includes: [ lincommon, lin.oa.managed.fw, pps.fw ]
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
   ram(GB): 0.5
