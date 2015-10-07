@@ -1,41 +1,43 @@
-escription: Checks for Office 365 Application End-point Host
+description: Checks for Office 365 Application End-point Host
 includes: [ wincommon ]
 firewall:
-  - name: outgoing
-    description: Outgoing connections
-    group: yes
-    networks: [frontnet]
-    direction: outgoing
-    rules:
-      - networks: [frontnet]
-        ports: 443
-        connect_with: {roles: [branding]}
-      - networks: [backnet]
-        ports: 6308
-        connect_with: {roles: [balinfe]}
-      - networks: [backnet]
-        ports: 5224
-        connect_with: {roles: [linmn]}
-      - networks: [backnet]
-        ports: 1433
-        connect_with: {roles: [o365mssql]}
-  - name: incoming
-    description: incoming
-    networks: [frontnet]
-    ports: 433
-    connect_with: {roles: [linmn]}
-  - name: mosi
-    description: allow access to mosi
-    direction: outgoing
-    networks: [backnet]
-    type: internet
+- name: outgoing
+  group: yes
+  direction: outgoing
+  rules:
+  - networks: [frontnet]
     ports: 443
-    connect_with: {hosts: [mosi.microsoftonline.com]}
+    connect_with: {roles: [branding, winbr]}
+  - networks: [backnet]
+    ports: 6308
+    connect_with: {roles: [linmn, winmn]}
+  - networks: [backnet]
+    ports: 5224
+    connect_with: {roles: [balinfe, bawinfe]}
+  - networks: [backnet]
+    ports: 1433
+    connect_with: {roles: [o365mssql]}
+- name: incoming
+  networks: [backnet]
+  ports: 443
+  connect_with: {roles: [linmn]}
+- name: mosi
+  direction: outgoing
+  type: internet
+  ports: 443
+  connect_with: {hosts: [mosi.microsoftonline.com]}
+- name: public
+  networks: [frontnet]
+  type: internet
+  ports: 443
+  connect_with: {hosts: any}
 requirements:
-  OS_SP: "^Microsoft Windows Server 2008 R2 Web Edition Service Pack 1$"
+  OS_SP: "^Microsoft Windows Server (2008 R2 Web Service Pack 1|2012 R2 Standard)$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 2
   cpu-frequency: 2.3
   ram(GB): 4
   'C:': 80
   networks: [backnet, frontnet]
+  sql_distr: { type: manual, value: 'Distribution for MS SQL can be required' }
