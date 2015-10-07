@@ -1,23 +1,24 @@
 description: Checks for MSSQLDATAADM role, SQL Server Web Data Administrator
 includes: [ wincommon, wpe.managed.fw ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    networks: [backnet]
-    direction: outgoing
-    rules:
-      - ports: 1433
-        connect_with: {roles: [mssqlcluster, mssql]}
-  - name: Incoming_from_public
-    description: "Allow access from Internet"
-    networks: [frontnet]
-    ports: 80
-    type: internet
-    connect_with:
-      hosts: any
+- name: to_mssql
+  networks: [backnet]
+  direction: outgoing
+  ports: 1433
+  connect_with: {roles: [mssqlcluster, mssql]}
+- name: http
+  networks: [backnet]
+  ports: 80
+  connect_with: {roles: [winbr, wincpnlb, linwdg, winwdg]}
+- name: public_http
+  networks: [frontnet]
+  ports: 80
+  type: internet
+  connect_with:
+    hosts: any
 requirements:
   OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 2
   cpu-frequency: 2.3
