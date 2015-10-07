@@ -1,5 +1,11 @@
 description: Checks for MYSQL role, linux mysql server
 includes: [ lincommon, lin.oa.managed.fw ]
+firewall:
+- name: Incoming_from_public
+  networks: [frontnet]
+  ports: 3306
+  type: internet
+  connect_with: { hosts: any }
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
   ram(GB): 4
