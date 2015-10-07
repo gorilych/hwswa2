@@ -9,7 +9,7 @@ firewall:
   connect_with: { hosts: any }
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 ((Standard|Enterprise|Datacenter)|R2 (Enterprise|Datacenter) Service Pack 1)|2012 R2 Enterprise)$"
-  arch_os: { type: manual, value: 'Architecture depends on OS, check manually' }
+  arch_os: { type: manual, value: 'Architecture depends on OS, OS depends on MS SQL version, check manually' }
   OSLanguage: en-US
   cpu-cores: 2
   cpu-frequency: 2.3
@@ -17,3 +17,4 @@ requirements:
   'C:': 40
   'D:': 100
   networks: [backnet]
+  sql_distr: { type: manual, value: 'Distribution for MS SQL 2014 or 2008/2008R2(Workgroup/Web/Standard/Enterprise) is required' }
