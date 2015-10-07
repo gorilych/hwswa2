@@ -21,11 +21,11 @@ firewall:
   networks: [backnet]
   ports: 443
   connect_with: {roles: [linmn]}
-- name: mosi
+- name: mosi_crest_graph
   direction: outgoing
   type: internet
   ports: 443
-  connect_with: {hosts: [mosi.microsoftonline.com]}
+  connect_with: {hosts: [mosi.microsoftonline.com, graph.windows.net, api.cp.microsoft.com]}
 - name: public
   networks: [frontnet]
   type: internet
@@ -41,3 +41,4 @@ requirements:
   'C:': 80
   networks: [backnet, frontnet]
   sql_distr: { type: manual, value: 'Distribution for MS SQL can be required' }
+  csp_frontnet: { type: manual, value: 'Frontnet is not required for CSP' }
