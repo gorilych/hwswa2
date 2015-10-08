@@ -5,7 +5,6 @@ requirements:
   ram(GB): 8
   swap(GB): 16
   cpu-cores: 4
-  cpu-frequency: 2.3
-  /var: 125
+  /var: 130
   /: 4
   networks: [backnet]

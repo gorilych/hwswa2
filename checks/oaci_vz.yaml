@@ -1,13 +1,14 @@
 description: Checks for PACI Parallels Cloud Server role
 includes: [ lincommon, lin.oa.managed.fw, vz.fw ]
 firewall:
-  - name: Outgoing_rules
-    group: yes
-    direction: outgoing
-    networks: [backnet]
-    rules:
-      - ports: 64000,22
-        connect_with: {roles: [oaci_bn_vz, oaci_vz]}
+- name: incoming
+  networks: [backnet]
+  ports: 64000,22
+  connect_with: {roles: [oaci_bn_vz, oaci_vz]}
+- name: public_vnc
+  type: internet
+  ports: 5800-6800
+  connect_with: {hosts: any}
 requirements:
   OS: 'Parallels Cloud Server 6\.'
   virtualization: 'bare metal'
@@ -15,8 +16,6 @@ requirements:
   swap(GB): 4
   cpu-frequency: 1.5
   /: 12
-  /vz:
-    type: disk
-    value: 500
+  /vz: 88
   networks: [backnet, frontnet]
-  vz_storage_check: { type: manual, value: 'Do not forget to check VZ storage reqs, use vzstorage roles' }
+  storage_roles: { type: manual, value: 'Be sure to use vzstorage roles servers.yaml if VZ storage cluster is used' }
