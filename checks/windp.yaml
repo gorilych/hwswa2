@@ -1,11 +1,16 @@
 description: Checks for WINDP, Domain Parking Server
 includes: [ wincommon, win.oa.managed.fw ]
 firewall:
-  - name: Incoming_from_public
-    description: "Allow access from Internet"
-    networks: [frontnet]
-    ports: 80
-    type: internet
-    connect_with:
-      hosts: any
-
+- name: Incoming_from_public
+  ports: 80
+  type: internet
+  connect_with: {hosts: any}
+requirements:
+  OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  architecture: 64-bit
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 2
+  'C:': 80
+  networks: [backnet, frontnet]

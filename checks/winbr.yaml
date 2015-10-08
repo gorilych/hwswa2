@@ -6,4 +6,12 @@ firewall:
   networks: [frontnet]
   ports: 1024-60000
   connect_with: {roles: [balinfe, bawinfe, linwdg, winwdg]}
-  ports: 60000-65535
+requirements:
+  OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  architecture: 64-bit
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 4
+  'C:': 80
+  networks: [backnet, frontnet]

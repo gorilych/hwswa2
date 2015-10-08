@@ -1,10 +1,16 @@
 description: Checks for SYSBU role, server for OA and BA and other system backups
 includes: [ lincommon ]
 firewall:
-  - name: SSH
-    description: OA MN, BALINFE, IM, IMDB should be able to put backups over SSH
-    networks: [backnet]
-    ports: 22
-    connect_with:
-        roles: [linmn, balinbe, oaci_im, oaci_imdb]
+- name: SSH
+  description: OA MN, BALINFE, IM, IMDB should be able to put backups over SSH
+  networks: [backnet]
+  ports: 22
+  connect_with: { roles: [linmn, balinbe, oaci_im, oaci_imdb] }
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
+  ram(GB): 0.5
+  swap(GB): 1
+  cpu-frequency: 2
+  /: 300
+  networks: [backnet]
 

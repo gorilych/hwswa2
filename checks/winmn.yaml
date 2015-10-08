@@ -8,6 +8,7 @@ requirements:
   cpu-frequency: 2.3
   ram(GB): 8
   'C:': 40
-  'D:': 150
+  'D:': 160
   networks: [backnet]
   cert_oa: { type: manual, value: 'SSL certificate is needed for control panel' }
+  sql_distr: { type: manual, value: 'Distribution for MS SQL 2014 Standard is required' }

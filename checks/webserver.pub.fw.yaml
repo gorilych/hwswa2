@@ -1,10 +1,9 @@
 description: Firewall rules for web hosting services
 internal: yes
 firewall:
-  - name: Incoming_from_public
-    description: "Allow access to hosting services: websites, ftp, ssh, filemanager, sql managers"
-    networks: [frontnet]
-    ports: 21,60000-65535,22,80,443,1299,9113,9114
-    type: internet
-    connect_with:
-      hosts: any
+- name: Incoming_from_public
+  description: "Allow access to hosting services: websites, ftp, ssh, filemanager, sql managers"
+  networks: [frontnet]
+  ports: 21,60000-65535,22,80,443,1299,9113,9114
+  type: internet
+  connect_with: {hosts: any}

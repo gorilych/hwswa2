@@ -1,12 +1,5 @@
 description: Checks for WPESRV role,  Windows Provisioning Engine Server
-includes: [ wincommon, win.oa.managed.fw, ad.member.fw ]
-firewall:
-- name: tcp_out_backnet_wpedb
-  description: Connections to WPE MSSQL DB
-  networks: [backnet]
-  direction: outgoing
-  ports: 1433
-  connect_with: {roles: [wpedb, wpedbcl ]}
+includes: [ wincommon, ad.member.fw ]
 requirements:
   OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012.*(Standard|Datacenter)$"
   architecture: 64-bit
@@ -14,5 +7,7 @@ requirements:
   cpu-cores: 4
   cpu-frequency: 2
   ram(GB): 4
-  'C:': 36
+  'C:': 40
+  'D:': 32
   networks: [backnet]
+  sql_distr: { type: manual, value: 'Distribution for MS SQL Server 2008 R2 Web/Workgroup/Standard/Enterprise Edition SP2 (64-bit) is required' }
