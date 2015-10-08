@@ -134,6 +134,7 @@ requirements:
   networks: { type: networks, value-example: [backnet, frontnet] }
   OS_SP: {type: regex, value-example: 'Microsoft Windows Server', join-rule: and}
   Activation: Licensed
+  is_admin: true
   dns_check: {parameter: 'network:dns_check', type: eq, value: OK}
   architecture: { value-example: 64-bit }
   ram(GB): {type: ge, value-example: 0.5, join-rule: sum}
