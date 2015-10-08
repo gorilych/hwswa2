@@ -2,7 +2,23 @@
 Version History
 ===============
 
-0.5.0 (work in progress)
+0.6.0 (2015-10-09)
+    - Added: license, software distributions, SSL certificate requirements are added to roles
+    - Added: roles for VZ storage, custbackup, wpedb, etc
+    - Added: subcommand bulk_exec
+    - Added: subcommand reportshistory
+    - Added: subcommand list-servers
+    - Added: support for _command inside dictionary parameter in role files
+    - Added: is_admin check in roles to check privileges
+    - Added: hw_id is stored in report
+    - Added: check if ipv6 is disabled on linmn
+    - Added: adjusted 90% of roles to conform with OSA 6.0 docs
+    - Improved: check now understand bond-slave links
+    - Improved: performance tweaks by postponing initialization or memoization
+    - Improved: added defaults for firewall rules
+    - Fixed: #113: disk req should check small partitions
+
+0.5.0 (2015-04-17)
     - Added: documentation for role files
     - Added: remote_debug option in main.cfg
     - Added: reboot_timeout option in main.cfg
