@@ -102,6 +102,7 @@ requirements:
     value-example: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
     join-rule: and
   architecture: x86_64
+  is_admin: true
   ram(GB): { type: ge, value-example: 0.5, join-rule: sum }
   swap(GB): { type: ge, value-example: 1, join-rule: sum }
   cpu-cores: { parameter: 'processors:count', type: ge,
