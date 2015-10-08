@@ -1,0 +1,27 @@
+description: Firewall rules for watchdog
+internal: yes
+firewall:
+- name: outgoing_frontnet
+  direction: outgoing
+  networks: [frontnet]
+  group: yes
+  rules:
+  - { ports: 21,80,443,60000-65535, connect_with: { roles: [helb, hewsl, wsng] } }
+  - { ports: 21,80,443,1024-65534, connect_with: { roles: [cf, winweb, winbr] } }
+  - { ports: 53, protos: [TCP, UDP], connect_with: { roles: [lindns] } }
+  - { ports: 22,443,8443 connect_with: { roles: [balinfe] } }
+  - { ports: 25,110,143, connect_with: { roles: [linmailsh, linmailnlb] } }
+  - { ports: 443, connect_with: { roles: [wm] } }
+  - { ports: 25, connect_with: { roles: [exhub] } }
+  - { ports: 110,143,443, connect_with: { roles: [excas] } }
+  - { ports: 80, connect_with: { roles: [mssqldataadm] } }
+- name: outgoing_backnet
+  direction: outgoing
+  networks: [backnet]
+  group: yes
+  rules:
+  - { ports: 8080, connect_with: { roles: [winui] } }
+  - { ports: 1433, connect_with: { roles: [winmn, mssql, mssqlcluster] } }
+  - { ports: 3306, connect_with: { roles: [mysql] } }
+  - { ports: 5432, connect_with: { roles: [linmn, pgsql] } }
+  - { ports: 22, connect_with: { roles: [lincommon] } }

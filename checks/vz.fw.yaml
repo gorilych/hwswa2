@@ -1,0 +1,13 @@
+description: Firewall rules for PCS server
+internal: yes
+firewall:
+- name: Outgoing_to_Internet
+  direction: outgoing
+  networks: [frontnet]
+  type: internet
+  group: yes
+  rules:
+  - ports: 5224,7050
+    connect_with: {hosts: [ka.odin.com]}
+  - ports: 80,443
+    connect_with: {hosts: [vzup2date.swsoft.com, vzup2date.parallels.com]}

@@ -1,0 +1,25 @@
+description: Checks for MSSQL role, MSSQL Database Server
+includes: [ wincommon, wpe.managed.fw ]
+firewall:
+- name: cluster_services
+  networks: [backnet, heartbeat]
+  protos: [udp]
+  ports: 137,3343
+  connect_with: {roles: [mssqlcluster]}
+- name: Incoming_from_public
+  description: "Allow access to hosting services"
+  networks: [frontnet]
+  ports: 1433
+  type: internet
+  connect_with: { hosts: any }
+requirements:
+  OS_SP: "^Microsoft Windows Server 2008 (Enterprise|Datacenter)$"
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 4
+  'C:': 36
+  'Q:': 0.5
+  'E:': 140
+  networks: [backnet, heartbeat]
+  sql_distr: { type: manual, value: 'Distribution for MS SQL 2008(Workgroup/Web/Standard/Enterprise) is required' }

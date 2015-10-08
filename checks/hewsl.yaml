@@ -1,23 +1,18 @@
 description: Checks for HEWSL role, linux NG cluster web server
-includes: [ common, poa.managed.fw, ngwebserver.fw ]
+includes: [ lincommon, lin.oa.managed.fw, ngwebserver.fw ]
 firewall:
-  - name: Outgoing_to_HELB
-    description: Allow access to Ganglia
-    policy: allow
-    direction: outgoing
-    networks: [backnet]
-    protos: [UDP]
-    ports: 8649
-    type: infra
-    connect_with:
-      roles: [helb]
+- name: with_helb
+  networks: [frontnet]
+  ports: 1-65535
+  connect_with: { roles: [helb] }
 requirements:
   OS: 'Cloud Linux 6\.'
   virtualization: 'bare metal'
   ram(GB): 32
   swap(GB): 32
-  cpu-cores: 4
+  cpu-cores: 8
   cpu-frequency: 2.2
-  /: 5
-  /var/log: 10
+  /: 40
   networks: [backnet, frontnet]
+  branding_ui: { type: manual, value: 'If webserver is used for UI+branding, 16 GB of RAM and 1 GB for vhosts will be enough. +10GB for /usr' }
+  branding_ui_fw: { type: manual, value: 'Be sure to use auxiliay roles branding and ui in servers.yaml while checking firewall' }

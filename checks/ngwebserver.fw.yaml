@@ -1,31 +1,25 @@
 description: Firewall for NG webservers HEWSL, WSNG
+internal: yes
 includes: [ webserver.pub.fw ]
 firewall:
-  - name: Outgoing_connections
-    group: yes
-    description: Allow access to SQL, LB, etc
-    policy: allow
-    direction: outgoing
-    networks: [backnet]
-    protos: [TCP]
-    type: infra
-    rules:
-      - name: to_redis
-        ports: 6380-6430
-        connect_with: {roles: [linmn]}
-      - name: to_mysql
-        ports: 3306
-        connect_with: {roles: [mysql]}
-      - name: to_pgsql
-        ports: 5432
-        connect_with: {roles: [pgsql]}
-      - name: to_awstats
-        ports: 21,1024-65535
-        connect_with: {roles: [awstats]}
-      - name: to_custbackup
-        ports: 8352
-        connect_with: {roles: [lincustbackup, wincustbackup]}
-      - name: to_mailsid
-        ports: 22
-        connect_with: {roles: [mailsid]}
-
+- name: Outgoing_connections
+  group: yes
+  description: Allow access to SQL, LB, etc
+  direction: outgoing
+  networks: [backnet]
+  rules:
+  - name: to_redis
+    ports: 6380-6430
+    connect_with: {roles: [linmn]}
+  - name: to_mysql
+    ports: 3306
+    connect_with: {roles: [mysql]}
+  - name: to_pgsql
+    ports: 5432
+    connect_with: {roles: [pgsql]}
+  - name: to_awstats
+    ports: 21,1024-65535
+    connect_with: {roles: [awstats]}
+  - name: to_mailsid
+    ports: 22
+    connect_with: {roles: [mailsid]}

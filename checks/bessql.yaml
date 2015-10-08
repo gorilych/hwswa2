@@ -1,14 +1,14 @@
-description: Checks for BESSQL role, BlackBerry SQL Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.poa.managed.fw ]
+description: MSSQL server carrying BlackBerry™ Configuration Database.
+includes: [ wincommon, ad.member.fw ]
 requirements:
   OS_SP: { type: manual, value: 'OS depends if SQL is clustered or not, check manually' }
+  arch_os: { type: manual, value: 'Architecture depends on OS, check manually' }
   OSLanguage: en-US
   cpu-cores: 2
   cpu-frequency: 2.3
   ram(GB): 4
   'C:': 40
   'D:': 60
-  'Clustered': { type: manual, value: 'Quorum disk and heartbeatNet are needed for clustered configuration, check manually' }
+  Clustered: { type: manual, value: 'Quorum disk and heartbeatNet are needed for clustered configuration, check manually' }
   networks: [backnet]
+  sql_bes: { type: manual, value: 'License and software distribution for MS SQL 2005 SP4 (32-bit or 64-bit) or 2005 Express SP3 or 2008 SP2 (32-bit or 64-bit) or 2008 Express SP1 (32-bit or 64-bit) or 2008 R2 (32-bit or 64-bit) or 2008 R2 Express (32-bit or 64-bit) are required. Only English versions. Express editions do not need license' }

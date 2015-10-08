@@ -1,19 +1,18 @@
-description: Checks for CDIWS role, Customer Active Directory Integration Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
+description: >
+  Customer Active Directory Integration Server
+
+  It runs the Customer AD Synchronization Web Service.
 includes: [ wincommon ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [backnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 8440 
-        connect_with: {roles: [linmn,winmn]}
+- name: to_mn_api
+  networks: [backnet]
+  direction: outgoing
+  ports: 8440
+  connect_with: {roles: [linmn,winmn]}
+- name: to_cdiws
+  type: internet
+  ports: 443
+  connect_with: { hosts: any }
 requirements:
   OS_SP: "^Microsoft Windows Server 2008.*(Standard|Enterprise|Datacenter)$"
   OSLanguage: en-US

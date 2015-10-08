@@ -54,12 +54,13 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
 
 5. Create distribution with pyinstaller
 
-   .. code:: shell
+   .. code-block:: shell
 
       (env)$ which rst2pdf >/dev/null && \
              { for d in README.rst CHANGELOG.rst docs/*rst;
                  do rst2pdf $d; done; }
-      (env)$ pyinstaller --distpath=pyinstaller/hwswa2/ \
+      (env)$ rm -rf pyinstaller/hwswa2 && \
+             pyinstaller --distpath=pyinstaller/hwswa2/ \
                          --workpath=pyinstaller/build/ \
                          --clean pyinstaller/hwswa2.spec && \
              \cp -af README* LICENSE CHANGELOG* config/ checks/ docs/ \
@@ -80,7 +81,7 @@ Installation
 5. Create missing role.yaml files in checks/, if needed.
 6. Prepare convenient alias
 
-.. code:: shell
+.. code-block:: shell
 
    # mkdir somedir && cd somedir
    # wget -Nc https://bitbucket.org/gorilych/hwswa2/downloads/hwswa2-centos6x64.tgz
@@ -106,7 +107,7 @@ Usage
 
 All possible options are shown by '-h' switch:
 
-.. code:: shell
+.. code-block:: shell
 
    $ ./hwswa2 -h
    usage: hwswa2 [-h] [--version] [-c CONFIGFILE] [-s SERVERSFILE]

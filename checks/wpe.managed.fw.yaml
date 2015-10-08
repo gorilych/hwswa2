@@ -1,0 +1,14 @@
+description: Firewall rules for WPE managed role
+internal: yes
+includes: [ win.oa.managed.fw, ad.member.fw ]
+firewall:
+- name: tcp_out_backnet
+  description: TCP connections in backnet to WPE
+  group: yes
+  networks: [backnet]
+  ports: 135,4000-4999
+  connect_with: {roles: [wpesrv, wpesrvdb]}
+  rules:
+  - direction: outgoing
+  - direction: incoming
+

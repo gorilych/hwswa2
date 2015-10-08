@@ -1,0 +1,9 @@
+description: VZ node running CS (chunk server) service
+includes: [ lincommon ]
+requirements:
+  OS: 'Parallels Cloud Server 6\.'
+  ram(GB): 0.25
+  /var/log/pstorage: 1.5
+  cpu_ram_disk_cs: { type: manual, value: 'CPU (1/8 core), RAM (0.25GB) and /var/log/pstorage (1.5GB) reqs are per one CS service' }
+  network_cs: { type: manual, value: 'See chapter Network Requirements and chapter Using 1 GbE and 10 GbE Networks of Storage Administrators Guide' }
+  networks: [storagenet]

@@ -11,14 +11,18 @@ __all__ = ['get_server', 'server_names', 'servers_context']
 
 logger = logging.getLogger(__name__)
 
+# _not_inited_servers = {name1: serverdict1, name2:.. }
+_not_inited_servers = {}
 # _servers = {name1: server1, name2: server2}
 _servers = {}
-# Some servers require postponed initialization
-# _servers_to_init_later = {name1: {reason1: req1, reason2: req2}, name2: {reason1: req3}}
-_servers_to_init_later = {}
 
 
 def get_server(name):
+    global _servers, _not_inited_servers
+    if name in _not_inited_servers:
+        logger.debug("Postponed initialization of server %s started" % name)
+        server_factory(_not_inited_servers[name])
+        del _not_inited_servers[name]
     if name in _servers:
         return _servers[name]
     else:
@@ -31,14 +35,14 @@ def server_names():
 
 @contextmanager
 def servers_context(servers_list):
-    srvrs = []
+    global _servers
     for serverdict in servers_list:
-        srvrs.append(server_factory(serverdict))
-    yield srvrs
+        server_pre_init(serverdict)
+    yield "finished"
     # clean up in proper order, gateways last
     with_gw = []
     ordered_srvrs = []
-    for srvr in srvrs:
+    for srvr in _servers.values():
         if srvr.gateway is None:
             ordered_srvrs.append(srvr)
         else:
@@ -53,19 +57,21 @@ def servers_context(servers_list):
         s.cleanup()
 
 
+def server_pre_init(serverdict):
+    global _not_inited_servers
+    name = serverdict['name']
+    _not_inited_servers[name] = serverdict
+
+
 def server_factory(serverdict):
-    global _servers, _servers_to_init_later
+    global _servers
 
     name = serverdict['name']
 
     if 'gateway' in serverdict:
         gwname = serverdict['gateway']
-        if gwname in _servers:
-            serverdict['gateway'] = _servers[gwname]
-        else:
-            if name not in _servers_to_init_later:
-                _servers_to_init_later[name] = {}
-            _servers_to_init_later[name]['gateway'] = gwname
+        logger.debug("Server %s uses server %s as a gateway" % (name, gwname))
+        serverdict['gateway'] = get_server[gwname]
 
     if 'ostype' not in serverdict:
         # try to get ostype from roles
@@ -94,17 +100,5 @@ def server_factory(serverdict):
         return None
 
     _servers[name] = server
-
-    # now check if new server blocks previous server initialization:
-    for sname, reasons in _servers_to_init_later.iteritems():
-        if 'gateway' in reasons:
-            if reasons['gateway'] == name:
-                logger.debug("We have found gateway %s for server %s" % (name, sname))
-                so = _servers[sname]
-                so.gateway = server
-                del reasons['gateway']
-
-    # remove servers with empty reasons
-    _servers_to_init_later = dict([(n, r) for n, r in _servers_to_init_later.iteritems() if r])
 
     return server

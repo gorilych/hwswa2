@@ -70,6 +70,14 @@ class Role(object):
         return self._data
 
     @property
+    def internal(self):
+        if not hasattr(self, '_internal'):
+            self._internal = self.data.get('internal')
+            # if internal flag is not mentioned in data - it is None
+            # this is ok, because internal is False by default
+        return self._internal
+
+    @property
     def description(self):
         return self.data.get('description')
 
@@ -89,6 +97,7 @@ class Role(object):
         if not hasattr(self, '_includes'):
             logger.debug("Postponed initialization of included roles for %s started" % self)
             self._init_includes()
+            logger.debug("Included roles for %s: %s" % (self, self._includes))
         return self._includes
 
     @property
@@ -128,6 +137,7 @@ class Role(object):
         self._includes = []
         for name in self.data.get('includes', list()):
             # WE DO NOT PROTECT FROM CYCLED INCLUDES!!!
+            logger.debug("Role %s is included into %s" % (name, self))
             r = role_factory(name)
             self._includes.append(r)
 
@@ -168,21 +178,22 @@ class Role(object):
                 rules.append(r)
         return rules
 
+    @property
     def connects_with_roles(self):
-        roles = []
-        for rule in self.firewall:
-            try:
-                add_roles = [role for role in rule['connect_with']['roles'] if role not in roles]
-            except KeyError:
-                pass
-            else:
-                roles.extend(add_roles)
-        return roles
+        if not hasattr(self, '_connects_with_roles'):
+            roles = []
+            for rule in self.firewall:
+                try:
+                    add_roles = [role for role in rule['connect_with']['roles'] if role not in roles]
+                except KeyError:
+                    pass
+                else:
+                    roles.extend(add_roles)
+            self._connects_with_roles = roles
+        return self._connects_with_roles
 
     def _init_firewall(self):
-        firewall = []
-        if 'firewall' in self.data:
-            firewall = self.data['firewall']
+        firewall = self.data.get('firewall', [])
         for role in self.includes:
             rf = copy.deepcopy(role.firewall)
             firewall.extend(rf)
@@ -194,6 +205,10 @@ class Role(object):
                 pass
             else:
                 rule['connect_with']['roles'] = [role.lower() for role in roles]
+            rule.setdefault('policy', 'allow')
+            rule.setdefault('direction', 'incoming')
+            rule.setdefault('protos', ['TCP'])
+            rule.setdefault('type', 'infra')
         self._firewall = firewall
 
     @staticmethod
@@ -227,6 +242,30 @@ class Role(object):
                 val = {}
                 failures = {}
                 progress = 0
+                if '_keys' in myparam:
+                    if '_command' in myparam:
+                        if mydeps:
+                            cmd = myparam['_command'] % mydeps
+                        else:
+                            cmd = myparam['_command']
+                        status, rows, failure = param_cmd(cmd)
+                    elif '_script' in myparam:
+                        if mydeps:
+                            script = myparam['_script'] % mydeps
+                        else:
+                            script = myparam['_script']
+                        status, line, failure = param_script(script)
+                    else:
+                        status, line, failure = False, None, "Parameter of type dictionary has _keys but no _command or _script"
+                    progress = 1
+                    if not status:
+                        val['_keys'] = line
+                        failures['_keys'] = failure
+                    else:
+                        myparam.setdefault('_separator', ' ')
+                        maxsplit = len(myparam['_keys']) - 1
+                        val = dict(zip(myparam['_keys'], row.split(myparam['_separator'], maxsplit)))
+                    yield {'param': val, 'progress': progress, 'failures': failures or None}
                 for p in myparam:
                     if not p.startswith('_'):
                         for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
@@ -234,15 +273,10 @@ class Role(object):
                             curprogress = progress + pv['progress']
                             if pv['failures'] is not None:
                                 failures[p] = copy.deepcopy(pv['failures'])
-                            if failures:
-                                curfailures = copy.deepcopy(failures)
-                            else:
-                                curfailures = None
+                            curfailures = copy.deepcopy(failures) or None
                             yield {'param': val, 'progress': curprogress, 'failures': curfailures}
                         progress = curprogress
-                if not failures:
-                    failures = None
-                yield {'param': val, 'progress': progress, 'failures': failures}
+                yield {'param': val, 'progress': progress, 'failures': failures or None}
             elif myparam['_type'] == 'table':
                 val = []
                 if '_command' in myparam:
@@ -262,8 +296,7 @@ class Role(object):
                 if not status:
                     yield {'param': rows, 'progress': 1, 'failures': failure}
                 else:
-                    if not '_separator' in myparam:
-                        myparam['_separator'] = ' '
+                    myparam.setdefault('_separator', ' ')
                     if not rows == '':
                         maxsplit = len(myparam['_fields']) - 1
                         for row in rows.split('\n'):

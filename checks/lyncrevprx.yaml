@@ -1,12 +1,12 @@
 description: Checks for LYNCREVPRX role
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
 includes: [ wincommon ]
 requirements:
-  OS_LP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 (Standard|Datacenter))$"
+  OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012 (Standard|Datacenter))$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 4
   cpu-frequency: 2
   ram(GB): 4
   'C:': 70
   networks: [backnet, frontnet]
+  tmg2010_distr: { type: manual, value: 'Distribution for Forefront Threat Management Gateway (TMG) 2010 Standard/Enterprise is required' }

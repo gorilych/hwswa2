@@ -1,0 +1,14 @@
+description: >
+  Customer Backup Server on Linux.
+  
+  This server stores the customer backups. 
+includes: [ lincommon, lin.oa.managed.fw, custbackup.fw ]
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
+  ram(GB): 0.5
+  swap(GB): 1
+  cpu-cores: 1
+  cpu-frequency: 2
+  /custbackups: 300
+  /: 5
+  networks: [backnet]

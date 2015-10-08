@@ -1,0 +1,4 @@
+description: Firewall rules for OA managed windows server
+internal: yes
+includes: [ oa.managed.fw ]
+

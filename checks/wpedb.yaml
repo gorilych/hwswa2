@@ -1,0 +1,13 @@
+description: Checks for WPESRV role,  Windows Provisioning Engine Server
+includes: [ wincommon, ad.member.fw ]
+requirements:
+  OS_SP: "^Microsoft Windows Server (2008 R2 (Standard|Enterprise|Datacenter) Service Pack 1|2012.*(Standard|Datacenter)$"
+  architecture: 64-bit
+  OSLanguage: en-US
+  cpu-cores: 4
+  cpu-frequency: 2
+  ram(GB): 4
+  'C:': 40
+  'D:': 32
+  networks: [backnet]
+  sql_distr: { type: manual, value: 'Distribution for MS SQL Server 2008 R2 Web/Workgroup/Standard/Enterprise Edition SP2 (64-bit) is required' }

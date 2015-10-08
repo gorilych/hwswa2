@@ -22,7 +22,7 @@ class Server(object):
 
     time_format = '%Y-%m-%d.%Hh%Mm%Ss'
 
-    def __init__(self, name, account, address,
+    def __init__(self, name, account=None, address=None,
                  role=None, port=None, ostype=None, dontcheck=False, gateway=None, expect=None):
         self.name = name
         self.ostype = ostype
@@ -102,7 +102,10 @@ class Server(object):
         return cls(**initargs)
 
     def __str__(self):
-        return "server %s" % self.name
+        s = "server %s" % self.name
+        if self.role: s += ", role %s" % self.role
+        if self.address: s += ", %s" % self.address
+        return s
 
     def last_connection_error(self):
         return self._last_connection_error

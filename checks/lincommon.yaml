@@ -1,6 +1,8 @@
 description: Common checks for all linux roles
+internal: yes
 ostype: linux
 parameters:
+  hw_id:              cat /sys/class/dmi/id/product_uuid
   hostname:           hostname -f 2>/dev/null || hostname
   time_utc:           LANG=C date --utc
   time:               LANG=C date
@@ -24,6 +26,7 @@ parameters:
   tmp_noexec: grep -q '/tmp[^/]*noexec' /proc/mounts
               && echo NOK noexec found
               || echo OK
+  is_admin: test $(id -u) == "0" && echo true || echo false
   processors:
     _type: dictionary
     count:     grep --fixed-strings processor -c /proc/cpuinfo
@@ -43,7 +46,8 @@ parameters:
     _command: lsblk.sh
   virtualization: virt-what.py
   network:
-    _type: dictionary 
+    _type: dictionary
+    disable_ipv6: cat /proc/sys/net/ipv6/conf/all/disable_ipv6
     name_servers: awk '$1=="nameserver"{print $2}' /etc/resolv.conf | xargs
     dns_check: getent hosts ya.ru >/dev/null 2>&1 && echo OK || echo NOT OK
     network_interfaces:
@@ -62,6 +66,9 @@ parameters:
               | grep --only-matching --extended-regexp ' link/.*'
               | awk '{print $2}'
       gateway: /sbin/ip route list dev %(name)s | grep ^default | awk '{print $3}'
+      slaveof: /sbin/ip --oneline link show dev %(name)s
+              | grep --only-matching --extended-regexp ' master [^ ]* '
+              | awk '{print $2}'
       ip:
         _type: table
         _fields: [address, prefix]
@@ -95,6 +102,7 @@ requirements:
     value-example: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
     join-rule: and
   architecture: x86_64
+  is_admin: true
   ram(GB): { type: ge, value-example: 0.5, join-rule: sum }
   swap(GB): { type: ge, value-example: 1, join-rule: sum }
   cpu-cores: { parameter: 'processors:count', type: ge,

@@ -1,0 +1,19 @@
+description: Firewall rules for AD member
+internal: yes
+firewall:
+- name: out_to_ad
+  description: TCP connections in backnet to AD controllers
+  group: yes
+  direction: outgoing
+  networks: [backnet]
+  connect_with: {roles: [ad]}
+  rules:
+  - name: NTP
+    protos: [udp]
+    ports: 123
+  - name: DNS, Kerberos auth, LDAP
+    protos: [tcp,udp]
+    ports: 53,88,389
+  - name: Microsoft Global Catalog
+    ports: 3268,3269
+

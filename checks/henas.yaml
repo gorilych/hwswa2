@@ -1,14 +1,11 @@
 description: Checks for HENAS role, NFS server for Linux NG Webcluster
-includes: [ common ]
+includes: [ lincommon ]
 firewall:
   - name: Incoming_from_HEWSL
     description: "Allow access to NFS share from cluster's webservers"
-    policy: allow
-    direction: incoming
     networks: [backnet]
     protos: [TCP,UDP]
     ports: 111,2049,10300-10305
-    type: infra
     connect_with:
       roles: [hewsl]
 requirements:
@@ -18,3 +15,4 @@ requirements:
   swap(GB): 32
   /: 80
   networks: [backnet, frontnet]
+  websites_disk: { type: manual, value: 'There should be block device for websites, 10 TB per 20000, check manually' }

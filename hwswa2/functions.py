@@ -12,7 +12,7 @@ import hwswa2.subcommands as subcommands
 from hwswa2.server.factory import servers_context
 from hwswa2.aliases import AliasedSubParsersAction
 
-__version__ = '0.5.0'
+__version__ = '0.6.0'
 
 __all__ = ['read_configuration', 'read_servers', 'read_networks', 'run_subcommand']
 
@@ -62,6 +62,17 @@ def _network(string):
         return {'name': match.group(1), 'address': match.group(2), 'prefix': match.group(3)}
 
 
+def int_above_one(value):
+    ivalue = int(value)
+    if ivalue < 2:
+        raise argparse.ArgumentTypeError("%s is not integer > 1" % value)
+    return ivalue
+
+
+def comma_separated_list(string):
+    return string.split(',')
+
+
 def read_configuration():
     """Reads configuration from command line args and main.cfg"""
     global hwswa2
@@ -93,6 +104,9 @@ def read_configuration():
 
     subparser = subparsers.add_parser('list-roles', help='show available roles')
     subparser.set_defaults(subcommand=subcommands.list_roles)
+
+    subparser = subparsers.add_parser('list-servers', help='list servers', aliases=('ls',))
+    subparser.set_defaults(subcommand=subcommands.list_servers)
 
     subparser = subparsers.add_parser('check', help='check servers',
                                       aliases=('ck',))
@@ -140,6 +154,18 @@ def read_configuration():
     subparser.add_argument('servername', metavar='server')
     subparser.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
     subparser.set_defaults(subcommand=subcommands.ni_exec_cmd)
+
+    subparser = subparsers.add_parser('bulk_exec',
+        help='execute command non-interactively on few servers in parallel',
+        aliases=('be',))
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames',
+        type=comma_separated_list, help='specific server(s)',
+        metavar='server1,server2,..')
+    subparser.add_argument('sshcmd', nargs=argparse.REMAINDER, metavar='cmd')
+    subparser.set_defaults(subcommand=subcommands.bulk_exec_cmd)
 
     subparser = subparsers.add_parser('put', help='copy file to server',
                                       aliases=('p',))
@@ -213,6 +239,15 @@ def read_configuration():
     subparser.add_argument('oldreport')
     subparser.add_argument('newreport')
     subparser.set_defaults(subcommand=subcommands.reportdiff)
+
+    subparser = subparsers.add_parser('reports-history',
+        help='show history of reports, by diffs',
+        aliases=('rh',))
+    subparser.add_argument('servername', metavar='server')
+    subparser.add_argument('-n', '--reports-number',
+            type=int_above_one, default=5, dest='reportsnumber',
+            help='compare last <n> reports, 5 by default')
+    subparser.set_defaults(subcommand=subcommands.reportshistory)
 
     subparser = subparsers.add_parser('agent', help="open agent console")
     subparser.add_argument('servername', metavar='server')

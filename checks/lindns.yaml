@@ -1,12 +1,8 @@
 description: Checks for LINDNS role, linux DNS server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, poa.managed.fw ]
+includes: [ lincommon, lin.oa.managed.fw ]
 firewall:
   - name: Incoming_from_internet_to_LINDNS
     description: Allow access to DNS from outer network
-    policy: allow
-    direction: incoming
     networks: [frontnet]
     protos: [TCP, UDP]
     ports: 53
@@ -19,6 +15,6 @@ requirements:
   swap(GB): 4
   cpu-cores: 2
   cpu-frequency: 2.3
-  /var: 20
+  /var: 28
   /: 4
   networks: [backnet, frontnet]

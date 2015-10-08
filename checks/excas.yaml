@@ -1,31 +1,38 @@
-description: Checks for EXCAS role,  Exchange 2013 Client Access Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+description: >
+  Exchange 2013 Client Access Server.
+
+  Client Access Servers proxy connections to Mailbox Servers for all clients
+  such as Microsoft Office Outlook, Outlook Web App, mobile devices, and other
+  mail clients. They also handle the incoming and outgoing SMTP traffic.
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
-  - name: gr_tcp_out_frontnet
-    description: Group for outgoing TCP connections in frontnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [backnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 80, 443
-        connect_with: {roles: [exmbx, excas]}
-  - name: Incoming_from_public
-    description: "Allow access to hosting services from Internet"
-    policy: allow
-    direction: incoming
-    networks: [frontnet]
-    protos: [TCP]
-    ports: 80,443,110,995,143,993,25,587 
-    type: internet
-    connect_with:
-      hosts: any
+- name: with_ad
+  group: yes
+  networks: [backnet]
+  protos: [tcp,udp]
+  ports: 1-65535
+  connect_with: {roles: [ad]}
+  rules:
+  - direction: outgoing
+  - direction: incoming
+- name: from_wpe
+  networks: [backnet]
+  ports: 80, 443
+  connect_with: {roles: [wpesrv, wpesrvdb]}
+- name: Incoming_from_public
+  networks: [frontnet]
+  ports: 80,443,110,995,143,993,25,587
+  type: internet
+  connect_with: { hosts: any }
+- name: to_public_smtp
+  networks: [frontnet]
+  direction: outgoing
+  ports: 25
+  type: internet
+  connect_with: { hosts: any }
 requirements:
-  OS_LP: "^Microsoft Windows Server 2012 (Standard|Datacenter)$"
+  OS_SP: "^Microsoft Windows Server 2012 (Standard|Datacenter)$"
+  architecture: 64-bit
   OSLanguage: en-US
   cpu-cores: 4
   cpu-frequency: 2.3
@@ -33,3 +40,4 @@ requirements:
   'C:': 150
   'D:': 150
   networks: [backnet, frontnet]
+  exch2013_distr: { type: manual, value: 'License and distribution for Exchange Server 2013 and Cumulative Update 1 are required' }

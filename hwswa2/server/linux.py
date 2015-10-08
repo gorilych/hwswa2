@@ -46,7 +46,7 @@ class LinuxServer(Server):
         self._param_cmd_prefix = None
         self._param_binpath = None
         for k in ['su', 'sudo']:
-            if k in self.account:
+            if self.account is not None and k in self.account:
                 self.account['sutype'] = k
                 self.account['supassword'] = self.account[k]
                 break

@@ -1,34 +1,15 @@
 description: Checks for MSSQL role, MSSQL Database Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [backnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 8352
-        connect_with: {roles: [custbackup]}
-      - ports: 3306
-        protos: [udp]
-        connect_with: {roles: [mssqlcluster]}
-  - name: Incoming_from_public
-    description: "Allow access to hosting services"
-    policy: allow
-    direction: incoming
-    networks: [frontnet]
-    protos: [TCP]
-    ports: 1433
-    type: internet
-    connect_with:
-      hosts: any
+- name: Incoming_from_public
+  description: "Allow access to hosting services"
+  networks: [frontnet]
+  ports: 1433
+  type: internet
+  connect_with: { hosts: any }
 requirements:
-  OS_LP: "^Microsoft Windows Server 2008 ((Standard|Enterprise|Datacenter)|R2 (Enterprise|Datacenter) Service Pack 1)$"
+  OS_SP: "^Microsoft Windows Server (2008 ((Standard|Enterprise|Datacenter)|R2 (Enterprise|Datacenter) Service Pack 1)|2012 R2 Enterprise)$"
+  arch_os: { type: manual, value: 'Architecture depends on OS, OS depends on MS SQL version, check manually' }
   OSLanguage: en-US
   cpu-cores: 2
   cpu-frequency: 2.3
@@ -36,3 +17,4 @@ requirements:
   'C:': 40
   'D:': 100
   networks: [backnet]
+  sql_distr: { type: manual, value: 'Distribution for MS SQL 2014 or 2008/2008R2(Workgroup/Web/Standard/Enterprise) is required' }

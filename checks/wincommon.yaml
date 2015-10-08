@@ -1,7 +1,9 @@
 description: Common checks for all windows roles
+internal: yes
 ostype: windows
 parameters:
   hostname: ps|hostname
+  hw_id: ps|(gwmi Win32_ComputerSystemProduct).UUID
   sid: ps|(gwmi Win32_UserAccount
              -Filter 'LocalAccount=true and sid like "S-1-5-21%-500"').SID -replace "-500$"
   time: ps|get-date -Format "ddd, dd MMM yyyy HH':'mm':'ss ('UTC'z)"
@@ -14,6 +16,8 @@ parameters:
   OS_SP: ps|(gwmi Win32_OperatingSystem).Caption + (gwmi Win32_OperatingSystem).CSDVersion
   OSLanguage: ps|[System.Globalization.CultureInfo]::InstalledUICulture.Name
   architecture: ps|(gwmi Win32_OperatingSystem).OSArchitecture
+  is_admin: ps|@( [System.Security.Principal.WindowsIdentity]::GetCurrent().groups 
+                  | foreach-object { $_.value } ) -Contains 'S-1-5-32-544'
   Activation: ps|Function ActivationStatus($code) {switch($code)
                      { 0 {"Unlicensed"}; 1 {"Licensed"}; 2 {"Out-Of-Box Grace Period"};
                        3 {"Out-Of-Tolerance Grace Period"}; 4 {"Non-Genuine Grace Period"};
@@ -130,8 +134,9 @@ requirements:
   networks: { type: networks, value-example: [backnet, frontnet] }
   OS_SP: {type: regex, value-example: 'Microsoft Windows Server', join-rule: and}
   Activation: Licensed
+  is_admin: true
   dns_check: {parameter: 'network:dns_check', type: eq, value: OK}
-  architecture: 64-bit
+  architecture: { value-example: 64-bit }
   ram(GB): {type: ge, value-example: 0.5, join-rule: sum}
   swap(GB): {type: ge, value-example: 1, join-rule: sum}
   cpu-cores: {parameter: 'processors:count', type: ge, value-example: 1, join-rule: max}

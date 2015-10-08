@@ -1,0 +1,44 @@
+description: Common firewall rules for BALINFE and BAWINFE
+internal: yes
+firewall:
+- name: outgoing_backnet
+  description: outgoing connections in backnet
+  group: yes
+  direction: outgoing
+  networks: [backnet]
+  rules:
+  - ports: 8440
+    connect_with: { roles: [linmn, winmn] }
+  - ports: 80,443,8443
+    connect_with: { roles: [balinos, bawinos] }
+- name: outgoing_frontnet
+  description: outgoing connections in frontnet
+  group: yes
+  direction: outgoing
+  networks: [frontnet]
+  rules:
+  - ports: 21,443,8443,60000-65534
+    connect_with: { roles: [branding] }
+  - ports: 21,443,8443,1024-65534
+    connect_with: { roles: [winbr, wincpnlb] }
+- name: incoming_backnet
+  description: incoming connections in backnet
+  direction: outgoing
+  networks: [backnet]
+  ports: 5224
+  connect_with: 
+    roles: [linmn, winmn, balinos, bawinos]
+- name: incoming_frontnet
+  description: incoming connections in frontnet
+  networks: [frontnet]
+  ports: 443,8443
+  connect_with:
+    roles: [branding, winbr, wincpnlb, linpps, winpps]
+- name: incoming_from_internet
+  description: Allow access to the panel
+  networks: [frontnet]
+  ports: 443,8443
+  type: internet
+  connect_with:
+    hosts: [any]
+

@@ -1,17 +1,17 @@
 description: Checks for WINFM role,  Windows FileManager Server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ wincommon, win.poa.managed.fw, wpe.poa.managed.fw ]
+includes: [ wincommon, wpe.managed.fw ]
 firewall:
-  - name: gr_tcp_out_backnet
-    description: Group for outgoing TCP connections in backnet
-    group: yes
-    policy: allow
-    type: infra
-    networks: [backnet]
-    direction: outgoing
-    protos: [tcp]
-    rules:
-      - ports: 21,1024-65535
-        connect_with: {roles: [winweb, winbr]}
-
+- name: gr_tcp_out_backnet
+  networks: [backnet]
+  direction: outgoing
+  ports: 21,1024-65535
+  connect_with: {roles: [winweb, winbr]}
+requirements:
+  OS_SP: "^Microsoft Windows Server 2012 R2 (Standard|Datacenter)$"
+  architecture: 64-bit
+  OSLanguage: en-US
+  cpu-cores: 2
+  cpu-frequency: 2.3
+  ram(GB): 2
+  'C:': 80
+  networks: [backnet, frontnet]

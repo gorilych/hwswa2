@@ -1,13 +1,17 @@
 description: Checks for MYSQL role, linux mysql server
-# includes: from more specific to less specific
-# includes: [ first, second ] - checks from first will override checks from second
-includes: [ common, poa.managed.fw ]
+includes: [ lincommon, lin.oa.managed.fw ]
+firewall:
+- name: Incoming_from_public
+  networks: [frontnet]
+  ports: 3306
+  type: internet
+  connect_with: { hosts: any }
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
   ram(GB): 4
   swap(GB): 8
   cpu-cores: 2
   cpu-frequency: 2.3
-  /var: 80
+  /var: 130
   /: 4
   networks: [backnet]

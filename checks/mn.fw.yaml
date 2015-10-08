@@ -1,0 +1,37 @@
+description: Firewall rules for OA management node (common lin/win)
+internal: yes
+firewall:
+- name: gr_tcp_out_backnet
+  description: Group for outgoing TCP connections in backnet
+  group: yes
+  networks: [backnet]
+  direction: outgoing
+  rules:  
+  - ports: 443
+    connect_with: {roles: [aeh]}
+  - ports: 389,3268
+    connect_with: {roles: [ad]}
+  - ports: 5224,5643,5743,5843 
+    connect_with: {roles: [balinfe, bawinfe]}
+  - ports: 3306
+    connect_with: {roles: [mysql]}
+  - ports: 5432
+    connect_with: {roles: [pgsql, linmndb]}
+  - ports: 8008
+    connect_with: {roles: [linpps, winpps]}
+  - ports: 389
+    connect_with: {roles: [linmailldap]}
+  - ports: 4433-4435
+    connect_with: {roles: [vzlin, vzlinbu, vzwin, vzwinbu]}
+  - ports: 4432
+    connect_with: {roles: [oaci_im]}
+  - ports: 48480
+    connect_with: {roles: [wpesrvdb, wpesrv]}
+- name: pa_download
+  description: allow access to pa repo
+  direction: outgoing
+  networks: [backnet]
+  type: internet
+  ports: 80,443
+  connect_with: {hosts: [download.automation.odin.com]}
+
