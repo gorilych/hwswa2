@@ -7,3 +7,4 @@ impacket
 ipcalc
 validate
 zxcvbn
+pyasn1
