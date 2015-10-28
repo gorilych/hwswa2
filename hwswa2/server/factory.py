@@ -30,7 +30,7 @@ def get_server(name):
 
 
 def server_names():
-    return [name for name in _servers]
+    return [name for name in _servers.keys() + _not_inited_servers.keys()]
 
 
 @contextmanager
@@ -71,7 +71,7 @@ def server_factory(serverdict):
     if 'gateway' in serverdict:
         gwname = serverdict['gateway']
         logger.debug("Server %s uses server %s as a gateway" % (name, gwname))
-        serverdict['gateway'] = get_server[gwname]
+        serverdict['gateway'] = get_server(gwname)
 
     if 'ostype' not in serverdict:
         # try to get ostype from roles
