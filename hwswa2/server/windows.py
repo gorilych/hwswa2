@@ -1,14 +1,5 @@
-import ntpath
-import os.path
-import socket
 import logging
-import base64
-import time
-
-from impacket.dcerpc.v5.transport import DCERPCStringBindingCompose, DCERPCTransportFactory
-from impacket.dcerpc.v5 import scmr
-from impacket.smbconnection import SessionError
-from impacket import system_errors
+import inrm
 
 import hwswa2
 from hwswa2.server import (Server, ServerException, TimeoutException, TIMEOUT,
@@ -17,16 +8,6 @@ from hwswa2.server import (Server, ServerException, TimeoutException, TIMEOUT,
 __all__ = [ 'WindowsServer', 'WindowsServerException', 'TIMEOUT', 'REBOOT_TIMEOUT' ]
 
 logger = logging.getLogger(__name__)
-
-_agent_pipe_name = 'hwswa2_agent'
-
-
-def encode_arg(arg):
-    return base64.b64encode(arg.encode('utf-16le'))
-
-
-def decode_res(res):
-    return base64.b64decode(res).decode('utf-16le')
 
 
 class WindowsServerException(ServerException):
@@ -87,42 +68,6 @@ class WindowsServer(Server):
             self._dce = dce
             self._transport = transport
             return True
-
-    def _create_service(self, name, binpath, exefile=None):
-        scManagerHandle = scmr.hROpenSCManagerW(self._dce)['lpScHandle']
-        try:  # check if service exists
-            resp = scmr.hROpenServiceW(self._dce, scManagerHandle, name + '\x00')
-        except Exception, e:
-            if e.get_error_code() == system_errors.ERROR_SERVICE_DOES_NOT_EXIST:
-                pass
-            else:
-                raise
-        else:  # service exists, try to stop it and it will remove itself
-            logger.debug("service %s exists, removing" % name)
-            try:
-                scmr.hRControlService(self._dce, resp['lpServiceHandle'],
-                                      scmr.SERVICE_CONTROL_STOP)
-            except Exception, e:
-                logger.debug("failed to stop %s, exception %s: %s" %
-                             (name, type(e).__name__, e.args), exc_info=True)
-                pass
-            # try to delete it
-            try:
-                scmr.hRDeleteService(self._dce, resp['lpServiceHandle'])
-            except Exception, e:
-                logger.debug("failed to delete %s, exception %s: %s" %
-                             (name, type(e).__name__, e.args), exc_info=True)
-                pass
-            scmr.hRCloseServiceHandle(self._dce, resp['lpServiceHandle'])
-            time.sleep(1)  # give it a time to vanish
-        if exefile is not None:
-            self.put(exefile, binpath)
-        resp = scmr.hRCreateServiceW(self._dce, scManagerHandle, name + '\x00',
-                                     name + '\x00', lpBinaryPathName=binpath + '\x00')
-        serviceHandle = resp['lpServiceHandle']
-        scmr.hRStartServiceW(self._dce, serviceHandle)
-        scmr.hRCloseServiceHandle(self._dce, serviceHandle)
-        scmr.hRCloseServiceHandle(self._dce, scManagerHandle)
 
     def shell(self, privileged=True):
         """Opens remote cmd session"""
@@ -260,91 +205,3 @@ class WindowsServer(Server):
             self._transport = None
             logger.debug("Closed connection to  %s" % self)
 
-    def agent_start(self):
-        """Start remote agent on server
-        :return: True on success
-        """
-        if self._agent_pipe is not None:
-            return True
-        else:
-            try:
-                if not self._connect():
-                    return False
-                else:
-                    wagent_exe = 'wagent-debug.exe' if hwswa2.config['remote_debug'] else 'wagent.exe'
-                    wagent_exe = hwswa2.config['resources'] + os.sep + wagent_exe
-                    wagent_remote_path = 'C:\\wagent.exe'
-                    self._create_service('hwswa2_agent', wagent_remote_path, wagent_exe)
-                    self._agent_pipe = self.open_pipe(_agent_pipe_name)
-                    banner = self._agent_pipe.read()
-                    logger.debug("agent started, banner: %s" % banner)
-            except KeyboardInterrupt:
-                raise
-            except Exception as e:
-                logger.debug("agent not started, exception %s: %s" %
-                             (type(e).__name__, e.args), exc_info=True)
-                return False
-            else:
-                return True
-
-    def agent_stop(self):
-        """Stop remote agent on server"""
-        if self._agent_pipe is not None:
-            try:
-                self.agent_cmd("exit", wait_result=False)
-                self._agent_pipe.close()
-            except Exception as e:
-                logger.debug("agent: error closing named pipe, exception %s: %s" %
-                             (type(e).__name__, e.args), exc_info=True)
-            self._agent_pipe = None
-
-    def agent_cmd(self, cmd, wait_result=True):
-        """Send command to remote agent and returns tuple (status, result)"""
-        if not self.agent_start():
-            return False, 'agent not started'
-        else:
-            pipe = self._agent_pipe
-            logger.debug('command: ' + cmd)
-            pipe.write(cmd)
-            reply = pipe.read()
-            logger.debug('accept reply: ' + reply)
-            accepted, space, reason = reply.partition(' ')
-            if accepted == 'accepted_notok':
-                return False, 'command not accepted: ' + reason
-            elif not accepted == 'accepted_ok':
-                return False, 'wrong accept message, should start with accepted_ok/accepted_notok: ' + reply
-            else:  # accepted == 'accepted_ok'
-                if not wait_result:
-                    return True, None
-                else:
-                    logger.debug('command accepted on server %s: %s' % (self, reason))
-                    reply = pipe.read()
-                    logger.debug('result reply: ' + reply)
-                    result_status, space, result = reply.partition(' ')
-                    if result_status == 'result_ok':
-                        return True, result
-                    elif result_status == 'result_notok':
-                        return False, 'command failed: ' + result
-                    else:
-                        return False, 'wrong result message, should start with result_ok/result_notok: ' + reply
-
-    def open_pipe(self, name):
-        return NamedPipe(self._transport.get_smb_connection(), name)
-
-
-class NamedPipe(object):
-
-    def __init__(self, smbconnection, name):
-        self.name = name
-        self._smbconnection = smbconnection
-        self._tid = smbconnection.connectTree('IPC$')
-        self._fid = smbconnection.openFile(self._tid, '\\' + name)
-
-    def write(self, data):
-        self._smbconnection.writeNamedPipe(self._tid, self._fid, data.encode('utf-16le'))
-
-    def read(self, bytesToRead=None):
-        return self._smbconnection.readNamedPipe(self._tid, self._fid, bytesToRead).decode('utf-16le')
-
-    def close(self):
-        self._smbconnection.closeFile(self._tid, self._fid)
