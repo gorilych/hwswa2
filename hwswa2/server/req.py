@@ -548,12 +548,12 @@ class DiskReq(_BaseReq):
 
 class AndReq(_BaseReq):
 
-    compare_type = 'and-notsupported'
+    compare_type = 'and'
 
     def check(self, parameters):
         reqs = self.value
         for r in reqs:
-            (result, reason) = r.check()
+            (result, reason) = r.check(parameters)
             # AndReq fails if any included req fails
             if not result:
                 self.compare_result_reason = reason
@@ -563,12 +563,12 @@ class AndReq(_BaseReq):
 
 class OrReq(_BaseReq):
 
-    compare_type = 'or-notsupported'
+    compare_type = 'or'
 
     def check(self, parameters):
         reqs = self.value
         for r in reqs:
-            (result, reason) = r.check()
+            (result, reason) = r.check(parameters)
             # OrReq is OK if any included req is OK
             if result:
                 self.compare_result_reason = reason
