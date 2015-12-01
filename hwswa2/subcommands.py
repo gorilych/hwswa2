@@ -295,10 +295,10 @@ def shell():
 
 def reboot():
     """Reboots specified servers"""
-    log_info_and_print("Rebooting servers: %s" % hwswa2.config['servernames'])
     servers = []
     if hwswa2.config['allservers']:
         hwswa2.config['servernames'] = server_names()
+    log_info_and_print("Rebooting servers: %s" % hwswa2.config['servernames'])
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
