@@ -427,11 +427,22 @@ def bulk_exec_cmd():
             time.sleep(2)
     print "============== FINISHED ================"
     print "Server\tExit code"
-    for name, result in exec_results.items():
+    for name in hwswa2.config['servernames']:
+        result = exec_results[name]
         if result['accessible']:
             print("%s\t%s" %(name, result['exitstatus']))
         else:
             print("%s\t%s" %(name, result['conn_err']))
+    for stream in ['stdout', 'stderr']:
+        if hwswa2.config[stream]:
+            print("============== %s ================" % stream)
+            for name in hwswa2.config['servernames']:
+                result = exec_results[name]
+                if result['accessible']:
+                    if not result[stream]:
+                        print("==== %s ==== Empty" % name)
+                    else:
+                        print("==== %s ====\n%s" % (name, result[stream]))
     print "See log file for stdout and stderr"
 
 

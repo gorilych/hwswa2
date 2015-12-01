@@ -158,6 +158,8 @@ def read_configuration():
     subparser = subparsers.add_parser('bulk_exec',
         help='execute command non-interactively on few servers in parallel',
         aliases=('be',))
+    subparser.add_argument('-o', '--stdout', help='show stdout', action='store_true')
+    subparser.add_argument('-e', '--stderr', help='show stderr', action='store_true')
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
                              help='all servers', action='store_true')
