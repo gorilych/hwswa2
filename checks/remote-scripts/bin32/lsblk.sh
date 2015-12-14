@@ -50,7 +50,7 @@ BtoGB () {
 }
 
 for dev in $(find /sys/block/ -maxdepth 1 \( -name 'sd*' -o -name 'sr*' -o -name 'hd*' \
-                                 -o -name 'vd*' \) | sed 's%^/sys/block/%%'); do
+                                 -o -name 'vd*' -o -name 'xvd*' \) | sed 's%^/sys/block/%%'); do
   size=$(cat /sys/block/$dev/size)
   if [ "$size" = "0" ]; then
     continue
