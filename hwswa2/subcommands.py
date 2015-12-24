@@ -8,7 +8,7 @@ import os
 
 import hwswa2
 from hwswa2.server.factory import get_server, server_names
-from hwswa2.server import FirewallException
+from hwswa2.server import FirewallException, TimeoutException
 from hwswa2.server.report import Report
 from hwswa2.server.role import Role
 
@@ -393,12 +393,19 @@ def bulk_exec_cmd():
     def _exec(server, resultsqueue):
         name = server.name
         if server.accessible():
-            stdout, stderr, exitstatus = server.exec_cmd(sshcmd)
-            logger.info("%s\n  = stdout = \n%s-------\n  = stderr = \n%s-------\nexitstatus = %s"
+            try:
+                stdout, stderr, exitstatus = server.exec_cmd(sshcmd)
+            except TimeoutException as te:
+                logger.info("%s: Timeout while executing command" % server)
+                resultsqueue.put({'name': name,
+                    'accessible': False,
+                    'conn_err': "Timeout while executing"})
+            else:
+                logger.info("%s\n  = stdout = \n%s-------\n  = stderr = \n%s-------\nexitstatus = %s"
                     % (server, stdout, stderr, exitstatus))
-            resultsqueue.put({'name': name,
-                'accessible': True, 'stdout': stdout, 'stderr': stderr,
-                'exitstatus': exitstatus})
+                resultsqueue.put({'name': name,
+                    'accessible': True, 'stdout': stdout, 'stderr': stderr,
+                    'exitstatus': exitstatus})
         else:
             resultsqueue.put({'name': name,
                 'accessible': False,
