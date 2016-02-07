@@ -43,7 +43,7 @@ def show_firewall():
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
-            log_error_and_print("Cannot find server %s in servers list" % name)
+            log_error_and_print("Cannot find or init server %s, check log file" % name)
             sys.exit(1)
         else:
             servers.append(server)
@@ -115,7 +115,7 @@ def firewall():
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
-            log_error_and_print("Cannot find server %s in servers list" % name)
+            log_error_and_print("Cannot find or init server %s, check log file" % name)
             sys.exit(1)
         elif not server.nw_ips:
             if server.get_ips(hwswa2.config['networks']):
@@ -217,7 +217,7 @@ def check():
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
-            log_error_and_print("Cannot find server %s in servers list" % name)
+            log_error_and_print("Cannot find or init server %s, check log file" % name)
             sys.exit(1)
         else:
             if server.dontcheck:
@@ -269,7 +269,7 @@ def prepare():
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
-            log_error_and_print("Cannot find server %s in servers list" % name)
+            log_error_and_print("Cannot find or init server %s, check log file" % name)
             sys.exit(1)
         else:
             if server.dontcheck:
@@ -283,7 +283,7 @@ def shell():
     servername = hwswa2.config['servername']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     log_info_and_print("Opening interactive shell to server %s" % servername)
     if server.accessible():
@@ -302,7 +302,7 @@ def reboot():
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
-            log_error_and_print("Cannot find server %s in servers list" % name)
+            log_error_and_print("Cannot find or init server %s, check log file" % name)
             sys.exit(1)
         else:
             if server.dontcheck:
@@ -340,7 +340,7 @@ def exec_cmd():
     servername = hwswa2.config['servername']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     sshcmd = " ".join(hwswa2.config['sshcmd'])
     get_pty = hwswa2.config['tty']
@@ -358,7 +358,7 @@ def ni_exec_cmd():
     servername = hwswa2.config['servername']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     sshcmd = " ".join(hwswa2.config['sshcmd'])
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
@@ -381,7 +381,7 @@ def bulk_exec_cmd():
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
-            log_error_and_print("Cannot find server %s in servers list" % name)
+            log_error_and_print("Cannot find or init server %s, check log file" % name)
             sys.exit(1)
         else:
             servers.append(server)
@@ -460,7 +460,7 @@ def put():
     remotepath = hwswa2.config['remotepath']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     logger.debug("Copying '%s' to '%s' on %s" % (localpath, remotepath, server))
     if server.accessible():
@@ -477,7 +477,7 @@ def get():
     remotepath = hwswa2.config['remotepath']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     logger.debug("Copying to '%s' from '%s' on %s" % (localpath, remotepath, server))
     if server.accessible():
@@ -492,7 +492,7 @@ def lastreport():
     raw = hwswa2.config['raw']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     report = server.last_report()
     if report is None:
@@ -507,7 +507,7 @@ def show_report():
     raw = hwswa2.config['raw']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     report = server.get_report(reportname)
     if report is None:
@@ -523,7 +523,7 @@ def reports():
     for name in hwswa2.config['servernames']:
         server = get_server(name)
         if server is None:
-            log_error_and_print("Cannot find server %s in servers list" % name)
+            log_error_and_print("Cannot find or init server %s, check log file" % name)
             sys.exit(1)
         else:
             servers.append(server)
@@ -538,7 +538,7 @@ def reportdiff():
     r2name = hwswa2.config['newreport']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     report1 = server.get_report(r1name)
     report2 = server.get_report(r2name)
@@ -556,7 +556,7 @@ def reportshistory():
     max_reports = hwswa2.config['reportsnumber']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     last_reports = server.reports[:max_reports]
     if len(last_reports) == 0:
@@ -605,7 +605,7 @@ def agent_console():
     servername = hwswa2.config['servername']
     server = get_server(servername)
     if server is None:
-        log_error_and_print("Cannot find server %s in servers list" % servername)
+        log_error_and_print("Cannot find or init server %s, check log file" % servername)
         sys.exit(1)
     log_info_and_print("Opening agent console for server %s" % servername)
     if server.accessible():

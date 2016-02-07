@@ -75,6 +75,9 @@ def server_factory(serverdict):
         gwname = serverdict['gateway']
         logger.debug("Server %s uses server %s as a gateway" % (name, gwname))
         serverdict['gateway'] = get_server(gwname)
+        if not serverdict['gateway']:
+            logger.error("Server %s uses server %s as a gateway, and we can't find such gateway in configuration" % (name, gwname))
+            return None
 
     if 'ostype' not in serverdict:
         # try to get ostype from roles
