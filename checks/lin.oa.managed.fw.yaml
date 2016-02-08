@@ -8,3 +8,5 @@ firewall:
   ports: 22
   connect_with:
     roles: [linmn]
+requirements:
+  selinux: Disabled
