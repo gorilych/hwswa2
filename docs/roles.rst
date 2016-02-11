@@ -11,7 +11,7 @@ Role files
 HWSWA2 uses roles to determine what parameters it should obtain for the server
 and what requirements it should satisfy.
 
-Role files are stored in *checks/* directory.
+Role files are stored in *roles/* directory.
 
 
 Role files structure

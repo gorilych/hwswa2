@@ -575,7 +575,7 @@ def reportshistory():
 
 def list_roles(roles_dir=None):
     if roles_dir is None:
-        roles_dir = hwswa2.config['checksdir']
+        roles_dir = hwswa2.config['rolesdir']
     roles = []
     role_names = []
     # Read all roles from role files

@@ -59,7 +59,7 @@ class Role(object):
         return "<Role " + self.name + ">"
 
     def __init__(self, name):
-        """Constructs role from checksdir/name.yaml"""
+        """Constructs role from rolesdir/name.yaml"""
         self.name = name.lower()
 
     @property
@@ -122,7 +122,7 @@ class Role(object):
         return self._requirements
 
     def _init_data(self):
-        f = os.path.join(hwswa2.config['checksdir'], self.name + '.yaml')
+        f = os.path.join(hwswa2.config['rolesdir'], self.name + '.yaml')
         try:
             self._data = yaml.load(open(f))
         except IOError as ie:

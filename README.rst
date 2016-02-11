@@ -63,7 +63,7 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
              pyinstaller --distpath=pyinstaller/hwswa2/ \
                          --workpath=pyinstaller/build/ \
                          --clean pyinstaller/hwswa2.spec && \
-             \cp -af README* LICENSE CHANGELOG* config/ checks/ docs/ \
+             \cp -af README* LICENSE CHANGELOG* config/ roles/ docs/ \
                      pyinstaller/hwswa2/ && \
              pushd pyinstaller/ && tar zcf hwswa2.tgz hwswa2 && popd
 
@@ -78,7 +78,7 @@ Installation
 2. Unpack.
 3. Edit configuration according to your needs.
 4. Populate networks.yaml and servers.yaml with information about environment to check.
-5. Create missing role.yaml files in checks/, if needed.
+5. Create missing role.yaml files in roles/, if needed.
 6. Prepare convenient alias
 
 .. code-block:: shell
@@ -94,8 +94,8 @@ Installation
    # vim cfg/networks.yaml
    # vim cfg/servers.yaml
 
-   # cp checks/mysql.yaml checks/newrole.yaml
-   # vim checks/newrole.yaml
+   # cp roles/mysql.yaml roles/newrole.yaml
+   # vim roles/newrole.yaml
 
    alias hwswa2="`pwd`/hwswa2/hwswa2 -c `pwd`/cfg/main.cfg -s
                  `pwd`/cfg/servers.yaml -n `pwd`/cfg/networks.yaml
@@ -167,7 +167,7 @@ hwswa2/config/servers.yaml and hwswa2/config/networks.yaml are examples of serve
 Advanced
 --------
 
-You can modify checks/\*.yaml or checks/remote-scripts/ files for your own needs.
+You can modify roles/\*.yaml or roles/remote-scripts/ files for your own needs.
 
 Source files
 ------------
@@ -176,9 +176,9 @@ Source files
    
    hwswa2$ ls -F
    CHANGELOG.rst  config/  hwswa2.py*  logs/    requirements.txt  TODO
-   checks/        docs/    hwswa2/     LICENSE     pyinstaller/  README.rst
+   roles/         docs/    hwswa2/     LICENSE     pyinstaller/  README.rst
 
-   hwswa2$ ls -F checks/
+   hwswa2$ ls -F roles/
    branding.yaml  linpgh.yaml          paci_pcs.yaml     poa.managed.fw.yaml
    common.yaml    linpps.yaml          paci_sn_pcs.yaml  pvclin.yaml
    helb.yaml      linwdg.yaml          pbalinbe.yaml     remote-scripts/
@@ -188,7 +188,7 @@ Source files
    linmndb.yaml   paci_imdb.yaml       pgsql.yaml        wsng.yaml
    linmn.yaml     paci_im.yaml         poadb.yaml
 
-   hwswa2$ ls -F checks/remote-scripts/
+   hwswa2$ ls -F roles/remote-scripts/
    bin32/  bin64/
 
    hwswa2$ ls -F config/
@@ -203,10 +203,10 @@ Source files
 hwswa2.py
   script to run directly from source, without building binary distribution
 
-checks/
+roles/
   location of role check description files: `<role name (lowercase)>.yaml`
 
-checks/remote-scripts/{bin32,bin64}
+roles/remote-scripts/{bin32,bin64}
   location of binaries copied to remote server in order to run
   specific checks (like nc binary)
 
