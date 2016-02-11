@@ -16,6 +16,11 @@ import random
 import string
 import fnmatch
 from ipcalc import Network
+import threading
+try:
+    import SocketServer
+except ImportError:
+    import socketserver as SocketServer
 
 import hwswa2.auxiliary as aux
 import hwswa2
@@ -337,6 +342,68 @@ class LinuxServer(Server):
 
     ########## Public methods
 
+    def Lportforward(self, bind_address, port, host, hostport):
+        """Copied from paramiko demos/forward.py
+
+        return SocketServer object
+        """
+
+        class ForwardServer (SocketServer.ThreadingTCPServer):
+            daemon_threads = True
+            allow_reuse_address = True
+
+        class Handler (SocketServer.BaseRequestHandler):
+            def handle(self):
+                try:
+                    chan = self.ssh_transport.open_channel('direct-tcpip',
+                                                           (self.chain_host, self.chain_port),
+                                                           self.request.getpeername())
+                except Exception as e:
+                    logger.error('Incoming request to %s:%d failed: %s' % (self.chain_host,
+                                                                      self.chain_port,
+                                                                      repr(e)))
+                    return
+                if chan is None:
+                    logger.error('Incoming request to %s:%d was rejected by the SSH server.' %
+                                 (self.chain_host, self.chain_port))
+                    return
+
+                logger.debug('Connected!  Tunnel open %r -> %r -> %r' % (self.request.getpeername(),
+                                                                    chan.getpeername(), (self.chain_host, self.chain_port)))
+                while True:
+                    r, w, x = select.select([self.request, chan], [], [])
+                    if self.request in r:
+                        data = self.request.recv(1024)
+                        if len(data) == 0:
+                            break
+                        chan.send(data)
+                    if chan in r:
+                        data = chan.recv(1024)
+                        if len(data) == 0:
+                            break
+                        self.request.send(data)
+
+                peername = self.request.getpeername()
+                chan.close()
+                self.request.close()
+                logger.debug('Tunnel closed from %r' % (peername,))
+
+        class SubHandler (Handler):
+            chain_host = host
+            chain_port = hostport
+            ssh_transport = self._sshclient.get_transport()
+
+        try:
+            server = ForwardServer((bind_address, port), SubHandler)
+        except socket.gaierror, gaierror:
+            logger.error("Cannot use %s to bind, %s" % (bind_address, gaierror))
+        else:
+            server_thread = threading.Thread(target=server.serve_forever)
+            server_thread.daemon = True
+            server_thread.start()
+            return server
+        return None
+
     def accessible(self, retry=False):
         try:
             self._connect(reconnect=retry, timeout=TIMEOUT)
@@ -581,7 +648,14 @@ class LinuxServer(Server):
     def shell(self):
         """Opens remote SSH session"""
         self._connect()
+        if hwswa2.config['Lportforward']:
+            # failure to do port forwarding is not fatal error
+            server = self.Lportforward(**hwswa2.config['Lportforward'])
+            if not server:
+                print('port forwarding failed, search logs for Lportforward errors')
         status, result = self.agent_cmd('shell', interactively=True)
+        if hwswa2.config['Lportforward'] and server:
+            server.shutdown()
         if status:
             return result
         else:

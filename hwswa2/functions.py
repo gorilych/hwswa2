@@ -73,6 +73,33 @@ def comma_separated_list(string):
     return string.split(',')
 
 
+def ipport(string):
+    try:
+        port = int(string)
+    except Exception:
+        raise argparse.ArgumentTypeError("%s is not integer" % string)
+    if not (1 < port < 65534):
+        raise argparse.ArgumentTypeError("port %s not in range [1, 65534]" % port)
+    return port
+
+
+def Lportforward(string):
+    """[bind_address:]port:host:hostport"""
+    args = string.split(':')
+    if len(args) == 3:
+        bind_address == ''
+    elif len(args) == 4:
+        bind_address = args[0]
+        args = args[1:]  # remove bind_address from args. args now is [port, host, hostport]
+    else:
+        raise argparse.ArgumentTypeError("%s not in form [bind_address:]port:host:hostport" % string)
+    host = args[1]
+    port = ipport(args[0])
+    hostport = ipport(args[2])
+    return {'bind_address': bind_address, 'port': port,
+            'host': host, 'hostport': hostport}
+
+
 def read_configuration():
     """Reads configuration from command line args and main.cfg"""
     global hwswa2
@@ -128,6 +155,9 @@ def read_configuration():
 
     subparser = subparsers.add_parser('shell', help='open shell to server',
                                       aliases=('sh',))
+    subparser.add_argument('-L', help='local port forwarding as in openssh client',
+                            type=Lportforward, dest='Lportforward',
+                            metavar='[bind_address:]port:host:hostport')
     subparser.add_argument('servername', metavar='server')
     subparser.set_defaults(subcommand=subcommands.shell)
 
