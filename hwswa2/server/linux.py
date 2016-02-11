@@ -26,7 +26,8 @@ import hwswa2.auxiliary as aux
 import hwswa2
 
 from hwswa2.server import (Server, ServerException, TunnelException,
-                           TimeoutException, TIMEOUT, REBOOT_TIMEOUT)
+                           ExecutionException, TimeoutException, TIMEOUT,
+                           REBOOT_TIMEOUT)
 
 __all__ = ['LinuxServer', 'LinuxServerException', 'TIMEOUT', 'REBOOT_TIMEOUT']
 
@@ -509,7 +510,8 @@ class LinuxServer(Server):
             else:
                 reason = base64.b64decode(result.get('reason'))
                 if reason == 'timeout':
-                    raise TimeoutException("Timeout during execution of %s" % cmd,
+                    raise TimeoutException("Timeout %s" % timeout,
+                                           cmd=cmd,
                                            output=base64.b64decode(result['stdout']),
                                            stderr=base64.b64decode(result['stderr']))
                 else:
@@ -521,7 +523,14 @@ class LinuxServer(Server):
         # remove last trailing newline
         if len(stdout_data) > 0 and stdout_data[-1] == '\n':
             stdout_data = stdout_data[:-1]
-        return stdout_data
+        if status == 0:
+            return stdout_data
+        # Exit code <> 0, raise ExecutionException
+        if len(stderr_data) > 0 and stderr_data[-1] == '\n':
+            stderr_data = stderr_data[:-1]
+        raise ExecutionException("Exit code: %s" % status,
+                                  output=stdout_data,
+                                  stderr=stderr_data)
 
     def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp', cleanup_later=True):
         """Creates directory/file using mktemp and returns its name"""
@@ -787,9 +796,10 @@ class LinuxServer(Server):
         prefixed_cmd = self._param_cmd_prefix + cmd
         try:
             output = self.get_cmd_out(prefixed_cmd)
-        except TimeoutException as te:
-            output = te.details.get('output')
-            return False, output, "Timeout exception: %s" % te
+        except ServerException as se:
+            output = se.details.get('output')
+            stderr = se.details.get('stderr')
+            return False, output, str(se) + ' |STDERR: ' + stderr
         else:
             return True, output, None
 
