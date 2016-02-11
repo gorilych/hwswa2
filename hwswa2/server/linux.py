@@ -396,7 +396,9 @@ class LinuxServer(Server):
         try:
             server = ForwardServer((bind_address, port), SubHandler)
         except socket.gaierror, gaierror:
-            logger.error("Cannot use %s to bind, %s" % (bind_address, gaierror))
+            logger.error("Cannot use %s to bind, socket.gaierror: %s" % (bind_address, gaierror))
+        except socket.error, serr:
+            logger.error("Cannot bind to %s:%s, socket.error: %s" % (bind_address, port, serr))
         else:
             server_thread = threading.Thread(target=server.serve_forever)
             server_thread.daemon = True
