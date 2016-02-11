@@ -670,7 +670,7 @@ class LinuxServer(Server):
             return True
         try:
             self._connect()
-            serverd_py = os.path.join(hwswa2.config['rscriptdir'], 'bin32', 'serverd.py')
+            serverd_py = os.path.join(hwswa2.config['resources'], 'serverd.py')
             # remote path. No need to remove it on exit because script deletes itself.
             r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp', cleanup_later=False)
             self.put(serverd_py, r_serverd_py)
