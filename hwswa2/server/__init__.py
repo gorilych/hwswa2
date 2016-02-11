@@ -390,21 +390,7 @@ class Server(object):
 
 
 class ServerException(Exception):
-    """Base class for server exceptions"""
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class TunnelException(ServerException):
-    """Exception for tunnel creation"""
-    pass
-
-
-class TimeoutException(ServerException):
-    """Timeout exception for server operations
+    """Base class for server exceptions
 
     Attributes:
         msg - error message
@@ -418,6 +404,22 @@ class TimeoutException(ServerException):
         return self.msg
 
 
+class TunnelException(ServerException):
+    """Exception for tunnel creation"""
+
+    def __str__(self):
+        return 'TunnelException: ' + self.msg
+
+
+class TimeoutException(ServerException):
+    """Timeout exception for server operations"""
+
+    def __str__(self):
+        return 'TimeoutException: ' + self.msg
+
+
 class FirewallException(ServerException):
     """Exception for tunnel creation"""
-    pass
+
+    def __str__(self):
+        return 'FirewallException: ' + self.msg
