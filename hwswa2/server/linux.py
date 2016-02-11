@@ -49,8 +49,6 @@ class LinuxServer(Server):
         # tunnels for other servers. 'name': {'sshclient': sshclient, 'tunnel': tunnel}
         self._sshtunnels = {}
         self._supath = None
-        self._param_cmd_prefix = None
-        self._param_binpath = None
         for k in ['su', 'sudo']:
             if self.account is not None and k in self.account:
                 self.account['sutype'] = k
@@ -167,26 +165,6 @@ class LinuxServer(Server):
         if self._sshclient is not None:
             self._sshclient = None
             self._disconnect_from_gateway()
-
-    def _prepare_param_scripts(self):
-        """Copy remote scripts to server, configure cmd prefix
-
-        :return True on success
-        """
-        rscripts_dir = hwswa2.config['rscriptdir']
-        if self._param_cmd_prefix is not None:
-            return True
-        arch = self.get_cmd_out('uname --machine')
-        if arch.endswith('64'):
-            rscriptdir = os.path.join(rscripts_dir,'bin64')
-        else:
-            rscriptdir = os.path.join(rscripts_dir,'bin32')
-        remote_hwswa2_dir = self.mktemp()
-        binpath = posixpath.join(remote_hwswa2_dir, 'bin')
-        self.put(rscriptdir, binpath)
-        self._param_binpath = binpath
-        self._param_cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
-        return True
 
     def _exists(self, path):
         self._connect()
@@ -786,16 +764,13 @@ class LinuxServer(Server):
             return 1
 
     def param_cmd(self, cmd):
-        """Execute cmd in prepared environment to obtain some server parameter
+        """Execute cmd to obtain some server parameter
 
         :param cmd: raw command to execute
         :return: (status, output, failure)
         """
-        if not self._prepare_param_scripts():
-            return False, None, "Remote scripts are not on the server"
-        prefixed_cmd = self._param_cmd_prefix + cmd
         try:
-            output = self.get_cmd_out(prefixed_cmd)
+            output = self.get_cmd_out(cmd)
         except ServerException as se:
             output = se.details.get('output')
             stderr = se.details.get('stderr')
@@ -804,17 +779,12 @@ class LinuxServer(Server):
             return True, output, None
 
     def param_script(self, script):
-        """Execute script in prepared environment to obtain some server parameter
+        """Execute script to obtain some server parameter
 
         :param script: script content
         :return: (status, output, failure)
         """
-        if not self._prepare_param_scripts():
-            return False, None, "Remote scripts are not on the server"
-        # no need to include in cleanup sequence because it is inside binpath
-        # inside remote hwswa2 dir which is already in self._tmp
-        scriptpath = self.mktemp(ftype='f', path=self._param_binpath,
-                                 cleanup_later=False)
+        scriptpath = self.mktemp(ftype='f')
         self.write(scriptpath, script)
         self.exec_cmd('chmod +x %s' % scriptpath)
         return self.param_cmd(scriptpath)

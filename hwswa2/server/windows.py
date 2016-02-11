@@ -38,8 +38,6 @@ class WindowsServer(Server):
     def __init__(self, *args, **kwargs):
         super(WindowsServer, self).__init__(*args, **kwargs)
         self._transport = None
-        self._param_cmd_prefix = None
-        self._param_binpath = None
         self._agent_pipe = None
 
     def _connect(self, reconnect=False, timeout=None):

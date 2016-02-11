@@ -26,7 +26,6 @@ configspec['networksfile'] = "string(default='" + _configdir + os.sep + "network
 configspec['logfile'] = "string(default='" + _logdir + os.sep + "hwswa2.log')"
 configspec['reportsdir'] = "string(default='" + _logdir + os.sep + "reports')"
 configspec['rolesdir'] = "string(default='" + _apppath + os.sep + "roles')"
-configspec['rscriptdir'] = "string(default='" + _apppath + os.sep + "roles" + os.sep + "remote-scripts')"
 configspec['debug'] = 'boolean(default=False)'
 configspec['remote_debug'] = 'boolean(default=False)'
 configspec['ssh_timeout'] = 'integer(0,7200,default=30)'
