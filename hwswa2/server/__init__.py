@@ -404,6 +404,13 @@ class ServerException(Exception):
         return self.msg
 
 
+class ExecutionException(ServerException):
+    """Exception for command execution"""
+
+    def __str__(self):
+        return 'ExecutionException: ' + self.msg
+
+
 class TunnelException(ServerException):
     """Exception for tunnel creation"""
 
