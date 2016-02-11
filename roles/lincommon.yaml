@@ -1,6 +1,7 @@
 description: Common checks for all linux roles
 internal: yes
 ostype: linux
+includes: [ lincommon-blockdevs ]
 parameters:
   hw_id:              cat /sys/class/dmi/id/product_uuid
   hostname:           hostname -f 2>/dev/null || hostname
@@ -39,11 +40,6 @@ parameters:
     _fields: [device, size(GB), mountpoint, fs_type]
     _separator: '|'
     _command: lspartitions.sh
-  blockdevs:
-    _type: table
-    _fields: [name, type, readonly, removable, rotational, size(GB), vendor, model]
-    _separator: '|'
-    _command: lsblk.sh
   virtualization: virt-what.py
   network:
     _type: dictionary
