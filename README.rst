@@ -63,7 +63,7 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
              pyinstaller --distpath=pyinstaller/hwswa2/ \
                          --workpath=pyinstaller/build/ \
                          --clean pyinstaller/hwswa2.spec && \
-             \cp -af README* LICENSE CHANGELOG* config/ roles/ docs/ \
+             \cp -af README* LICENSE CHANGELOG* config/ resources/ roles/ docs/ \
                      pyinstaller/hwswa2/ && \
              pushd pyinstaller/ && tar zcf hwswa2.tgz hwswa2 && popd
 

@@ -7,16 +7,14 @@ __all__ = ['config', 'configspec']
 if getattr(sys, 'frozen', False):
     # pyinstaller binary
     _apppath = os.path.dirname(sys.executable)
-    _res_path = sys._MEIPASS
 elif __file__:
     # script
     _apppath = os.path.abspath(os.path.dirname(os.path.realpath(sys.argv[0])))
-    _res_path = _apppath + os.sep + 'resources'
 else:
     # something else
     _apppath = '.'
-    _res_path = _apppath + os.sep + 'resources'
 
+_res_path = _apppath + os.sep + 'resources'
 _configdir = _apppath + os.sep + 'config'
 _logdir = _apppath + os.sep + 'logs'
 _configfile = _configdir + os.sep + 'main.cfg'
