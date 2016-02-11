@@ -102,15 +102,37 @@ For this purpose you need to describe parameter as a dictionary and put some
 specific keys inside it, which should start with underscore.
 
 ``_type`` key determines the type of the parameter which can be: *dictionary*,
-*list* or *table*. If ``_type`` is not specified, HWSWA2 assumes this parameter
-is a *dictionary*.
+*list*, *table* or *scalar*. If ``_type`` is not specified, HWSWA2 assumes
+this parameter is a *dictionary*.
 
 ``_command`` key says which command's output to use to obtain parameter's value.
 
 ``_script`` key is an alternative to a ``_command``: HWSWA2 will create
 temporary executable file and will use output of this script's execution to
-obtain parameter's value. This key does not work for windows roles and
-CAN BE DROPPED IN FUTURE VERSIONS
+obtain parameter's value. This key does not work for windows roles for now.
+
+Scalar parameter
+++++++++++++++++
+
+*scalar* parameter is alternative way to specify string parameter. So::
+
+  hostname:           hostname -f 2>/dev/null || hostname
+
+can be added as::
+
+  hostname:
+    _type: scalar
+    _command: hostname -f 2>/dev/null || hostname
+
+or as::
+
+  hostname:
+    _type: scalar
+    _script: >
+      #!/bin/sh
+      hostname -f 2>/dev/null || hostname
+
+Internally, all string parameters are converted to *scalar*
 
 Dictionary parameter
 ++++++++++++++++++++

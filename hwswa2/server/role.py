@@ -212,6 +212,26 @@ class Role(object):
         self._firewall = firewall
 
     @staticmethod
+    def _exec_func(param, param_cmd, param_script, deps=None):
+        """Execute remote command
+
+        Return status, value, failure message
+        """
+        if '_command' in param:
+            if deps:
+                cmd = param['_command'] % deps
+            else:
+                cmd = param['_command']
+            return param_cmd(cmd)
+        elif '_script' in param:
+            if deps:
+                script = param['_script'] % deps
+            else:
+                script = param['_script']
+            return param_script(script)
+        return False, None, "Parameter has no _command or _script"
+
+    @staticmethod
     def _get_param_value(param, param_cmd, param_script, deps=None):
         """Get param using passed functions
 
@@ -228,130 +248,96 @@ class Role(object):
         progress = 0
         curprogress = 0
         if isinstance(myparam, (str, unicode)):
-            if mydeps:
-                cmd = myparam % mydeps
-            else:
-                cmd = myparam
-            status, output, failure = param_cmd(cmd)
+            myparam = {'_type': 'scalar', '_command': myparam}
+        # dictionary is default _type
+        myparam.setdefault('_type', 'dictionary')
+        if myparam['_type'] == 'scalar':
+            status, output, failure = Role._exec_func(myparam, param_cmd, param_script, mydeps)
             yield {'param': output, 'progress': 1, 'failures': failure}
-        else:  # non-scalar type
-            if not '_type' in myparam: # dictionary is default type
-                myparam['_type'] = 'dictionary'
-            # different type processing
-            if myparam['_type'] == 'dictionary':
-                val = {}
-                failures = {}
-                progress = 0
-                if '_keys' in myparam:
-                    if '_command' in myparam:
-                        if mydeps:
-                            cmd = myparam['_command'] % mydeps
-                        else:
-                            cmd = myparam['_command']
-                        status, rows, failure = param_cmd(cmd)
-                    elif '_script' in myparam:
-                        if mydeps:
-                            script = myparam['_script'] % mydeps
-                        else:
-                            script = myparam['_script']
-                        status, line, failure = param_script(script)
-                    else:
-                        status, line, failure = False, None, "Parameter of type dictionary has _keys but no _command or _script"
-                    progress = 1
-                    if not status:
-                        val['_keys'] = line
-                        failures['_keys'] = failure
-                    else:
-                        myparam.setdefault('_separator', ' ')
-                        maxsplit = len(myparam['_keys']) - 1
-                        val = dict(zip(myparam['_keys'], row.split(myparam['_separator'], maxsplit)))
-                    yield {'param': val, 'progress': progress, 'failures': failures or None}
-                for p in myparam:
-                    if not p.startswith('_'):
-                        for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
-                            val[p] = copy.deepcopy(pv['param'])
-                            curprogress = progress + pv['progress']
-                            if pv['failures'] is not None:
-                                failures[p] = copy.deepcopy(pv['failures'])
-                            curfailures = copy.deepcopy(failures) or None
-                            yield {'param': val, 'progress': curprogress, 'failures': curfailures}
-                        progress = curprogress
-                yield {'param': val, 'progress': progress, 'failures': failures or None}
-            elif myparam['_type'] == 'table':
-                val = []
-                if '_command' in myparam:
-                    if mydeps:
-                        cmd = myparam['_command'] % mydeps
-                    else:
-                        cmd = myparam['_command']
-                    status, rows, failure = param_cmd(cmd)
-                elif '_script' in myparam:
-                    if mydeps:
-                        script = myparam['_script'] % mydeps
-                    else:
-                        script = myparam['_script']
-                    status, rows, failure = param_script(script)
-                else:
-                    status, rows, failure = False, None, "Parameter of type table has no _command or _script"
+        elif myparam['_type'] == 'dictionary':
+            val = {}
+            failures = {}
+            progress = 0
+            if '_keys' in myparam:
+                status, rows, failure = Role._exec_func(myparam, param_cmd, param_script, mydeps)
+                progress = 1
                 if not status:
-                    yield {'param': rows, 'progress': 1, 'failures': failure}
+                    val['_keys'] = line
+                    failures['_keys'] = failure
                 else:
                     myparam.setdefault('_separator', ' ')
-                    if not rows == '':
-                        maxsplit = len(myparam['_fields']) - 1
-                        for row in rows.split('\n'):
-                            val.append(dict(zip(myparam['_fields'], row.split(myparam['_separator'], maxsplit))))
-                    yield {'param': val, 'progress': 1, 'failures': failure}
-            elif myparam['_type'] == 'list':
-                # evaluate generator first
-                for generator in myparam['_generator']:  # there should be only one
-                    placeholder = myparam['_generator'][generator]
-                    if mydeps:
-                        cmd = myparam[generator] % mydeps
-                    else:
-                        cmd = myparam[generator]
-                    status, gen_values, failure = param_cmd(cmd)
-                    if not status:
-                        yield {'param': gen_values, 'progress': 1, 'failures': failure}
-                    else:
-                        gen_values = gen_values.split('\n')
-                        del myparam[generator]
-                        val = []
-                        failures = []
-                        progress = 1
-                        for gen_value in gen_values:
-                            mydeps[placeholder] = gen_value
-                            elem = {generator: gen_value}
-                            failure = {}
-                            # evaluate other parameters based on generator
-                            for p in myparam:
-                                if not p.startswith('_'):
+                    maxsplit = len(myparam['_keys']) - 1
+                    val = dict(zip(myparam['_keys'], rows.split(myparam['_separator'], maxsplit)))
+                yield {'param': val, 'progress': progress, 'failures': failures or None}
+            for p in myparam:
+                if not p.startswith('_'):
+                    for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
+                        val[p] = copy.deepcopy(pv['param'])
+                        curprogress = progress + pv['progress']
+                        if pv['failures'] is not None:
+                            failures[p] = copy.deepcopy(pv['failures'])
+                        curfailures = copy.deepcopy(failures) or None
+                        yield {'param': val, 'progress': curprogress, 'failures': curfailures}
+                    progress = curprogress
+            yield {'param': val, 'progress': progress, 'failures': failures or None}
+        elif myparam['_type'] == 'table':
+            val = []
+            status, rows, failure = Role._exec_func(myparam, param_cmd, param_script, mydeps)
+            if not status:
+                yield {'param': rows, 'progress': 1, 'failures': failure}
+            else:
+                myparam.setdefault('_separator', ' ')
+                if not rows == '':
+                    maxsplit = len(myparam['_fields']) - 1
+                    for row in rows.split('\n'):
+                        val.append(dict(zip(myparam['_fields'], row.split(myparam['_separator'], maxsplit))))
+                yield {'param': val, 'progress': 1, 'failures': failure}
+        elif myparam['_type'] == 'list':
+            # evaluate generator first
+            for generator in myparam['_generator']:  # there should be only one
+                placeholder = myparam['_generator'][generator]
+                status, gen_values, failure = Role._exec_func({'_command': myparam[generator]}, param_cmd, param_script, mydeps)
+                if not status:
+                    yield {'param': gen_values, 'progress': 1, 'failures': failure}
+                else:
+                    gen_values = gen_values.split('\n')
+                    del myparam[generator]
+                    val = []
+                    failures = []
+                    progress = 1
+                    for gen_value in gen_values:
+                        mydeps[placeholder] = gen_value
+                        elem = {generator: gen_value}
+                        failure = {}
+                        # evaluate other parameters based on generator
+                        for p in myparam:
+                            if not p.startswith('_'):
+                                curval = copy.deepcopy(val)
+                                curfailures = copy.deepcopy(failures)
+                                for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
                                     curval = copy.deepcopy(val)
                                     curfailures = copy.deepcopy(failures)
-                                    for pv in Role._get_param_value(myparam[p], param_cmd, param_script, mydeps):
-                                        curval = copy.deepcopy(val)
-                                        curfailures = copy.deepcopy(failures)
-                                        elem[p] = pv['param']
-                                        if pv['failures'] is not None:
-                                            failure[p] = pv['failures']
-                                        curval.append(elem)
-                                        if failure == {}:
-                                            curfailures.append(None)
-                                        else:
-                                            curfailures.append(failure)
-                                        curprogress = progress + pv['progress']
-                                        if [f for f in curfailures if f is not None]:
-                                            report_failures = curfailures
-                                        else:
-                                            report_failures = None
-                                        yield {'param': curval, 'progress': curprogress, 'failures': report_failures}
-                                progress = curprogress
-                            val = curval
-                            failures = curfailures
-            else:  # unclear type
-                yield {'param': None,
-                       'progress': 1,
-                       'failures': "Unexpected _type for parameter: %s" % myparam['_type']}
+                                    elem[p] = pv['param']
+                                    if pv['failures'] is not None:
+                                        failure[p] = pv['failures']
+                                    curval.append(elem)
+                                    if failure == {}:
+                                        curfailures.append(None)
+                                    else:
+                                        curfailures.append(failure)
+                                    curprogress = progress + pv['progress']
+                                    if [f for f in curfailures if f is not None]:
+                                        report_failures = curfailures
+                                    else:
+                                        report_failures = None
+                                    yield {'param': curval, 'progress': curprogress, 'failures': report_failures}
+                            progress = curprogress
+                        val = curval
+                        failures = curfailures
+        else:  # unclear type
+            yield {'param': None,
+                   'progress': 1,
+                   'failures': "Unexpected _type for parameter: %s" % myparam['_type']}
 
     def all_included_roles(self):
         air = [r.name for r in self.includes]
