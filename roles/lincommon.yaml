@@ -1,7 +1,7 @@
 description: Common checks for all linux roles
 internal: yes
 ostype: linux
-includes: [ lincommon-blockdevs ]
+includes: [ lincommon-blockdevs, lincommon-partitions ]
 parameters:
   hw_id:              cat /sys/class/dmi/id/product_uuid
   hostname:           hostname -f 2>/dev/null || hostname
@@ -35,11 +35,6 @@ parameters:
     frequency(GHz): grep --fixed-strings --max-count=1 'cpu MHz' /proc/cpuinfo 
                     | awk '{printf("%.2f",$NF/1000)}' 
                     | sed -e 's/\.0*$//' -e 's/\(\.[0-9]*[1-9]\)0*$/\1/'
-  partitions:
-    _type: table
-    _fields: [device, size(GB), mountpoint, fs_type]
-    _separator: '|'
-    _command: lspartitions.sh
   virtualization: virt-what.py
   network:
     _type: dictionary
