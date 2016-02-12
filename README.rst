@@ -169,6 +169,22 @@ Advanced
 
 You can modify roles/\*.yaml or roles/remote-scripts/ files for your own needs.
 
+Debugging
+---------
+
+HWSWA2 can be debugged with PDB. To start debugging, send SIGUSR1 to the main
+process. Pdb console can be accessed with telnet on 127.0.0.1:4444::
+
+  $ ps ax | grep hwswa
+  19956 pts/2    Sl+    0:00 python ./hwswa2.py -dc ../tests/main.cfg.test shell -L localhost:2000:localhost:22 localhost
+  19981 pts/3    S+     0:00 grep hwswa
+
+  $ kill -SIGUSR1 19956
+
+  $ telnet localhost 4444
+  ...
+  (Pdb) 
+
 Source files
 ------------
 
