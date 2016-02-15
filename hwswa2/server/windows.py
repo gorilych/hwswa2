@@ -72,11 +72,11 @@ class WindowsServer(Server):
             raise WindowsServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
         if cmd.startswith('cmd|'):
                 command = cmd[4:]
+                skip_cmd_shell = False
         elif cmd.startswith('ps|'):
                 command = 'powershell.exe'
                 posh_cmd = cmd[3:]
                 arguments = ('-encodedCommand', encode_arg(posh_cmd))
-                skip_cmd_shell = False
         else:
             #TODO: split cmd into command and arguments 
             raise NotImplementedError
