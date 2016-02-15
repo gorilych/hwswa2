@@ -1,5 +1,6 @@
 import logging
-import inrm
+import winrmlib.shell
+import base64
 
 import hwswa2
 from hwswa2.server import (Server, ServerException, TimeoutException, TIMEOUT,
@@ -10,6 +11,14 @@ __all__ = [ 'WindowsServer', 'WindowsServerException', 'TIMEOUT', 'REBOOT_TIMEOU
 logger = logging.getLogger(__name__)
 
 
+def encode_arg(arg):
+    return base64.b64encode(arg.encode('utf-16le'))
+
+
+def decode_res(res):
+    return base64.b64decode(res).decode('utf-16le')
+
+
 class WindowsServerException(ServerException):
     pass
 
@@ -18,10 +27,7 @@ class WindowsServer(Server):
 
     def __init__(self, *args, **kwargs):
         super(WindowsServer, self).__init__(*args, **kwargs)
-        self._transport = None
-        self._param_cmd_prefix = None
-        self._param_binpath = None
-        self._agent_pipe = None
+        self._shell = None
 
     def _connect(self, reconnect=False, timeout=None):
         """Connect to server
@@ -29,45 +35,17 @@ class WindowsServer(Server):
         Return True on success 
         """
         timeout = timeout or TIMEOUT
-        if self._transport is not None:
+        if self._shell is not None:
             if reconnect:
-                try:
-                    self._transport.disconnect()
-                except socket.error:
-                    pass
-                self._transport = None
+                self._shell.close()
+                self._shell = None
                 logger.debug("Will reconnect to  %s" % self)
             else:
                 return True
         logger.debug("Trying to connect to  %s" % self)
-        hostname = self.address
-        username = self.account['login']
-        password = self.account['password']
-        strbinding = DCERPCStringBindingCompose(protocol_sequence='ncacn_np',
-                                                network_address=hostname,
-                                                endpoint='\pipe\svcctl')
-        transport = DCERPCTransportFactory(strbinding)
-        transport.set_credentials(username, password)
-        transport.set_connect_timeout(timeout)
-        dce = transport.get_dce_rpc()
-
-        try:
-            dce.connect()
-        except SessionError, se:
-            logger.debug('Failed to establish connection with %s: %s' % (self, se))
-            self._last_connection_error = 'SessionError raised while connecting: %s' % se
-            return False
-        except socket.error, serr:
-            logger.debug('socket.error raised while connecting to %s@%s: %s' % (username, hostname, serr))
-            self._last_connection_error = 'socket.error raised while connecting to %s@%s: %s' \
-                                          % (username, hostname, serr)
-            return False
-        else:
-            dce.bind(scmr.MSRPC_UUID_SCMR)
-            logger.debug('Established connection with %s@%s' % (username, hostname))
-            self._dce = dce
-            self._transport = transport
-            return True
+        self._shell = winrmlib.shell.CommandShell("http://{0}:5985/wsman".format(self.address), self.account['login'], self.account['password'])
+        self._shell.open()
+        return True
 
     def shell(self, privileged=True):
         """Opens remote cmd session"""
@@ -82,42 +60,28 @@ class WindowsServer(Server):
         raise NotImplementedError
 
     def exec_cmd(self, cmd, input_data=None, timeout=None, privileged=True):
-        """Executes command and returns tuple of stdout, stderr and status"""
+        """Execute command
+
+        Return tuple of stdout, stderr and status
+        """
         timeout = timeout or TIMEOUT
+        skip_cmd_shell = True
+        arguments=()
         logger.debug("Executing on %s: %s" % (self, cmd))
         if not self._connect():
             raise WindowsServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        if cmd.startswith('cmd|'):
+                command = cmd[4:]
+        elif cmd.startswith('ps|'):
+                command = 'powershell.exe'
+                posh_cmd = cmd[3:]
+                arguments = ('-encodedCommand', encode_arg(posh_cmd))
+                skip_cmd_shell = False
         else:
-            if not self.agent_start():
-                logger.error("Failed to start agent on %s" % self)
-                raise WindowsServerException("Failed to start agent on %s" % self)
-            else:
-                if input_data:
-                    acmd = ('exec_in ' + encode_arg(cmd) + ' ' +
-                            encode_arg(input_data) + ' ' + str(timeout))
-                elif cmd.startswith('cmd|'):
-                    acmd = ('exec_cmd ' + encode_arg(cmd[4:]) + ' ' + str(timeout))
-                elif cmd.startswith('ps|'):
-                    acmd = ('exec_pse ' + encode_arg(cmd[3:]) + ' ' + str(timeout))
-                else:
-                    acmd = ('exec ' + encode_arg(cmd) + ' ' + str(timeout))
-                status, result = self.agent_cmd(acmd)
-                # result is "[reason:<reason of failure>] \
-                # returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
-                logger.debug("exec_cmd result %s" % result)
-                result = dict([r.split(':') for r in result.split(' ')])
-                if status:
-                    return (decode_res(result['stdout']),
-                            decode_res(result['stderr']),
-                            int(result['returncode']))
-                else:
-                    reason = decode_res(result.get('reason'))
-                    if reason == 'timeout':
-                        raise TimeoutException("Timeout during execution of %s" % cmd,
-                                               output=decode_res(result['stdout']),
-                                               stderr=decode_res(result['stderr']))
-                    else:
-                        raise WindowsServerException("Execution of %s failed: %s" % (cmd, reason))
+            #TODO: split cmd into command and arguments 
+            raise NotImplementedError
+        command_id = self._shell.run(command, arguments, skip_cmd_shell=skip_cmd_shell)
+        return self._shell.receive(command_id)
 
     def get_cmd_out(self, cmd, input_data=None, timeout=None, privileged=True):
         """Returns command output (stdout)"""
@@ -134,8 +98,6 @@ class WindowsServer(Server):
         :param cmd: raw command to execute
         :return: (status, output, failure)
         """
-        if not self.agent_start():
-            return False, None, "Agent is not started on the server"
         try:
             output = self.get_cmd_out(cmd).strip()
         except TimeoutException as te:
@@ -144,23 +106,17 @@ class WindowsServer(Server):
         else:
             return True, output, None
 
+    def cleanup(self):
+        if self._shell:
+            self._shell.close()
+
     def remove(self, path, privileged=True):
         """Removes file/directory"""
         raise NotImplementedError
 
     def put(self, localpath, remotepath):
         """Copies local file/directory to the server"""
-        logger.debug("Copying %s to %s:%s" % (localpath, self.name, remotepath))
-        if not os.path.exists(localpath):
-            raise Exception("Local path does not exist: %s" % localpath)
-        self._connect()
-        smbconnection = self._transport.get_smb_connection()
-        fh = open(localpath, 'rb')
-        # remotepath = C:\somedir\somefile
-        # => share = C$, sharepath = somedir\somefile
-        share = remotepath[0] + '$'
-        sharepath = remotepath[3:]
-        smbconnection.putFile(share, sharepath, fh.read)
+        raise NotImplementedError
 
     def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='`pwd`'):
         """Creates directory using mktemp and returns its name"""
@@ -168,21 +124,11 @@ class WindowsServer(Server):
 
     def mkdir(self, path):
         """Creates directory"""
-        logger.debug("MKDIR %s on %s" %(path, self))
-        self._connect()
-        smbconnection = self._transport.get_smb_connection()
-        share = path[0] + '$'
-        sharepath = path[3:]
-        smbconnection.createDirectory(share, sharepath)
+        raise NotImplementedError
 
     def rmdir(self, path):
         """Removes directory"""
-        logger.debug("RMDIR %s on %s" %(path, self))
-        self._connect()
-        smbconnection = self._transport.get_smb_connection()
-        share = path[0] + '$'
-        sharepath = path[3:]
-        smbconnection.deleteDirectory(share, sharepath)
+        raise NotImplementedError
 
     def exists(self, path):
         raise NotImplementedError
@@ -197,11 +143,4 @@ class WindowsServer(Server):
         """Reboot the server and check the time it takes to come up"""
         raise NotImplementedError
 
-    def cleanup(self):
-        if self._transport is not None:
-            if self._agent_pipe is not None:
-                self.agent_stop()
-            self._transport.disconnect()
-            self._transport = None
-            logger.debug("Closed connection to  %s" % self)
 

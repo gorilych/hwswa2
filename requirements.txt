@@ -3,7 +3,7 @@ PyYAML==3.11
 argparse==1.2.1
 configobj==5.0.4
 paramiko
-pywinrm
+winrmlib
 ipcalc
 validate
 zxcvbn
