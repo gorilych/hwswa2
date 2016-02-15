@@ -136,7 +136,7 @@ requirements:
   Activation: Licensed
   is_admin: true
   dns_check: {parameter: 'network:dns_check', type: eq, value: OK}
-  architecture: { value-example: 64-bit }
+  architecture: { type: eq, value-example: 64-bit }
   ram(GB): {type: ge, value-example: 0.5, join-rule: sum}
   swap(GB): {type: ge, value-example: 1, join-rule: sum}
   cpu-cores: {parameter: 'processors:count', type: ge, value-example: 1, join-rule: max}
