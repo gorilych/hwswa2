@@ -1,6 +1,6 @@
 import logging
-import threading
-import Queue
+from multiprocessing import Process
+from multiprocessing.queues import SimpleQueue
 import time
 import sys
 import glob
@@ -35,18 +35,32 @@ def list_servers():
         print(get_server(name))
 
 
-def show_firewall():
-    """Show firewall requirements"""
-    servers = []
+def get_server_or_exit(name):
+    server = get_server(name)
+    if server:
+        return server
+    else:
+        log_error_and_print("Cannot find or init server %s, check log file" % name)
+        sys.exit(1)
+
+
+def get_servers_or_exit(skip_dontcheck=True):
     if hwswa2.config['allservers']:
         hwswa2.config['servernames'] = server_names()
-    for name in hwswa2.config['servernames']:
-        server = get_server(name)
-        if server is None:
-            log_error_and_print("Cannot find or init server %s, check log file" % name)
-            sys.exit(1)
-        else:
-            servers.append(server)
+    servers = [get_server_or_exit(name) for name in hwswa2.config['servernames']]
+    if skip_dontcheck:
+        for server in servers:
+            if server.dontcheck:
+                log_info_and_print("Skipping server %s because of dontcheck option" % name)
+        servers = [server for server in servers if not server.dontcheck]
+    return servers
+
+
+def show_firewall():
+    """Show firewall requirements"""
+    if hwswa2.config['allservers']:
+        hwswa2.config['servernames'] = server_names()
+    servers = get_servers_or_exit(skip_dontcheck=False)
     intranet_rules = []
     internet_rules = []
     for s in servers:
@@ -110,14 +124,8 @@ def firewall():
     max_failures = hwswa2.config['firewall']['max_failures']
     max_closed_ports = hwswa2.config['firewall']['max_closed_ports']
     servers = []
-    if hwswa2.config['allservers']:
-        hwswa2.config['servernames'] = server_names()
-    for name in hwswa2.config['servernames']:
-        server = get_server(name)
-        if server is None:
-            log_error_and_print("Cannot find or init server %s, check log file" % name)
-            sys.exit(1)
-        elif not server.nw_ips:
+    for server in get_servers_or_exit(skip_dontcheck=False):
+        if not server.nw_ips:
             if server.get_ips(hwswa2.config['networks']):
                 servers.append(server)
             else:
@@ -210,81 +218,77 @@ def check():
     """Check servers"""
     check_time = time.localtime()
     report_period = hwswa2.config['check']['report_period']
-    servers = []
-    if hwswa2.config['allservers']:
-        hwswa2.config['servernames'] = server_names()
+    progress = ""; sep = '  |  '
     log_info_and_print("Checking servers: %s" % hwswa2.config['servernames'])
-    for name in hwswa2.config['servernames']:
-        server = get_server(name)
-        if server is None:
-            log_error_and_print("Cannot find or init server %s, check log file" % name)
-            sys.exit(1)
-        else:
-            if server.dontcheck:
-                log_info_and_print("Skipping server %s because of dontcheck option" % name)
-            else:
-                servers.append(server)
-    results = Queue.Queue()
-    cth = {}
-    status = {}
+    servers = get_servers_or_exit()
+    # process, status and queue for each server
+    proc = {}; status = {}; queue = {}
     for server in servers:
-        cth[server.name] = threading.Thread(name=server.name, target=_check, args=(server, results))
-        cth[server.name].start()
-        status[server.name] = 'not started'
-
-    def there_is_alive_check_thread():
-        for name in cth:
-            if cth[name].is_alive():
-                return True
-        return False
-    while there_is_alive_check_thread():
-        while not results.empty():
-            result = results.get()
-            name = result['name']
-            progress = result['progress']
-            status[name] = progress
-        for name in status:
-            if not cth[name].is_alive():
-                status[name] = "finished"
-        print("Progress: %s" % status)
+        name = server.name
+        queue[name] = SimpleQueue()
+        proc[name] = Process(name=name, target=_check, args=(server, check_time, queue[name]))
+        proc[name].start()
+        status[name] = 'not started'
+    finished = []; interrupted = []
+    # while there is at least one alive child
+    while next((p for p in proc.values() if p.is_alive()), None):
+        for name in queue:
+            while not queue[name].empty():
+                status[name] = queue[name].get()
+        for name in proc:
+            if not proc[name].is_alive():
+                if str(status[name]).startswith("finished"):
+                    finished.append(name)
+                    if name in interrupted: interrupted.remove(name)
+                else:
+                    status[name] = "interrupted?"
+                    if not name in interrupted: interrupted.append(name)
+        # remove finished processes
+        proc = dict([(n, p) for (n, p) in proc.items() if not str(status[n]).startswith("finished")])
+        # show progress: Finished | Not started | Interrupted? | Waiting for
+        waiting = ', '.join([server.name + '(' + str(status[server.name]) +')'
+            for server in servers if isinstance(status[server.name], int)])
+        not_started = ', '.join([server.name
+            for server in servers if status[server.name] == 'not started'])
+        progress = ""
+        for (k, v) in [("Finished", ', '.join(finished)), ('Not started', not_started),
+                ('Interrupted?', ', '.join(interrupted)), ('Waiting', waiting)]:
+            if v:
+                if not progress:  progress = k + ': ' + v
+                else:             progress += sep + k + ': ' + v
+        print(progress)
         time.sleep(report_period)
+    # processes finished, let's clean up queues
+    for name in queue:
+        while not queue[name].empty():
+            status[name] = queue[name].get()
+            if not str(status[name]).startswith("finished"):
+                status[name] = "interrupted?"
+    print("============== FINISHED =============")
     for server in servers:
-        server.prepare_and_save_report(check_time)
-        log_info_and_print("%s status: %s, report file: %s" %
-                    (server.name, server.last_report().data['check_status'], server.last_report().yamlfile))
+        print("{0} status: {1}".format(server.name, status[server.name]))
 
 
-def _check(server, resultsqueue):
+def _check(server, check_time, resultsqueue):
     name = server.name
     for progress in server.collect_parameters():
-        resultsqueue.put({'name': name, 'progress': progress})
+        resultsqueue.put(progress)
+    server.prepare_and_save_report(check_time)
+    resultsqueue.put("{0}, report file: {1}".format(
+        server.last_report().data['check_status'],
+        server.last_report().yamlfile))
 
 
 def prepare():
     """Prepare servers"""
     logger.debug("Preparing servers: %s" % hwswa2.config['servernames'])
-    servers = []
-    if hwswa2.config['allservers']:
-        hwswa2.config['servernames'] = server_names()
-    for name in hwswa2.config['servernames']:
-        server = get_server(name)
-        if server is None:
-            log_error_and_print("Cannot find or init server %s, check log file" % name)
-            sys.exit(1)
-        else:
-            if server.dontcheck:
-                log_info_and_print("Skipping server %s because of dontcheck option" % name)
-            else:
-                servers.append(server)
+    servers = get_servers_or_exit()
 
 
 def shell():
     """Open interactive shell to specific server"""
     servername = hwswa2.config['servername']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
+    server = get_server_or_exit(servername)
     log_info_and_print("Opening interactive shell to server %s" % servername)
     if server.accessible():
         server.shell()
@@ -295,53 +299,71 @@ def shell():
 
 def reboot():
     """Reboots specified servers"""
-    servers = []
-    if hwswa2.config['allservers']:
-        hwswa2.config['servernames'] = server_names()
     log_info_and_print("Rebooting servers: %s" % hwswa2.config['servernames'])
-    for name in hwswa2.config['servernames']:
-        server = get_server(name)
-        if server is None:
-            log_error_and_print("Cannot find or init server %s, check log file" % name)
-            sys.exit(1)
-        else:
-            if server.dontcheck:
-                log_info_and_print("Skipping server %s because of dontcheck option" % name)
-            else:
-                servers.append(server)
-    cth = {}
-    finished = []
+    progress = ""; sep = '  |  '
+    servers = get_servers_or_exit()
+    # process, status and queue for each server
+    proc = {}; queue = {}; status = {}
+    rebooted = []; interrupted = []; failed = []; waiting = []
     for server in servers:
-        cth[server.name] = threading.Thread(name=server.name, target=server.check_reboot)
-        cth[server.name].start()
-
-    def there_is_alive_check_thread():
-        for n in cth:
-            if cth[n].is_alive():
-                return True
-        return False
-    while there_is_alive_check_thread():
-        for name in cth:
-            if not cth[name].is_alive():
-                if not name in finished:
-                    log_info_and_print("%s: %s" % (name, get_server(name).check_reboot_result))
-                    finished.append(name)
+        name = server.name
+        waiting.append(name)
+        queue[name] = SimpleQueue()
+        proc[name] = Process(name=server.name, target=_reboot, args=(server, queue[name]))
+        proc[name].start()
+    # while there is at least one alive child
+    while next((p for p in proc.values() if p.is_alive()), None):
+        # remove finished processes
+        proc = dict([(n, p) for (n, p) in proc.items() if p.is_alive()])
+        # receive new statuses
+        for name in queue:
+            if not queue[name].empty():
+                status[name] = queue[name].get()
+        # update rebooted/failed/interupted/waiting
+        for server in servers:
+            name = server.name
+            if (name not in rebooted) and (name not in failed):
+                if name in status:  # status just received
+                    if name in interrupted: interrupted.remove(name)
+                    if name in waiting: waiting.remove(name)
+                    if isinstance(status[name], int):  rebooted.append(name)
+                    else:                              failed.append(name)
+                elif name not in proc:  # process died, no status received till now
+                    if name in waiting: waiting.remove(name)
+                    if not name in interrupted: interrupted.append(name)
+        # show progress: Rebooted | Failed | Interrupted? | Waiting
+        for (k, v) in [("Rebooted", rebooted), ('Failed', failed),
+                ('Interrupted?', interrupted), ('Waiting', waiting)]:
+            if v:
+                if not progress:  progress = k + ': ' + ', '.join(v)
+                else:             progress += sep + k + ': ' + ', '.join(v)
+        print(progress)
         time.sleep(1)
+    for name in queue:
+        if not queue[name].empty():
+            status[name] = queue[name].get()
     print "============== FINISHED ================"
     for server in servers:
-        if server.check_reboot_result is None:
-            print("%s: reboot failed?" % server)
-        else:
-            print("%s: %s" % (server, server.check_reboot_result))
+        if not server.name in status:
+            status[server.name] = 'interrupted?'
+        print("{0}: {1}".format(server.name, status[server.name]))
+
+
+def _reboot(server, queue):
+    try:
+        server.check_reboot()
+    except Exception as e:
+        pass
+    if server.check_reboot_result is None:
+        queue.put("reboot failed?")
+    else:
+        queue.put(server.check_reboot_result)
 
 
 def exec_cmd():
     """Exec command on specified server interactively"""
     servername = hwswa2.config['servername']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
+    server = get_server_or_exit(servername)
     sshcmd = " ".join(hwswa2.config['sshcmd'])
     get_pty = hwswa2.config['tty']
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
@@ -356,10 +378,7 @@ def exec_cmd():
 def ni_exec_cmd():
     """Exec command on specified server non-interactively"""
     servername = hwswa2.config['servername']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
+    server = get_server_or_exit(servername)
     sshcmd = " ".join(hwswa2.config['sshcmd'])
     logger.debug("Executing `%s` on server %s" % (sshcmd, servername))
     if server.accessible():
@@ -375,93 +394,83 @@ def ni_exec_cmd():
 def bulk_exec_cmd():
     """Exec command on specified server(s) non-interactively"""
     sshcmd = " ".join(hwswa2.config['sshcmd'])
-    servers = []
-    if hwswa2.config['allservers']:
-        hwswa2.config['servernames'] = server_names()
-    for name in hwswa2.config['servernames']:
-        server = get_server(name)
-        if server is None:
-            log_error_and_print("Cannot find or init server %s, check log file" % name)
-            sys.exit(1)
-        else:
-            servers.append(server)
+    servers = get_servers_or_exit(skip_dontcheck=False) 
     logger.debug("Will execute %s on servers %s" % (sshcmd, servers))
-    results = Queue.Queue()
-    exec_results = {}
-    cth = {}
-    status = {}
-    def _exec(server, resultsqueue):
-        name = server.name
-        if server.accessible():
-            try:
-                stdout, stderr, exitstatus = server.exec_cmd(sshcmd)
-            except TimeoutException as te:
-                logger.info("%s: Timeout while executing command" % server)
-                resultsqueue.put({'name': name,
-                    'accessible': False,
-                    'conn_err': "Timeout while executing"})
-            else:
-                logger.info("%s\n  = stdout = \n%s-------\n  = stderr = \n%s-------\nexitstatus = %s"
-                    % (server, stdout, stderr, exitstatus))
-                resultsqueue.put({'name': name,
-                    'accessible': True, 'stdout': stdout, 'stderr': stderr,
-                    'exitstatus': exitstatus})
-        else:
-            resultsqueue.put({'name': name,
-                'accessible': False,
-                'conn_err': server.last_connection_error()})
+    # process, status and queue for each server
+    proc = {}; status = {}; queue = {}
+    executed = []; waiting = []
+    progress = ""; sep = "  |  "
     for server in servers:
-        cth[server.name] = threading.Thread(name=server.name, target=_exec, args=(server, results))
-        cth[server.name].start()
-        status[server.name] = 'waiting'
-    def there_is_alive_check_thread():
-        for name in cth:
-            if cth[name].is_alive():
-                return True
-        return False
-    while there_is_alive_check_thread() or not results.empty():
-        if not results.empty():
-            result = results.get()
-            name = result['name']
-            if result['accessible']:
-                status[name] = 'executed'
-            else:
-                status[name] = 'not accessible'
-            exec_results[name] = result
-        if there_is_alive_check_thread():
-            print("Progress: %s" % status)
-            #FIXME replace with configurable value
-            time.sleep(2)
+        name = server.name
+        queue[name] = SimpleQueue()
+        proc[name] = Process(name=server.name, target=_exec, args=(server, sshcmd, queue[name]))
+        proc[name].start()
+        waiting.append(name)
+    # while there is at least one alive child
+    while next((p for p in proc.values() if p.is_alive()), None):
+        # remove finished processes
+        proc = dict([(n, p) for (n, p) in proc.items() if p.is_alive()])
+        # receive new statuses
+        for name in queue:
+            if not queue[name].empty():
+                status[name] = queue[name].get()
+                waiting.remove(name)
+                executed.append(name)
+        if executed:  progress = "Executed: " + ', '.join(executed)
+        if waiting:
+            if progress:  progress += sep
+            progress += "Waiting: " + ', '.join(waiting)
+        print(progress)
+        #TODO replace with configurable value
+        time.sleep(1)
+    # update statuses
+    for name in queue:
+        if not queue[name].empty():
+            status[name] = queue[name].get()
     print "============== FINISHED ================"
     print "Server\tExit code"
-    for name in hwswa2.config['servernames']:
-        result = exec_results[name]
+    for server in servers:
+        result = status[server.name]
         if result['accessible']:
-            print("%s\t%s" %(name, result['exitstatus']))
+            print("%s\t%s" %(server.name, result['exitstatus']))
         else:
-            print("%s\t%s" %(name, result['conn_err']))
+            print("%s\t%s" %(server.name, result['conn_err']))
     for stream in ['stdout', 'stderr']:
         if hwswa2.config[stream]:
             print("============== %s ================" % stream)
-            for name in hwswa2.config['servernames']:
-                result = exec_results[name]
+            for server in servers:
+                result = status[server.name]
                 if result['accessible']:
                     if not result[stream]:
-                        print("==== %s ==== Empty" % name)
+                        print("==== %s ==== Empty" % server.name)
                     else:
-                        print("==== %s ====\n%s" % (name, result[stream]))
+                        print("==== %s ====\n%s" % (server.name, result[stream]))
     print "See log file for stdout and stderr"
+
+
+def _exec(server, cmd, resultsqueue):
+    if server.accessible():
+        try:
+            stdout, stderr, exitstatus = server.exec_cmd(cmd)
+        except TimeoutException as te:
+            logger.info("%s: Timeout while executing command" % server)
+            resultsqueue.put({'accessible': False,
+                'conn_err': "Timeout while executing"})
+        else:
+            logger.info("%s\n  = stdout = \n%s-------\n  = stderr = \n%s-------\nexitstatus = %s"
+                % (server, stdout, stderr, exitstatus))
+            resultsqueue.put({'accessible': True, 'stdout': stdout,
+                'stderr': stderr, 'exitstatus': exitstatus})
+    else:
+        resultsqueue.put({'accessible': False,
+            'conn_err': server.last_connection_error()})
 
 
 def put():
     """Copy file to server"""
-    servername = hwswa2.config['servername']
+    server = get_server_or_exit(hwswa2.config['servername'])
     localpath = hwswa2.config['localpath']
     remotepath = hwswa2.config['remotepath']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
     logger.debug("Copying '%s' to '%s' on %s" % (localpath, remotepath, server))
     if server.accessible():
         server.put(localpath, remotepath)
@@ -472,13 +481,9 @@ def put():
 
 def get():
     """Copy file from server"""
-    servername = hwswa2.config['servername']
+    server = get_server_or_exit(hwswa2.config['servername'])
     localpath = hwswa2.config['localpath']
     remotepath = hwswa2.config['remotepath']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
     logger.debug("Copying to '%s' from '%s' on %s" % (localpath, remotepath, server))
     if server.accessible():
         server.get(remotepath, localpath)
@@ -488,12 +493,8 @@ def get():
 
 
 def lastreport():
-    servername = hwswa2.config['servername']
+    server = get_server_or_exit(hwswa2.config['servername'])
     raw = hwswa2.config['raw']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
     report = server.last_report()
     if report is None:
         log_info_and_print("%s has no reports" % server)
@@ -502,13 +503,9 @@ def lastreport():
 
 
 def show_report():
-    servername = hwswa2.config['servername']
+    server = get_server_or_exit(hwswa2.config['servername'])
     reportname = hwswa2.config['reportname']
     raw = hwswa2.config['raw']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
     report = server.get_report(reportname)
     if report is None:
         log_error_and_print("%s has no report %s" % (server, reportname))
@@ -517,29 +514,15 @@ def show_report():
 
 
 def reports():
-    servers = []
-    if hwswa2.config['allservers']:
-        hwswa2.config['servernames'] = server_names()
-    for name in hwswa2.config['servernames']:
-        server = get_server(name)
-        if server is None:
-            log_error_and_print("Cannot find or init server %s, check log file" % name)
-            sys.exit(1)
-        else:
-            servers.append(server)
-    for server in servers:
+    for server in get_servers_or_exit(skip_dontcheck=False):
         print "==== %s" % server
         server.list_reports()
 
 
 def reportdiff():
-    servername = hwswa2.config['servername']
+    server = get_server_or_exit(hwswa2.config['servername'])
     r1name = hwswa2.config['oldreport']
     r2name = hwswa2.config['newreport']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
     report1 = server.get_report(r1name)
     report2 = server.get_report(r2name)
     if report1 is None:
@@ -552,12 +535,8 @@ def reportdiff():
 
 
 def reportshistory():
-    servername = hwswa2.config['servername']
+    server = get_server_or_exit(hwswa2.config['servername'])
     max_reports = hwswa2.config['reportsnumber']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
     last_reports = server.reports[:max_reports]
     if len(last_reports) == 0:
         print "%s has no reports" % server
@@ -602,12 +581,8 @@ def list_roles(roles_dir=None):
 
 def agent_console():
     """Open interactive shell to specific server"""
-    servername = hwswa2.config['servername']
-    server = get_server(servername)
-    if server is None:
-        log_error_and_print("Cannot find or init server %s, check log file" % servername)
-        sys.exit(1)
-    log_info_and_print("Opening agent console for server %s" % servername)
+    server = get_server_or_exit(hwswa2.config['servername'])
+    log_info_and_print("Opening agent console for server %s" % server.name)
     if server.accessible():
         server.agent_console()
     else:
