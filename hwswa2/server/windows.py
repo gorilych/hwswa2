@@ -43,7 +43,8 @@ class WindowsServer(Server):
             else:
                 return True
         logger.debug("Trying to connect to  %s" % self)
-        self._shell = winrmlib.shell.CommandShell("http://{0}:5985/wsman".format(self.address), self.account['login'], self.account['password'])
+        self._shell = winrmlib.shell.CommandShell("http://{0}:5985/wsman".format(self.address),
+                self.account['login'], self.decrypt_in_account('password'))
         self._shell.open()
         return True
 

@@ -91,7 +91,7 @@ class LinuxServer(Server):
         timeout = timeout or TIMEOUT
         logger.debug("Trying to connect to %s" % self)
         username = self.account['login']
-        password = self.account.get('password')
+        password = self.decrypt_in_account('password')
         key_filename = self.account.get('key')
         # _connect_to_gateway() will initialize self._sshtunnel used later
         if not self._connect_to_gateway(timeout=timeout):
@@ -672,7 +672,7 @@ class LinuxServer(Server):
                            'stderr': stderr}
             sutype = self.account.get('sutype')
             if sutype:
-                supassword = self.account.get('supassword')
+                supassword = self.decrypt_in_account('supassword')
                 cmd = 'elevate_' + sutype
                 if supassword:
                     cmd += ' ' + aux.shell_escape(supassword)

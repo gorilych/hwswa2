@@ -6,6 +6,7 @@ import logging
 from configobj import ConfigObj
 from validate import Validator
 import yaml
+import getpass
 
 import hwswa2
 import hwswa2.subcommands as subcommands
@@ -125,6 +126,8 @@ def read_configuration():
     parser.add_argument('-r', '--reports', help='directory to store reports',
                         dest='reportsdir')
     parser.add_argument('-d', '--debug', help='enable debug', action='store_true')
+    parser.add_argument('-a', '--askpass', help='ask encryption password',
+            action='store_true', default=False)
 
     subparsers = parser.add_subparsers(title='Subcommands',
                                        help='Run `hwswa2 <subcommand> -h` for usage')
@@ -306,6 +309,10 @@ def read_configuration():
 
     # values from command line take precedence over configuration file options
     hwswa2.config.update(vars(args))
+
+    # ask encryptionn password
+    if hwswa2.config['askpass']:
+        hwswa2.password = getpass.getpass(prompt="Servers.yaml encryption password: ")
 
     # create reports directory
     if not os.path.exists(hwswa2.config['reportsdir']):

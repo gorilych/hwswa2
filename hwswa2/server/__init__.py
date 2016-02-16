@@ -35,6 +35,7 @@ class Server(object):
             self.roles = [role, ]
         self._rolecollection = None
         self.account = account
+        self.account.setdefault('encrypted', False)
         self.address = address
         self.port = port
         self.dontcheck = dontcheck
@@ -385,6 +386,24 @@ class Server(object):
         self.report.save()
         return True
 
+    def decrypt_in_account(self, field):
+        """Decrypt field in account, using password provided with --askpass
+
+        To decrypt password or su or sudo fields
+        """
+        if not field in self.account:
+            return None
+        if not self.account['encrypted']:
+            return self.account[field]
+        if not hwswa2.password:
+            raise ServerException("""Failed to decrypt account.{} for {},
+                    no or empty password provided with --askpass""".format(field, self))
+        try:
+            return aux.decrypt(hwswa2.password, self.account[field])
+        except Exception as e:
+            raise ServerException("""Failed to decrypt account.{} for {},
+                    got exception {}""".format(field, self, repr(e)))
+
     def cleanup(self):
         return True
 
@@ -399,6 +418,7 @@ class ServerException(Exception):
     def __init__(self, msg, **kwargs):
         self.msg = msg
         self.details = kwargs
+        logger.debug("ServerException: {}. DETAILS: {}".format(msg, repr(kwargs)))
 
     def __str__(self):
         return self.msg

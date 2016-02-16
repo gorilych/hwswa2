@@ -2,7 +2,7 @@ import os
 import sys
 from configobj import ConfigObj
 
-__all__ = ['config', 'configspec']
+__all__ = ['config', 'configspec', 'password']
 
 if getattr(sys, 'frozen', False):
     # pyinstaller binary
@@ -43,3 +43,5 @@ configspec['check'] = {
     }
 
 config = {'configfile': _configfile}
+
+password = ''
