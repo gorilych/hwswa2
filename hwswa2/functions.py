@@ -132,6 +132,12 @@ def read_configuration():
     subparsers = parser.add_subparsers(title='Subcommands',
                                        help='Run `hwswa2 <subcommand> -h` for usage')
 
+    subparser = subparsers.add_parser('encrypt', help='encrypt password')
+    subparser.set_defaults(subcommand=subcommands.encrypt)
+
+    subparser = subparsers.add_parser('decrypt', help='decrypt password')
+    subparser.set_defaults(subcommand=subcommands.decrypt)
+
     subparser = subparsers.add_parser('list-roles', help='show available roles')
     subparser.set_defaults(subcommand=subcommands.list_roles)
 

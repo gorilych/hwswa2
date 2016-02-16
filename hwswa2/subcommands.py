@@ -7,6 +7,7 @@ import glob
 import os
 
 import hwswa2
+import hwswa2.auxiliary as aux
 from hwswa2.server.factory import get_server, server_names
 from hwswa2.server import FirewallException, TimeoutException
 from hwswa2.server.report import Report
@@ -588,3 +589,17 @@ def agent_console():
     else:
         log_error_and_print("Failed to connect to %s: %s" % (server, server.last_connection_error()))
         sys.exit(1)
+
+
+def encrypt():
+    from getpass import getpass
+    key = getpass("Enter encryption key: ")
+    password = getpass("Enter password to encrypt: ")
+    print(aux.encrypt(key, password))
+
+
+def decrypt():
+    from getpass import getpass
+    key = getpass("Enter encryption key: ")
+    password = getpass("Enter encoded password to decrypt: ")
+    print(aux.decrypt(key, password))
