@@ -13,7 +13,11 @@ git pull
 which rst2pdf >/dev/null && \
 { for d in README.rst CHANGELOG.rst docs/*rst; do rst2pdf $d; done; }
 
+[ -d env ] || virtualenv --python=/usr/bin/python2 --no-site-packages --prompt='(hwswa2)' env
+
 source env/bin/activate
+
+pip install -r requirements.txt
 
 rm -rf pyinstaller/hwswa2 pyinstaller/hwswa2.tgz
 pyinstaller --distpath=pyinstaller/hwswa2/ --workpath=pyinstaller/build/ \
