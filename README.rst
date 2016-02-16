@@ -69,7 +69,8 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
 
 Distribution archive will be stored in pyinstaller/hwswa2.tgz
 
-Requirements: python >=2.6, virtualenv, gcc + glibc-headers (to compile pycrypto)
+Requirements: python >=2.7, virtualenv, gcc + glibc-headers,
+python-dev, libssl-dev, libkrb5-dev, libffi-dev, libyaml-dev ..
 
 Installation
 ------------
