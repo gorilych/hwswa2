@@ -79,7 +79,7 @@ class WindowsServer(Server):
                 arguments = ('-encodedCommand', encode_arg(posh_cmd))
         else:
             #TODO: split cmd into command and arguments 
-            raise NotImplementedError
+            command = cmd
         command_id = self._shell.run(command, arguments, skip_cmd_shell=skip_cmd_shell)
         return self._shell.receive(command_id)
 
@@ -141,6 +141,8 @@ class WindowsServer(Server):
 
     def check_reboot(self, timeout=300):
         """Reboot the server and check the time it takes to come up"""
+        self.check_reboot_result = "not implemented"
+        return self.check_reboot_result
         raise NotImplementedError
 
 
