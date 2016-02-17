@@ -1,6 +1,40 @@
 description: virtualization parameter for lincommon role
 internal: yes
 parameters:
+  CPUVTfeatures:
+    _type: scalar
+    _script: |
+      #!/bin/bash
+
+      VTsupported=no
+      VTfeatures=''
+      
+      flags=$(awk -F':' '$1~"flags" {print $2}' /proc/cpuinfo)
+      
+      for flag in $flags; do
+          if [ $flag == "vmx" ]; then
+              VTsupported=yes
+              VTfeatures="Intel VT-x"
+          fi
+          if [ $flag == "svm" ]; then
+              VTsupported=yes
+              VTfeatures="AMD SVM"
+          fi
+      done
+      
+      if [ $VTsupported == "yes" ]; then
+          for flag in $flags; do
+              [ $flag == "ept" ] && VTfeatures="$VTfeatures, Intel Extended Page Tables"
+              [ $flag == "vpid" ] && VTfeatures="$VTfeatures, Intel VPID"
+              [ $flag == "npt" ] && VTfeatures="$VTfeatures, AMD Nested Page Tables"
+              [ $flag == "vnmi" ] && VTfeatures="$VTfeatures, Intel Virtual NMI"
+              [ $flag == "tpr_shadow" ] && VTfeatures="$VTfeatures, Intel TPR Shadow"
+              [ $flag == "flexpriority" ] && VTfeatures="$VTfeatures, Intel FlexPriority"
+          done
+      fi
+      
+      echo $VTfeatures
+      
   virtualization: 
     _type: scalar
     _script: |
