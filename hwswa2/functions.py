@@ -319,6 +319,8 @@ def read_configuration():
     # ask encryptionn password
     if hwswa2.config['askpass']:
         hwswa2.password = getpass.getpass(prompt="Servers.yaml encryption password: ")
+    else:
+        hwswa2.password = os.environ.get('HWSWA2_ENC_PWD') or hwswa2.password
 
     # create reports directory
     if not os.path.exists(hwswa2.config['reportsdir']):
