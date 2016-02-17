@@ -35,7 +35,8 @@ class Server(object):
             self.roles = [role, ]
         self._rolecollection = None
         self.account = account
-        self.account.setdefault('encrypted', False)
+        if self.account:
+            self.account.setdefault('encrypted', False)
         self.address = address
         self.port = port
         self.dontcheck = dontcheck
