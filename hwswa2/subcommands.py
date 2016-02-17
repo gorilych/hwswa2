@@ -63,7 +63,8 @@ def show_firewall():
         hwswa2.config['servernames'] = server_names()
     servers = get_servers_or_exit(skip_dontcheck=False)
     intranet_rules = []
-    internet_rules = []
+    internet_in_rules = []
+    internet_out_rules = []
     for s in servers:
         for other_s in servers:
             if not other_s.name == s.name:
@@ -74,14 +75,21 @@ def show_firewall():
                                            'proto': rule['proto'],
                                            'ports': rule['ports'],
                                            'network': rule['network']})
-        inet_rules = s.rolecollection.collect_outgoing_internet_rules()
-        for address in inet_rules:
-            internet_rules.append({'source': s.name, 
-                                   'destination': address, 
-                                   'proto': '',
-                                   'ports': inet_rules[address],
-                                   'network': ''})
-    all_rules = intranet_rules + internet_rules
+        inet_rules = s.rolecollection.collect_internet_rules()
+        for rule in inet_rules:
+            if rule['direction'] == 'outgoing':
+                internet_out_rules.append({'source': s.name,
+                    'destination': rule['address'],
+                    'proto': rule['proto'],
+                    'ports': rule['ports'],
+                    'network': ''})
+            elif rule['direction'] == 'incoming':
+                internet_in_rules.append({'source': rule['address'],
+                    'destination': s.name,
+                    'proto': rule['proto'],
+                    'ports': rule['ports'],
+                    'network': ''})
+    all_rules = intranet_rules + internet_in_rules + internet_out_rules
     if hwswa2.config['csv']:
         import csv
         dw = csv.DictWriter(sys.stdout, all_rules[0].keys())
@@ -112,8 +120,10 @@ def show_firewall():
                             print(" from {source} {proto}:{ports}".format(**rule))
     if not hwswa2.config['csv']:
         print("===== Internet access requirements =====")
-        for rule in internet_rules:
+        for rule in internet_out_rules:
             print("{source} -> {destination}:{ports}".format(**rule))
+        for rule in internet_in_rules:
+            print("{destination} {proto}:{ports} <- {source}".format(**rule))
         print("=============END========================")
 
 

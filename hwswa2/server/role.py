@@ -362,6 +362,25 @@ class Role(object):
                         rules[host] = aux.joinranges(rules[host], rule['ports'])
         return rules
 
+    def collect_internet_rules(self):
+        """Collect all internet rules
+
+        :return: [ {'address': adsf, 'direction', 'proto': tcp/udp, ports: 20-30}, ... ]
+        """
+        rules = []
+        for rule in self.firewall:
+            if rule['type'] == 'internet' and 'hosts' in rule['connect_with']:
+                hosts = rule['connect_with']['hosts']
+                if not isinstance(hosts, list):
+                    hosts = [hosts,]
+                for host in hosts:
+                    for proto in rule['protos']:
+                        rules.append({'address': host,
+                            'direction': rule['direction'],
+                            'proto': proto,
+                            'ports': rule['ports']})
+        return rules
+
     def collect_incoming_fw_rules(self, other):
         """Collect firewall rules for incoming connections from other role
 
