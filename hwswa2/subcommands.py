@@ -282,8 +282,11 @@ def check():
 
 def _check(server, check_time, resultsqueue):
     name = server.name
-    for progress in server.collect_parameters():
-        resultsqueue.put(progress)
+    try:
+        for progress in server.collect_parameters():
+            resultsqueue.put(progress)
+    finally:
+        server.cleanup()
     server.prepare_and_save_report(check_time)
     resultsqueue.put("{0}, report file: {1}".format(
         server.last_report().data['check_status'],
@@ -365,6 +368,8 @@ def _reboot(server, queue):
         server.check_reboot()
     except Exception as e:
         pass
+    finally:
+        server.cleanup()
     if server.check_reboot_result is None:
         queue.put("reboot failed?")
     else:
@@ -472,6 +477,8 @@ def _exec(server, cmd, resultsqueue):
                 % (server, stdout, stderr, exitstatus))
             resultsqueue.put({'accessible': True, 'stdout': stdout,
                 'stderr': stderr, 'exitstatus': exitstatus})
+        finally:
+            server.cleanup()
     else:
         resultsqueue.put({'accessible': False,
             'conn_err': server.last_connection_error()})
