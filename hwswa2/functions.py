@@ -88,7 +88,7 @@ def Lportforward(string):
     """[bind_address:]port:host:hostport"""
     args = string.split(':')
     if len(args) == 3:
-        bind_address == ''
+        bind_address = ''
     elif len(args) == 4:
         bind_address = args[0]
         args = args[1:]  # remove bind_address from args. args now is [port, host, hostport]
