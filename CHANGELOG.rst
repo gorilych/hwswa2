@@ -12,7 +12,7 @@ Version History
     - Added: helper subcommands encrypt and decrypt for passwords
     - Added: requirement for CPU virtualization support features for VZ roles
     - Added: subcommand show-reqs 
-    - Added: 
+    - Added: configuration documentation
     - Change: roles directory renamed from 'checks' to 'roles'
     - Change: remote scripts are imbed into role files
     - Change: support for Python 2.6 dropped!!!
