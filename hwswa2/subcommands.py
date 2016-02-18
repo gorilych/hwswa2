@@ -225,6 +225,17 @@ def firewall():
     print "========================================"
 
 
+def show_reqs():
+    servers = get_servers_or_exit()
+    print("REQUIREMENTS")
+    for server in servers:
+        print("====== {}".format(server))
+        for req in server.rolecollection.requirements:
+            if not req.istemplate():
+                print('    ' + req.pretty_str())
+    print("==== END ====")
+
+
 def check():
     """Check servers"""
     check_time = time.localtime()

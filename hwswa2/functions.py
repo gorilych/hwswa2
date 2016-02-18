@@ -153,6 +153,15 @@ def read_configuration():
                              help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.check)
 
+    subparser = subparsers.add_parser('show-reqs', help='show requirements for servers',
+                                      aliases=('sr',))
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)', metavar='server')
+    subparser.set_defaults(subcommand=subcommands.show_reqs)
+
     subparser = subparsers.add_parser('prepare', help='prepare servers (not implemented)',
                                       aliases=('pr',))
     servergroup = subparser.add_mutually_exclusive_group()

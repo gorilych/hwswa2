@@ -164,6 +164,11 @@ class _BaseReq(object):
         self.joined_from = []
         self.compare_result_reason = None
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: comparing {}, compare type: {}".format(self.parameter, self.compare_type)
+        return "Comparing {} with {}, compare type: {}".format(self.parameter, self.value, self.compare_type)
+
     def istemplate(self):
         return self.value is None
 
@@ -282,6 +287,11 @@ class ManualReq(_BaseReq):
     def __str__(self):
         return "%s:%s %s" % (self.role, self.name, self.compare_type)
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: Manual check for {}".format(self.parameter)
+        return "Manual check for {}: {}".format(self.parameter, self.value)
+
     def istemplate(self):
         return False
 
@@ -308,6 +318,11 @@ class NetworksReq(_BaseReq):
         else:
             networks = ', '.join(self.networks)
             return "%s:%s(%s)" % (self.role, self.compare_type, networks)
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: check for networks"
+        return "Required networks: {}".format(', '.join(self.value))
 
     def check(self, parameters):
         networks_in_p = []
@@ -339,6 +354,11 @@ class EqualReq(_BaseReq):
 
     compare_type = 'eq'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} equals ...".format(self.parameter)
+        return "{} == {}".format(self.parameter, self.value)
+
     def _compare(self, value):
         if not value == self.value:
             self.compare_result_reason = "actual value: %s" % value
@@ -350,6 +370,11 @@ class EqualReq(_BaseReq):
 class NotEqualReq(_BaseReq):
 
     compare_type = 'neq'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is not equal ...".format(self.parameter)
+        return "{} != {}".format(self.parameter, self.value or "''")
 
     def _compare(self, value):
         if not value != self.value:
@@ -363,6 +388,11 @@ class LessThenReq(_BaseReq):
 
     compare_type = 'lt'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is less than ...".format(self.parameter)
+        return "{} < {}".format(self.parameter, self.value)
+
     def _compare(self, value):
         if not value < self.value:
             self.compare_result_reason = "actual value: %s" % value 
@@ -374,6 +404,11 @@ class LessThenReq(_BaseReq):
 class LessEqualReq(_BaseReq):
 
     compare_type = 'le'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is less or equal to ...".format(self.parameter)
+        return "{} <= {}".format(self.parameter, self.value)
 
     def _compare(self, value):
         if not value <= self.value:
@@ -387,6 +422,11 @@ class GreaterThenReq(_BaseReq):
 
     compare_type = 'gt'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is greater than ...".format(self.parameter)
+        return "{} > {}".format(self.parameter, self.value)
+
     def _compare(self, value):
         if not value > self.value:
             self.compare_result_reason = "actual value: %s" % value
@@ -399,6 +439,11 @@ class GreaterEqualReq(_BaseReq):
 
     compare_type = 'ge'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is greater or equal to ...".format(self.parameter)
+        return "{} >= {}".format(self.parameter, self.value)
+
     def _compare(self, value):
         if not value >= self.value:
             self.compare_result_reason = "actual value: %s" % value
@@ -410,6 +455,11 @@ class GreaterEqualReq(_BaseReq):
 class RegexReq(_BaseReq):
 
     compare_type = 'regex'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} matches pattern ...".format(self.parameter)
+        return "{} matches regex pattern {}".format(self.parameter, self.value)
 
     def __init__(self, *args, **kargs):
         super(RegexReq, self).__init__(*args, **kargs)
@@ -437,6 +487,11 @@ class DiskReq(_BaseReq):
             return "req disk tmpl: {'%s': X}" % self.name
         else:
             return "req disk: %s" % self.path_size
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template for disk requirement for {}".format(self.parameter)
+        return ', '.join(["{} > {}GB".format(path, size) for (path, size) in self.path_size.items()])
 
     def __init__(self, *args, **kargs):
         super(DiskReq, self).__init__(*args, **kargs)
@@ -550,6 +605,11 @@ class AndReq(_BaseReq):
 
     compare_type = 'and'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template for AND reqs"
+        return ' AND '.join([req.pretty_str() for req in self.value])
+
     def check(self, parameters):
         reqs = self.value
         for r in reqs:
@@ -564,6 +624,11 @@ class AndReq(_BaseReq):
 class OrReq(_BaseReq):
 
     compare_type = 'or'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template for OR reqs"
+        return ' OR '.join([req.pretty_str() for req in self.value])
 
     def check(self, parameters):
         reqs = self.value

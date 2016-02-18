@@ -11,6 +11,7 @@ Version History
     - Added: support for encrypted passwords in servers.yaml (can be passed via --askpass or environment variable HWSWA2_ENC_PWD)
     - Added: helper subcommands encrypt and decrypt for passwords
     - Added: requirement for CPU virtualization support features for VZ roles
+    - Added: subcommand show-reqs 
     - Added: 
     - Change: roles directory renamed from 'checks' to 'roles'
     - Change: remote scripts are imbed into role files
