@@ -52,7 +52,7 @@ def init_logger():
         os.makedirs(logdir)
     logging.basicConfig(filename=hwswa2.config['logfile'], filemode='a', level=logging.INFO,
                         format="%(asctime)s %(levelname)s " +
-                               "[%(threadName)s:%(name)s.%(funcName)s():%(lineno)d] " +
+                        "[%(process)d:%(processName)s:%(name)s.%(funcName)s():%(lineno)d] " +
                                "%(message)s")
     if sys.hexversion >= 0x2070000:
         logging.captureWarnings(True)
