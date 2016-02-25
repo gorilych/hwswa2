@@ -646,11 +646,32 @@ def _join_override(reqs):
     return reqs[0]
 
 def _generate_join_logical(cls):
-    """Generate join function 
+    """Generate join function
+
     which join requirements inside a logical requirement of given class
+    Suitable only for AND and OR, because it removes equal reqs!
     """
     def join_func(reqs):
-        new_req = cls(None, None, None, None, reqs)
+        # filter out non-unique requirements
+        unique_reqs = []
+        name = None
+        parameter = None
+        if len(reqs) > 0:
+            name = reqs[0].name
+            parameter = reqs[0].parameter
+        for req in reqs:
+            if req.name != name:
+                name = None
+                parameter = None
+            unique = True
+            for ur in unique_reqs:
+                if ur.isequal(req):
+                    unique = False
+            if unique:
+                unique_reqs.append(req)
+        if len(unique_reqs) == 1:
+            return unique_reqs[0]
+        new_req = cls(name, None, None, parameter, unique_reqs)
         new_req.joined = True
         new_req.joined_from = reqs
         return new_req
