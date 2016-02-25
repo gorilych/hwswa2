@@ -379,9 +379,10 @@ class Server(object):
                 if not req.istemplate():
                     (result, reason) = req.check(self.report.data['parameters'])
                     if result:
-                        self.requirement_successes.append(str(req))
+                        self.requirement_successes.append(req.pretty_str())
                     else:
-                        self.requirement_failures.append(str(req) + ': ' + reason)
+                        self.requirement_failures.append(req.pretty_str()
+                            + ': ' + reason)
             self.report.data['requirement_successes'] = self.requirement_successes
             self.report.data['requirement_failures'] = self.requirement_failures
         self.report.save()
