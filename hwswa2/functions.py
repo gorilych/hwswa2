@@ -13,7 +13,7 @@ import hwswa2.subcommands as subcommands
 from hwswa2.server.factory import servers_context
 from hwswa2.aliases import AliasedSubParsersAction
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 
 __all__ = ['read_configuration', 'read_servers', 'read_networks', 'run_subcommand']
 
