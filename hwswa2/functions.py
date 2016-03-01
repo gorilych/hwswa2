@@ -256,11 +256,18 @@ def read_configuration():
     subparser.set_defaults(subcommand=subcommands.show_firewall)
 
     subparser = subparsers.add_parser('lastreport',
-                                      help='show last report for the server',
+                                      help='show/save last report for the servers',
                                       aliases=('lr',))
-    subparser.add_argument('-r', '--raw', help='show raw file content',
-                           action='store_true')
-    subparser.add_argument('servername', metavar='server')
+    formatgroup = subparser.add_mutually_exclusive_group()
+    formatgroup.add_argument('-r', '--raw', help='show raw file content',
+            action='store_true')
+    formatgroup.add_argument('-x', '--xlsx', help='save to <reportsdir>/reportYYYYMMDD-HHMM.xlsx file',
+            action='store_true')
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.lastreport)
 
     subparser = subparsers.add_parser('report',

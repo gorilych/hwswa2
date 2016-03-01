@@ -8,3 +8,4 @@ ipcalc
 validate
 zxcvbn
 pyasn1
+XlsxWriter

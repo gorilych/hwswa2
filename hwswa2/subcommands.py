@@ -5,6 +5,7 @@ import time
 import sys
 import glob
 import os
+import xlsxwriter
 
 import hwswa2
 import hwswa2.auxiliary as aux
@@ -12,6 +13,7 @@ from hwswa2.server.factory import get_server, server_names
 from hwswa2.server import FirewallException, TimeoutException
 from hwswa2.server.report import Report
 from hwswa2.server.role import Role
+from hwswa2.server.req import DiskReq
 
 __all__ = ['show_firewall', 'firewall', 'check', 'checkall', 'prepare',
            'prepareall', 'shell', 'reboot', 'exec_cmd', 'ni_exec_cmd', 'put',
@@ -522,13 +524,156 @@ def get():
 
 
 def lastreport():
-    server = get_server_or_exit(hwswa2.config['servername'])
-    raw = hwswa2.config['raw']
-    report = server.last_report()
-    if report is None:
-        log_info_and_print("%s has no reports" % server)
+    servers = get_servers_or_exit()
+    if not hwswa2.config['xlsx']:
+        for server in servers:
+            print("======== {} ========".format(server))
+            report = server.last_report()
+            if report is None:
+                log_info_and_print("%s has no reports" % server)
+            else:
+                report.show(raw=hwswa2.config['raw'])
     else:
-        report.show(raw=raw)
+        workbook = xlsxwriter.Workbook(os.path.join(hwswa2.config['reportsdir'], 
+            'reports' + time.strftime('%Y%m%d.%H%M%S') + '.xlsx'))
+        # different cell formatting
+        bold = workbook.add_format({'bold': True})
+        percent = workbook.add_format({'num_format': '0%'})
+        # dark green text on light green background
+        OK_format = workbook.add_format({'bg_color': '#C6EFCE', 'fg_color': 'green' })
+        # dark red text on light red background
+        NOK_format = workbook.add_format({'bg_color': '#FFC7CE', 'fg_color': 'red' })
+        bold_white_on_blue = workbook.add_format()
+        bold_white_on_blue.set_bold()
+        bold_white_on_blue.set_font_color('white')
+        bold_white_on_blue.set_bg_color('#558ED5')
+        summary = workbook.add_worksheet("Summary")
+        summary.write('B2', 'Overall Status', bold)
+        summary.write_formula('C2',
+                "=IF(COUNTIF(C5:C247, \"NOT OK\")=0, \"Accepted\", \"Not Accepted\")",
+                bold)
+        summary.conditional_format('C2', { 'type': 'cell', 'criteria': 'equal to',
+            'value': '"Accepted"', 'format': OK_format })
+        summary.conditional_format('C2', { 'type': 'cell', 'criteria': 'equal to',
+            'value': '"Not Accepted"', 'format': NOK_format })
+        # set column width
+        summary.set_column('B:B', 22); summary.set_column('C:C', 17)
+        summary.set_column('E:E', 30)
+        summary.write('B4', 'Name', bold)
+        summary.write('C4', 'Status', bold)
+        summary.write('D4', 'Progress', bold)
+        summary.write('E4', 'Additional information', bold)
+        summary_server_row = 4
+        for server in servers:
+            # Create row for the server on "Summary" sheet
+            summary_server_row += 1
+            name_cell = "B{}".format(summary_server_row)
+            status_cell = "C{}".format(summary_server_row)
+            progress_cell = "D{}".format(summary_server_row)
+            addinfo_cell = "E{}".format(summary_server_row)
+            summary.write_url(name_cell, "internal:'{}'!A1".format(server.name),
+                    string=server.name)
+            summary.write_formula(status_cell,
+                    "=IF(D{}=1, \"OK\", \"NOT OK\")".format(summary_server_row))
+            summary.write_formula(progress_cell,
+                    "=INDIRECT(\"'\"&B{}&\"'!F2\")".format(summary_server_row),
+                    percent, 0)
+            summary.write_formula(addinfo_cell, 
+                    "=CONCATENATE(COUNTIF(INDIRECT(\"'\"&B{}&\"'!G6:G38\"), \"NOT OK\"), \" items not 'OK'\")".format(summary_server_row))
+            # Create sheet for the server
+            server_sheet = workbook.add_worksheet(server.name)
+            server_sheet.write_url('A1', "internal:Summary!A1", string='Summary')
+            server_sheet.write('C2', "Overall status readiness/completeness level of the server", bold)
+            server_sheet.write_formula('F2', 
+                    "=COUNTIF(G6:G490, \"OK\")/(COUNTIF(G6:G490, \"OK\")+COUNTIF(G6:G490, \"NOT OK\"))",
+                    percent, 0)
+            report = server.last_report()
+            if report is None:
+                log_info_and_print("%s has no reports" % server)
+                continue
+            if not report.finished():
+                log_info_and_print("Last report is not finished for %s" % server)
+                continue
+            parameters = report.data['parameters']
+            reqs = [req for req in server.rolecollection.requirements if not req.istemplate()]
+            # set column width
+            server_sheet.set_column('C:C', 78); server_sheet.set_column('D:F', 25)
+            server_sheet.set_column('G:G', 9);  server_sheet.set_column('H:H', 12)
+            server_sheet.set_column('I:I', 55)
+            server_sheet.write_row('D4', ["Desired Value", "Customer Value",
+                "Actual Value", "Status", "Criticality", "Comments"], bold)
+            server_sheet.write_row('B5', ["", "General information", "", "", "",
+                "", "", ""], bold_white_on_blue)
+            def check_req(reqname, reqs, parameters, parampath=None):
+                """Return expected value, actual value, status"""
+                req = next((req for req in reqs if req.name == reqname), None)
+                if req:
+                    (result, reason) = req.check(parameters)
+                    if result:
+                        return "", req.actual_value(parameters), "OK"
+                    else:
+                        return req.expected, req.actual_value(parameters), "NOT OK"
+                else:
+                    parampath = parampath or reqname
+                    keys = parampath.split(':')
+                    for key in keys:
+                        actual = parameters[key]
+                    return "", actual, "OK"
+            # Line 6: Server name
+            server_sheet.write_row('C6', ["Server name", "", "",
+                parameters["hostname"], "NOT OK", "Not Critical"])
+            # Line 7: Operating System
+            desired, actual, status = check_req('OS', reqs, parameters)
+            server_sheet.write_row('C7', ["Operating System", desired, "", actual, status, "Critical"])
+            # Line 8 (windows): Is OS activated?
+            if server.ostype == 'windows':
+                desired, actual, status = check_req('Activation', reqs, parameters)
+                server_sheet.write_row('C8', ["Is OS activated?", desired, "", actual, status, "Not Critical"])
+            # Line 8 (linux): yum repositories
+            if server.ostype == 'linux':
+                desired, actual, status = check_req('yum_repos', reqs, parameters)
+                server_sheet.write_row('C8', ["Yum repositories", desired, "", actual, "NOT OK", "Not Critical"])
+            # Line 9: Architecture
+            desired, actual, status = check_req('architecture', reqs, parameters)
+            server_sheet.write_row('C9', ["Architecture", desired, "", actual, status, "Critical"])
+            # Line 10: CPU
+            cores_desired, cores_actual, cores_status = check_req('cpu-cores', reqs, parameters, 'processors:count')
+            fq_desired, fq_actual, fq_status = check_req('cpu-frequency', reqs, parameters, 'processors:frequency(GHz)')
+            if cores_status == "OK" and fq_status == "OK":
+                server_sheet.write_row('C10', ["CPU", "", "", str(cores_actual) + 'x' + str(fq_actual) + 'GHz' , "OK", "Not Critical"])
+            else:
+                server_sheet.write_row('C10', ["CPU", str(cores_desired) + 'x' +
+                    str(fq_desired) + 'GHz', "", str(cores_actual) + 'x' +
+                    str(fq_actual) + 'GHz' , "NOT OK", "Not Critical"])
+            # Line 11: RAM
+            desired, actual, status = check_req('ram(GB)', reqs, parameters)
+            server_sheet.write_row('C11', ["RAM (GB)", desired, "", actual, status, "Critical"])
+            # Line 12: Swap
+            desired, actual, status = check_req('swap(GB)', reqs, parameters)
+            server_sheet.write_row('C12', ["Swap (GB)", desired, "", actual, status, "Not Critical"])
+            # Line 13: Disk space
+            req = next((req for req in reqs if isinstance(req, DiskReq)), None)
+            result, reason = req.check(parameters)
+            if result:
+                server_sheet.write_row('C13', ["Disk", "", "", req.actual_value(parameters), "OK", "Critical"])
+            else:
+                server_sheet.write_row('C13', ["Disk", req.expected, "", req.actual_value(parameters), "NOT OK", "Critical"])
+            # Line 14: Network interfaces
+            desired, actual, status = check_req('networks', reqs, parameters)
+            server_sheet.write_row('C14', ["Network interfaces", desired, "", actual, status, "Not Critical"])
+            # Line 15: Time
+            server_sheet.write_row('C15', ["Time synchronization is enabled, time is properly set on server",
+                "", "", "", "NOT OK", "Critical"])
+            # Lines 16-17: Access 
+            server_sheet.write_row('B16', ["", "Access to the server", "", "", "",
+                "", "", ""], bold_white_on_blue)
+            if report.data['check_status'] == "server is not accessible":
+                server_sheet.write_row('C17', ["Is it possible to access the server?",
+                    "", "", "No", "NOT OK", "Blocker"])
+            else:
+                server_sheet.write_row('C17', ["Is it possible to access the server?",
+                    "", "", "Yes", "OK", "Blocker"])
+        workbook.close()
 
 
 def show_report():
