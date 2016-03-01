@@ -2,7 +2,8 @@
 Version History
 ===============
 
-0.7.0 (Work in progress)
+0.7.0 (2016-03-01)
+    - Added: new options for report: --xlsx
     - Added: new options for bulk_exec: --stdout and --stderr
     - Added: port forwarding for LinuxServer for shell subcommand like in openssh -L
     - Added: scalar type for role parameter
@@ -18,7 +19,7 @@ Version History
     - Change: support for Python 2.6 dropped!!!
     - Improved: winrmlib is used instead of external hwswa2_wagent for Windows
     - Improved: multiprocessing used instead of multithreading (can help eliminate underground knocks)
-    - Improved: 
+    - Improved: subcommand report can show reports for multiple servers
     - Bugfix: list-servers, --all for other subcommands were not working
     - Bugfix: reboot -a didn't show server names
     - Bugfix: check ignores /dev/xvd* block devices
@@ -27,7 +28,6 @@ Version History
     - Bugfix: requirement for disabled selinux for oa-managed linux nodes
     - Bugfix: parameter failures are generated in reports in case of non-zero exit code
     - Bugfix: show-firewall shows publicly available ports
-    - Bugfix: 
 
 0.6.0 (2015-10-09)
     - Added: license, software distributions, SSL certificate requirements are added to roles
