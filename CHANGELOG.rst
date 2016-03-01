@@ -2,6 +2,33 @@
 Version History
 ===============
 
+0.7.0 (2016-03-01)
+    - Added: new options for report: --xlsx
+    - Added: new options for bulk_exec: --stdout and --stderr
+    - Added: port forwarding for LinuxServer for shell subcommand like in openssh -L
+    - Added: scalar type for role parameter
+    - Added: debugging with PDB on SIGUSR1 (PDB console: telnet localhost 4444)
+    - Added: example of script to build distribution: build.sh
+    - Added: support for encrypted passwords in servers.yaml (can be passed via --askpass or environment variable HWSWA2_ENC_PWD)
+    - Added: helper subcommands encrypt and decrypt for passwords
+    - Added: requirement for CPU virtualization support features for VZ roles
+    - Added: subcommand show-reqs 
+    - Added: configuration documentation
+    - Change: roles directory renamed from 'checks' to 'roles'
+    - Change: remote scripts are imbed into role files
+    - Change: support for Python 2.6 dropped!!!
+    - Improved: winrmlib is used instead of external hwswa2_wagent for Windows
+    - Improved: multiprocessing used instead of multithreading (can help eliminate underground knocks)
+    - Improved: subcommand report can show reports for multiple servers
+    - Bugfix: list-servers, --all for other subcommands were not working
+    - Bugfix: reboot -a didn't show server names
+    - Bugfix: check ignores /dev/xvd* block devices
+    - Bugfix: bulk_exec fails with timeout exception 
+    - Bugfix: hwswa does not fail if wrong gateway name is specified
+    - Bugfix: requirement for disabled selinux for oa-managed linux nodes
+    - Bugfix: parameter failures are generated in reports in case of non-zero exit code
+    - Bugfix: show-firewall shows publicly available ports
+
 0.6.0 (2015-10-09)
     - Added: license, software distributions, SSL certificate requirements are added to roles
     - Added: roles for VZ storage, custbackup, wpedb, etc

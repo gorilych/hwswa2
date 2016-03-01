@@ -1,9 +1,11 @@
-PyInstaller==2.1
-PyYAML==3.11
-argparse==1.2.1
-configobj==5.0.4
+PyInstaller
+PyYAML
+argparse
+configobj
 paramiko
-impacket
+winrmlib
 ipcalc
 validate
 zxcvbn
+pyasn1
+XlsxWriter

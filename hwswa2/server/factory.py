@@ -15,7 +15,8 @@ logger = logging.getLogger(__name__)
 _not_inited_servers = {}
 # _servers = {name1: server1, name2: server2}
 _servers = {}
-
+# ordered list of servernames
+_servernames = []
 
 def get_server(name):
     global _servers, _not_inited_servers
@@ -30,7 +31,7 @@ def get_server(name):
 
 
 def server_names():
-    return [name for name in _servers]
+    return _servernames
 
 
 @contextmanager
@@ -59,8 +60,10 @@ def servers_context(servers_list):
 
 def server_pre_init(serverdict):
     global _not_inited_servers
+    global _servernames
     name = serverdict['name']
     _not_inited_servers[name] = serverdict
+    _servernames.append(name)
 
 
 def server_factory(serverdict):
@@ -71,7 +74,10 @@ def server_factory(serverdict):
     if 'gateway' in serverdict:
         gwname = serverdict['gateway']
         logger.debug("Server %s uses server %s as a gateway" % (name, gwname))
-        serverdict['gateway'] = get_server[gwname]
+        serverdict['gateway'] = get_server(gwname)
+        if not serverdict['gateway']:
+            logger.error("Server %s uses server %s as a gateway, and we can't find such gateway in configuration" % (name, gwname))
+            return None
 
     if 'ostype' not in serverdict:
         # try to get ostype from roles

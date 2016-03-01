@@ -35,6 +35,8 @@ class Server(object):
             self.roles = [role, ]
         self._rolecollection = None
         self.account = account
+        if self.account:
+            self.account.setdefault('encrypted', False)
         self.address = address
         self.port = port
         self.dontcheck = dontcheck
@@ -377,34 +379,39 @@ class Server(object):
                 if not req.istemplate():
                     (result, reason) = req.check(self.report.data['parameters'])
                     if result:
-                        self.requirement_successes.append(str(req))
+                        self.requirement_successes.append(req.pretty_str())
                     else:
-                        self.requirement_failures.append(str(req) + ': ' + reason)
+                        self.requirement_failures.append(req.pretty_str()
+                            + ': ' + reason)
             self.report.data['requirement_successes'] = self.requirement_successes
             self.report.data['requirement_failures'] = self.requirement_failures
         self.report.save()
         return True
+
+    def decrypt_in_account(self, field):
+        """Decrypt field in account, using password provided with --askpass
+
+        To decrypt password or su or sudo fields
+        """
+        if not field in self.account:
+            return None
+        if not self.account['encrypted']:
+            return self.account[field]
+        if not hwswa2.password:
+            raise ServerException("""Failed to decrypt account.{} for {},
+                    no or empty password provided with --askpass""".format(field, self))
+        try:
+            return aux.decrypt(hwswa2.password, self.account[field])
+        except Exception as e:
+            raise ServerException("""Failed to decrypt account.{} for {},
+                    got exception {}""".format(field, self, repr(e)))
 
     def cleanup(self):
         return True
 
 
 class ServerException(Exception):
-    """Base class for server exceptions"""
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return repr(self.value)
-
-
-class TunnelException(ServerException):
-    """Exception for tunnel creation"""
-    pass
-
-
-class TimeoutException(ServerException):
-    """Timeout exception for server operations
+    """Base class for server exceptions
 
     Attributes:
         msg - error message
@@ -413,11 +420,35 @@ class TimeoutException(ServerException):
     def __init__(self, msg, **kwargs):
         self.msg = msg
         self.details = kwargs
+        logger.debug("ServerException: {}. DETAILS: {}".format(msg, repr(kwargs)))
 
     def __str__(self):
         return self.msg
 
 
+class ExecutionException(ServerException):
+    """Exception for command execution"""
+
+    def __str__(self):
+        return 'ExecutionException: ' + self.msg
+
+
+class TunnelException(ServerException):
+    """Exception for tunnel creation"""
+
+    def __str__(self):
+        return 'TunnelException: ' + self.msg
+
+
+class TimeoutException(ServerException):
+    """Timeout exception for server operations"""
+
+    def __str__(self):
+        return 'TimeoutException: ' + self.msg
+
+
 class FirewallException(ServerException):
     """Exception for tunnel creation"""
-    pass
+
+    def __str__(self):
+        return 'FirewallException: ' + self.msg

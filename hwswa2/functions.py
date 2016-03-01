@@ -6,13 +6,14 @@ import logging
 from configobj import ConfigObj
 from validate import Validator
 import yaml
+import getpass
 
 import hwswa2
 import hwswa2.subcommands as subcommands
 from hwswa2.server.factory import servers_context
 from hwswa2.aliases import AliasedSubParsersAction
 
-__version__ = '0.6.0'
+__version__ = '0.7.0'
 
 __all__ = ['read_configuration', 'read_servers', 'read_networks', 'run_subcommand']
 
@@ -73,6 +74,33 @@ def comma_separated_list(string):
     return string.split(',')
 
 
+def ipport(string):
+    try:
+        port = int(string)
+    except Exception:
+        raise argparse.ArgumentTypeError("%s is not integer" % string)
+    if not (1 < port < 65534):
+        raise argparse.ArgumentTypeError("port %s not in range [1, 65534]" % port)
+    return port
+
+
+def Lportforward(string):
+    """[bind_address:]port:host:hostport"""
+    args = string.split(':')
+    if len(args) == 3:
+        bind_address = ''
+    elif len(args) == 4:
+        bind_address = args[0]
+        args = args[1:]  # remove bind_address from args. args now is [port, host, hostport]
+    else:
+        raise argparse.ArgumentTypeError("%s not in form [bind_address:]port:host:hostport" % string)
+    host = args[1]
+    port = ipport(args[0])
+    hostport = ipport(args[2])
+    return {'bind_address': bind_address, 'port': port,
+            'host': host, 'hostport': hostport}
+
+
 def read_configuration():
     """Reads configuration from command line args and main.cfg"""
     global hwswa2
@@ -98,9 +126,17 @@ def read_configuration():
     parser.add_argument('-r', '--reports', help='directory to store reports',
                         dest='reportsdir')
     parser.add_argument('-d', '--debug', help='enable debug', action='store_true')
+    parser.add_argument('-a', '--askpass', help='ask encryption password',
+            action='store_true', default=False)
 
     subparsers = parser.add_subparsers(title='Subcommands',
                                        help='Run `hwswa2 <subcommand> -h` for usage')
+
+    subparser = subparsers.add_parser('encrypt', help='encrypt password')
+    subparser.set_defaults(subcommand=subcommands.encrypt)
+
+    subparser = subparsers.add_parser('decrypt', help='decrypt password')
+    subparser.set_defaults(subcommand=subcommands.decrypt)
 
     subparser = subparsers.add_parser('list-roles', help='show available roles')
     subparser.set_defaults(subcommand=subcommands.list_roles)
@@ -117,6 +153,15 @@ def read_configuration():
                              help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.check)
 
+    subparser = subparsers.add_parser('show-reqs', help='show requirements for servers',
+                                      aliases=('sr',))
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)', metavar='server')
+    subparser.set_defaults(subcommand=subcommands.show_reqs)
+
     subparser = subparsers.add_parser('prepare', help='prepare servers (not implemented)',
                                       aliases=('pr',))
     servergroup = subparser.add_mutually_exclusive_group()
@@ -128,6 +173,9 @@ def read_configuration():
 
     subparser = subparsers.add_parser('shell', help='open shell to server',
                                       aliases=('sh',))
+    subparser.add_argument('-L', help='local port forwarding as in openssh client',
+                            type=Lportforward, dest='Lportforward',
+                            metavar='[bind_address:]port:host:hostport')
     subparser.add_argument('servername', metavar='server')
     subparser.set_defaults(subcommand=subcommands.shell)
 
@@ -158,6 +206,8 @@ def read_configuration():
     subparser = subparsers.add_parser('bulk_exec',
         help='execute command non-interactively on few servers in parallel',
         aliases=('be',))
+    subparser.add_argument('-o', '--stdout', help='show stdout', action='store_true')
+    subparser.add_argument('-e', '--stderr', help='show stderr', action='store_true')
     servergroup = subparser.add_mutually_exclusive_group()
     servergroup.add_argument('-a', '--all', dest='allservers',
                              help='all servers', action='store_true')
@@ -206,11 +256,18 @@ def read_configuration():
     subparser.set_defaults(subcommand=subcommands.show_firewall)
 
     subparser = subparsers.add_parser('lastreport',
-                                      help='show last report for the server',
+                                      help='show/save last report for the servers',
                                       aliases=('lr',))
-    subparser.add_argument('-r', '--raw', help='show raw file content',
-                           action='store_true')
-    subparser.add_argument('servername', metavar='server')
+    formatgroup = subparser.add_mutually_exclusive_group()
+    formatgroup.add_argument('-r', '--raw', help='show raw file content',
+            action='store_true')
+    formatgroup.add_argument('-x', '--xlsx', help='save to <reportsdir>/reportYYYYMMDD-HHMM.xlsx file',
+            action='store_true')
+    servergroup = subparser.add_mutually_exclusive_group()
+    servergroup.add_argument('-a', '--all', dest='allservers',
+                             help='all servers', action='store_true')
+    servergroup.add_argument('-s', '--servers', dest='servernames', nargs='+',
+                             help='specific server(s)', metavar='server')
     subparser.set_defaults(subcommand=subcommands.lastreport)
 
     subparser = subparsers.add_parser('report',
@@ -274,6 +331,12 @@ def read_configuration():
 
     # values from command line take precedence over configuration file options
     hwswa2.config.update(vars(args))
+
+    # ask encryptionn password
+    if hwswa2.config['askpass']:
+        hwswa2.password = getpass.getpass(prompt="Servers.yaml encryption password: ")
+    else:
+        hwswa2.password = os.environ.get('HWSWA2_ENC_PWD') or hwswa2.password
 
     # create reports directory
     if not os.path.exists(hwswa2.config['reportsdir']):

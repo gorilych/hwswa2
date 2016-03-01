@@ -2,21 +2,19 @@ import os
 import sys
 from configobj import ConfigObj
 
-__all__ = ['config', 'configspec']
+__all__ = ['config', 'configspec', 'password']
 
 if getattr(sys, 'frozen', False):
     # pyinstaller binary
     _apppath = os.path.dirname(sys.executable)
-    _res_path = sys._MEIPASS
 elif __file__:
     # script
     _apppath = os.path.abspath(os.path.dirname(os.path.realpath(sys.argv[0])))
-    _res_path = _apppath + os.sep + 'resources'
 else:
     # something else
     _apppath = '.'
-    _res_path = _apppath + os.sep + 'resources'
 
+_res_path = _apppath + os.sep + 'resources'
 _configdir = _apppath + os.sep + 'config'
 _logdir = _apppath + os.sep + 'logs'
 _configfile = _configdir + os.sep + 'main.cfg'
@@ -27,8 +25,7 @@ configspec['serversfile'] = "string(default='" + _configdir + os.sep + "servers.
 configspec['networksfile'] = "string(default='" + _configdir + os.sep + "networks.yaml')"
 configspec['logfile'] = "string(default='" + _logdir + os.sep + "hwswa2.log')"
 configspec['reportsdir'] = "string(default='" + _logdir + os.sep + "reports')"
-configspec['checksdir'] = "string(default='" + _apppath + os.sep + "checks')"
-configspec['rscriptdir'] = "string(default='" + _apppath + os.sep + "checks" + os.sep + "remote-scripts')"
+configspec['rolesdir'] = "string(default='" + _apppath + os.sep + "roles')"
 configspec['debug'] = 'boolean(default=False)'
 configspec['remote_debug'] = 'boolean(default=False)'
 configspec['ssh_timeout'] = 'integer(0,7200,default=30)'
@@ -46,3 +43,5 @@ configspec['check'] = {
     }
 
 config = {'configfile': _configfile}
+
+password = ''

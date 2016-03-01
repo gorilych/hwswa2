@@ -174,7 +174,7 @@ class Report(object):
             print yaml.safe_dump(report)
         else:
             # trying to print in pretty order
-            for key in ['name', 'role', 'check_status', 'check_time', 'parameters_failures']:
+            for key in ['name', 'role', 'check_status', 'check_time']:
                 if key in report:
                     val = report[key]
                     if key == 'role' and isinstance(val, list):
@@ -264,6 +264,13 @@ class Report(object):
                             nic_ips.append(res_str)
                         printkey('nics')
                         print(' | '.join(nic_ips))
+            if 'parameters_failures' in report:
+                pf = report['parameters_failures']
+                if pf:
+                    aux.printout(indent + '  == Parameter FAILURES (parameter: failure) ==', aux.RED)
+                    for p in pf:
+                        printkey(p)
+                        print(pf[p])
             if 'requirement_failures' in report:
                 aux.printout(indent + '  == Requirement FAILURES (role:req: reason) ==', aux.RED)
                 for failure in report['requirement_failures']:

@@ -23,7 +23,6 @@ firewall:
     connect_with: { roles: [winbr, wincpnlb] }
 - name: incoming_backnet
   description: incoming connections in backnet
-  direction: outgoing
   networks: [backnet]
   ports: 5224
   connect_with: 

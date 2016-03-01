@@ -11,3 +11,5 @@ firewall:
     connect_with: {hosts: [ka.odin.com]}
   - ports: 80,443
     connect_with: {hosts: [vzup2date.swsoft.com, vzup2date.parallels.com]}
+requirements:
+  CPUVTfeatures: { type: neq, value: '' }

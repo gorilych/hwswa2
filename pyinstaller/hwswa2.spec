@@ -2,11 +2,12 @@
 
 import pkg_resources
 
-a = Analysis(['hwswa2.py'],
+a = Analysis(['../hwswa2.py'],
              pathex=[],
-             hiddenimports=[],
+             hiddenimports=['_cffi_backend'],
              hookspath=None,
              runtime_hooks=None)
+
 pyz = PYZ(a.pure)
 
 for fn in ('adjacency_graphs.json', 'frequency_lists.json'):
@@ -14,8 +15,6 @@ for fn in ('adjacency_graphs.json', 'frequency_lists.json'):
                 pkg_resources.resource_filename('zxcvbn', 'generated/' + fn),
                 'DATA'))
 
-a.datas += [('wagent.exe','resources/wagent.exe','DATA'),
-            ('wagent-debug.exe','resources/wagent-debug.exe','DATA')]
 exe = EXE(pyz,
           a.scripts,
           a.binaries,

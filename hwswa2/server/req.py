@@ -164,6 +164,11 @@ class _BaseReq(object):
         self.joined_from = []
         self.compare_result_reason = None
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: comparing {}, compare type: {}".format(self.parameter, self.compare_type)
+        return "Comparing {} with {}, compare type: {}".format(self.parameter, self.value, self.compare_type)
+
     def istemplate(self):
         return self.value is None
 
@@ -177,6 +182,16 @@ class _BaseReq(object):
         """Check if other requirement is the same
         """
         return isinstance(other, type(self)) and other.name == self.name and other.role == self.role
+
+    def isequal(self, other):
+        """Check if other requiremnt is logically the same
+        """
+        return isinstance(other, type(self)) and other.parameter == self.parameter and other.value == self.value
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return self.value
 
     @classmethod
     def merge(cls, reqs, incl_reqs):
@@ -263,6 +278,9 @@ class _BaseReq(object):
             param_val = param_val[key]
         return param_val
 
+    def actual_value(self, parameters):
+        return self._convert(self._find_parameter(parameters))
+
     def check(self, parameters):
         """Check requirement against parameters
 
@@ -282,12 +300,22 @@ class ManualReq(_BaseReq):
     def __str__(self):
         return "%s:%s %s" % (self.role, self.name, self.compare_type)
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: Manual {}".format(self.parameter)
+        return "Manual {}: {}".format(self.parameter, self.value)
+
     def istemplate(self):
         return False
 
     def check(self, parameters):
-        self.compare_result_reason = self.value or "Check manually, too complex to automate"
+        self.compare_result_reason = ""
         return (False, self.compare_result_reason)
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return "manual check"
 
 
 class NetworksReq(_BaseReq):
@@ -308,6 +336,45 @@ class NetworksReq(_BaseReq):
         else:
             networks = ', '.join(self.networks)
             return "%s:%s(%s)" % (self.role, self.compare_type, networks)
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: check for networks"
+        return "Required networks: {}".format(self.expected)
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return ', '.join(self.value)
+
+    def actual_value(self, parameters):
+        """Return nics, not just networks"""
+        nic_ips = []
+        try:  # can fail if no nics
+            nics = parameters['network']['network_interfaces']
+            for nic in nics:
+                if nic.get('slaveof'):  # do not show slave nics
+                    continue
+                name = nic['name']
+                res_str = name
+                slaves = [n['name'] for n in nics
+                        if n.get('slaveof') == name]
+                if slaves:
+                    res_str += '(' + ','.join(slaves) + ')'
+                try:  # can fail if no ips
+                    for ip in nic['ip']:
+                        if ip['address'].find(':') == -1:  # filter out IPv6 addresses
+                            try:  # can fail if no network
+                                res_str += ' ' + ip['address'] + '/' + ip['network']
+                                nic_ips.append(res_str)
+                            except Exception:
+                                logger.debug("found no network in %s" % ip)
+                except Exception:
+                    logger.debug("found no ips in %s" % nic)
+        except Exception:
+            logger.debug("found no network interfaces in %s" % parameters)
+        return ' | '.join(nic_ips)
+
 
     def check(self, parameters):
         networks_in_p = []
@@ -339,6 +406,11 @@ class EqualReq(_BaseReq):
 
     compare_type = 'eq'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} equals ...".format(self.parameter)
+        return "{} == {}".format(self.parameter, self.value)
+
     def _compare(self, value):
         if not value == self.value:
             self.compare_result_reason = "actual value: %s" % value
@@ -350,6 +422,19 @@ class EqualReq(_BaseReq):
 class NotEqualReq(_BaseReq):
 
     compare_type = 'neq'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is not equal ...".format(self.parameter)
+        return "{} != {}".format(self.parameter, self.value or "''")
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        if self.value:
+            return 'Not' + str(self.value)
+        else:
+            return 'Not empty'
 
     def _compare(self, value):
         if not value != self.value:
@@ -363,6 +448,16 @@ class LessThenReq(_BaseReq):
 
     compare_type = 'lt'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is less than ...".format(self.parameter)
+        return "{} < {}".format(self.parameter, self.value)
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return str(self.value)
+
     def _compare(self, value):
         if not value < self.value:
             self.compare_result_reason = "actual value: %s" % value 
@@ -374,6 +469,16 @@ class LessThenReq(_BaseReq):
 class LessEqualReq(_BaseReq):
 
     compare_type = 'le'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is less or equal to ...".format(self.parameter)
+        return "{} <= {}".format(self.parameter, self.value)
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return self.value
 
     def _compare(self, value):
         if not value <= self.value:
@@ -387,6 +492,16 @@ class GreaterThenReq(_BaseReq):
 
     compare_type = 'gt'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is greater than ...".format(self.parameter)
+        return "{} > {}".format(self.parameter, self.value)
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return str(self.value)
+
     def _compare(self, value):
         if not value > self.value:
             self.compare_result_reason = "actual value: %s" % value
@@ -399,6 +514,16 @@ class GreaterEqualReq(_BaseReq):
 
     compare_type = 'ge'
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} is greater or equal to ...".format(self.parameter)
+        return "{} >= {}".format(self.parameter, self.value)
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return self.value
+
     def _compare(self, value):
         if not value >= self.value:
             self.compare_result_reason = "actual value: %s" % value
@@ -410,6 +535,16 @@ class GreaterEqualReq(_BaseReq):
 class RegexReq(_BaseReq):
 
     compare_type = 'regex'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template: {} matches pattern ...".format(self.parameter)
+        return "{} matches regex pattern {}".format(self.parameter, self.value)
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return self.value
 
     def __init__(self, *args, **kargs):
         super(RegexReq, self).__init__(*args, **kargs)
@@ -438,6 +573,16 @@ class DiskReq(_BaseReq):
         else:
             return "req disk: %s" % self.path_size
 
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template for disk requirement for {}".format(self.parameter)
+        return self.expected
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return ', '.join(["{} {}GB".format(path, size) for (path, size) in self.path_size.items()])
+
     def __init__(self, *args, **kargs):
         super(DiskReq, self).__init__(*args, **kargs)
         if isinstance(self.value, dict):
@@ -460,6 +605,10 @@ class DiskReq(_BaseReq):
 
     def _convert(self, param_value):
         return param_value
+
+    def actual_value(self, parameters):
+        return ', '.join(["{} {}GB".format(path, size) for (path, size)
+            in self._convert(self._find_parameter(parameters)).items()])
 
     @staticmethod
     def _find_mount4path(path, mounts):
@@ -548,12 +697,29 @@ class DiskReq(_BaseReq):
 
 class AndReq(_BaseReq):
 
-    compare_type = 'and-notsupported'
+    compare_type = 'and'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template for AND reqs"
+        return self.expected
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return ' AND '.join([req.pretty_str() for req in self.value])
+
+    def actual_value(self, parameters):
+        """Return actual value of the first req"""
+        if self.name:
+            return self.value[0].actual_value(parameters)
+        else:
+            return None
 
     def check(self, parameters):
         reqs = self.value
         for r in reqs:
-            (result, reason) = r.check()
+            (result, reason) = r.check(parameters)
             # AndReq fails if any included req fails
             if not result:
                 self.compare_result_reason = reason
@@ -563,12 +729,22 @@ class AndReq(_BaseReq):
 
 class OrReq(_BaseReq):
 
-    compare_type = 'or-notsupported'
+    compare_type = 'or'
+
+    def pretty_str(self):
+        if self.istemplate():
+            return "Template for OR reqs"
+        return self.expected
+
+    @property
+    def expected(self):
+        """Return expected value"""
+        return ' OR '.join([req.pretty_str() for req in self.value])
 
     def check(self, parameters):
         reqs = self.value
         for r in reqs:
-            (result, reason) = r.check()
+            (result, reason) = r.check(parameters)
             # OrReq is OK if any included req is OK
             if result:
                 self.compare_result_reason = reason
@@ -581,11 +757,32 @@ def _join_override(reqs):
     return reqs[0]
 
 def _generate_join_logical(cls):
-    """Generate join function 
+    """Generate join function
+
     which join requirements inside a logical requirement of given class
+    Suitable only for AND and OR, because it removes equal reqs!
     """
     def join_func(reqs):
-        new_req = cls(None, None, None, None, reqs)
+        # filter out non-unique requirements
+        unique_reqs = []
+        name = None
+        parameter = None
+        if len(reqs) > 0:
+            name = reqs[0].name
+            parameter = reqs[0].parameter
+        for req in reqs:
+            if req.name != name:
+                name = None
+                parameter = None
+            unique = True
+            for ur in unique_reqs:
+                if ur.isequal(req):
+                    unique = False
+            if unique:
+                unique_reqs.append(req)
+        if len(unique_reqs) == 1:
+            return unique_reqs[0]
+        new_req = cls(name, None, None, parameter, unique_reqs)
         new_req.joined = True
         new_req.joined_from = reqs
         return new_req

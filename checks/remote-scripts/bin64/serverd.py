@@ -1,1 +1,0 @@
-../bin32/serverd.py

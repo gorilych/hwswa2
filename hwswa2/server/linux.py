@@ -16,12 +16,18 @@ import random
 import string
 import fnmatch
 from ipcalc import Network
+import threading
+try:
+    import SocketServer
+except ImportError:
+    import socketserver as SocketServer
 
 import hwswa2.auxiliary as aux
 import hwswa2
 
 from hwswa2.server import (Server, ServerException, TunnelException,
-                           TimeoutException, TIMEOUT, REBOOT_TIMEOUT)
+                           ExecutionException, TimeoutException, TIMEOUT,
+                           REBOOT_TIMEOUT)
 
 __all__ = ['LinuxServer', 'LinuxServerException', 'TIMEOUT', 'REBOOT_TIMEOUT']
 
@@ -43,8 +49,6 @@ class LinuxServer(Server):
         # tunnels for other servers. 'name': {'sshclient': sshclient, 'tunnel': tunnel}
         self._sshtunnels = {}
         self._supath = None
-        self._param_cmd_prefix = None
-        self._param_binpath = None
         for k in ['su', 'sudo']:
             if self.account is not None and k in self.account:
                 self.account['sutype'] = k
@@ -87,7 +91,7 @@ class LinuxServer(Server):
         timeout = timeout or TIMEOUT
         logger.debug("Trying to connect to %s" % self)
         username = self.account['login']
-        password = self.account.get('password')
+        password = self.decrypt_in_account('password')
         key_filename = self.account.get('key')
         # _connect_to_gateway() will initialize self._sshtunnel used later
         if not self._connect_to_gateway(timeout=timeout):
@@ -142,78 +146,51 @@ class LinuxServer(Server):
                 self._sshtunnel = None
 
     def _connect(self, reconnect=False, timeout=None):
-        """Initiates SSH connection to the server.
+        """Initiate SSH connection to the server.
 
-        Returns true if connection was successful.
+        Raise LinuxServerException on failure.
         """
         timeout = timeout or TIMEOUT
         if self._is_connected() and not reconnect:
-            return True
+            return
         else:
             if self._is_connected():  # was asked to reconnect, obviously
                 self._disconnect()
                 logger.debug("Will reconnect to %s" % self)
             self._sshclient = self._new_sshclient(timeout)
-        return self._is_connected()
+        if not self._is_connected():
+            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
 
     def _disconnect(self):
         if self._sshclient is not None:
             self._sshclient = None
             self._disconnect_from_gateway()
 
-    def _prepare_param_scripts(self):
-        """Copy remote scripts to server, configure cmd prefix
-
-        :return True on success
-        """
-        rscripts_dir = hwswa2.config['rscriptdir']
-        if self._param_cmd_prefix is not None:
-            return True
-        arch = self.get_cmd_out('uname --machine')
-        if arch.endswith('64'):
-            rscriptdir = os.path.join(rscripts_dir,'bin64')
-        else:
-            rscriptdir = os.path.join(rscripts_dir,'bin32')
-        remote_hwswa2_dir = self.mktemp()
-        binpath = posixpath.join(remote_hwswa2_dir, 'bin')
-        self.put(rscriptdir, binpath)
-        self._param_binpath = binpath
-        self._param_cmd_prefix = 'export PATH=$PATH:%s; ' % binpath
-        return True
-
     def _exists(self, path):
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            try:
-                sftp.stat(path)
-                return True
-            except IOError as ie:
-                return False
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        try:
+            sftp.stat(path)
+            return True
+        except IOError as ie:
+            return False
 
     def _listdir(self, remotedir):
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            return sftp.listdir(remotedir)
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        return sftp.listdir(remotedir)
 
     def _isdir(self, remotepath):
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            attrs = sftp.stat(remotepath)
-            return stat.S_ISDIR(attrs.st_mode)
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        attrs = sftp.stat(remotepath)
+        return stat.S_ISDIR(attrs.st_mode)
 
     def _isfile(self, remotepath):
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            attrs = sftp.stat(remotepath)
-            return stat.S_ISREG(attrs.st_mode)
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        attrs = sftp.stat(remotepath)
+        return stat.S_ISREG(attrs.st_mode)
 
     def _put_dir_content(self, localdir, remotedir):
         for f in os.listdir(localdir):
@@ -236,16 +213,14 @@ class LinuxServer(Server):
                 self._get_dir_content(rname, lname)
 
     def _remove(self, path, sftp=None):
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = sftp or self._sshclient.open_sftp()
-            if self._isdir(path):
-                for name in sftp.listdir(path):
-                    self._remove(path + '/' + name, sftp=sftp)
-                sftp.rmdir(path)
-            elif self._isfile(path):
-                sftp.remove(path)
+        self._connect()
+        sftp = sftp or self._sshclient.open_sftp()
+        if self._isdir(path):
+            for name in sftp.listdir(path):
+                self._remove(path + '/' + name, sftp=sftp)
+            sftp.rmdir(path)
+        elif self._isfile(path):
+            sftp.remove(path)
 
     def _bootid(self):
         return self.get_cmd_out('cat /proc/sys/kernel/random/boot_id')
@@ -346,11 +321,76 @@ class LinuxServer(Server):
 
     ########## Public methods
 
-    def accessible(self, retry=False):
-        if self._is_connected() and not retry:
-            return True
+    def Lportforward(self, bind_address, port, host, hostport):
+        """Copied from paramiko demos/forward.py
+
+        return SocketServer object
+        """
+
+        class ForwardServer (SocketServer.ThreadingTCPServer):
+            daemon_threads = True
+            allow_reuse_address = True
+
+        class Handler (SocketServer.BaseRequestHandler):
+            def handle(self):
+                try:
+                    chan = self.ssh_transport.open_channel('direct-tcpip',
+                                                           (self.chain_host, self.chain_port),
+                                                           self.request.getpeername())
+                except Exception as e:
+                    logger.error('Incoming request to %s:%d failed: %s' % (self.chain_host,
+                                                                      self.chain_port,
+                                                                      repr(e)))
+                    return
+                if chan is None:
+                    logger.error('Incoming request to %s:%d was rejected by the SSH server.' %
+                                 (self.chain_host, self.chain_port))
+                    return
+
+                logger.debug('Connected!  Tunnel open %r -> %r -> %r' % (self.request.getpeername(),
+                                                                    chan.getpeername(), (self.chain_host, self.chain_port)))
+                while True:
+                    r, w, x = select.select([self.request, chan], [], [])
+                    if self.request in r:
+                        data = self.request.recv(1024)
+                        if len(data) == 0:
+                            break
+                        chan.send(data)
+                    if chan in r:
+                        data = chan.recv(1024)
+                        if len(data) == 0:
+                            break
+                        self.request.send(data)
+
+                peername = self.request.getpeername()
+                chan.close()
+                self.request.close()
+                logger.debug('Tunnel closed from %r' % (peername,))
+
+        class SubHandler (Handler):
+            chain_host = host
+            chain_port = hostport
+            ssh_transport = self._sshclient.get_transport()
+
+        try:
+            server = ForwardServer((bind_address, port), SubHandler)
+        except socket.gaierror, gaierror:
+            logger.error("Cannot use %s to bind, socket.gaierror: %s" % (bind_address, gaierror))
+        except socket.error, serr:
+            logger.error("Cannot bind to %s:%s, socket.error: %s" % (bind_address, port, serr))
         else:
-            return self._connect(reconnect=True, timeout=TIMEOUT)
+            server_thread = threading.Thread(target=server.serve_forever)
+            server_thread.daemon = True
+            server_thread.start()
+            return server
+        return None
+
+    def accessible(self, retry=False):
+        try:
+            self._connect(reconnect=retry, timeout=TIMEOUT)
+        except LinuxServerException:
+            return False
+        return True
 
     def create_tunnel(self, name, address, port, timeout=None):
         """Creates SSH tunnel via itself, using separate connection
@@ -401,66 +441,59 @@ class LinuxServer(Server):
             pass
 
     def write(self, path, data):
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            f = sftp.open(path, 'w')
-            f.write(data)
-            f.close()
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        f = sftp.open(path, 'w')
+        f.write(data)
+        f.close()
 
     def mkdir(self, path):
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            sftp.mkdir(path)
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        sftp.mkdir(path)
 
     def exec_cmd_i(self, cmd, get_pty=False):
         """Executes command interactively"""
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        self._connect()
+        status, result = self.agent_cmd('exec_i ' + aux.shell_escape(cmd),
+                                        interactively=True)
+        if status:
+            return result
         else:
-            status, result = self.agent_cmd('exec_i ' + aux.shell_escape(cmd),
-                                            interactively=True)
-            if status:
-                return result
-            else:
-                logger.error("Execution of %s failed: %s" % (cmd, result))
-                raise LinuxServerException("Execution of %s failed: %s" % (cmd, result))
+            logger.error("Execution of %s failed: %s" % (cmd, result))
+            raise LinuxServerException("Execution of %s failed: %s" % (cmd, result))
 
     def exec_cmd(self, cmd, input_data=None, timeout=None):
         """Executes command and returns tuple of stdout, stderr and status"""
         timeout = timeout or TIMEOUT
         logger.debug("Executing on %s: %s" % (self, cmd))
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        self._connect()
+        if not self.agent_start():
+            logger.error("Failed to start agent on %s" % self)
+            raise LinuxServerException("Failed to start agent on %s" % self)
         else:
-            if not self.agent_start():
-                logger.error("Failed to start agent on %s" % self)
-                raise LinuxServerException("Failed to start agent on %s" % self)
+            if input_data:
+                i_d = base64.b64encode(input_data)
             else:
-                if input_data:
-                    i_d = base64.b64encode(input_data)
+                i_d = "''"
+            acmd = 'cmd_exec ' + aux.shell_escape(cmd) + ' ' + i_d + ' ' + str(timeout)
+            status, result = self.agent_cmd(acmd)
+            # result is "[reason:<reason of failure>] \
+            # returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
+            logger.debug("exec_cmd result %s" % result)
+            result = dict([r.split(':') for r in result.split(' ')])
+            if status:
+                return (base64.b64decode(result['stdout']),
+                        base64.b64decode(result['stderr']), int(result['returncode']))
+            else:
+                reason = base64.b64decode(result.get('reason'))
+                if reason == 'timeout':
+                    raise TimeoutException("Timeout %s" % timeout,
+                                           cmd=cmd,
+                                           output=base64.b64decode(result['stdout']),
+                                           stderr=base64.b64decode(result['stderr']))
                 else:
-                    i_d = "''"
-                acmd = 'cmd_exec ' + aux.shell_escape(cmd) + ' ' + i_d + ' ' + str(timeout)
-                status, result = self.agent_cmd(acmd)
-                # result is "[reason:<reason of failure>] \
-                # returncode:<num> stdout:<base64encoded> stderr:<base64encoded>"
-                logger.debug("exec_cmd result %s" % result)
-                result = dict([r.split(':') for r in result.split(' ')])
-                if status:
-                    return (base64.b64decode(result['stdout']),
-                            base64.b64decode(result['stderr']), int(result['returncode']))
-                else:
-                    reason = base64.b64decode(result.get('reason'))
-                    if reason == 'timeout':
-                        raise TimeoutException("Timeout during execution of %s" % cmd,
-                                               output=base64.b64decode(result['stdout']),
-                                               stderr=base64.b64decode(result['stderr']))
-                    else:
-                        raise LinuxServerException("Execution of %s failed: %s" % (cmd, reason))
+                    raise LinuxServerException("Execution of %s failed: %s" % (cmd, reason))
 
     def get_cmd_out(self, cmd, input_data=None, timeout=None):
         timeout = timeout or TIMEOUT
@@ -468,7 +501,14 @@ class LinuxServer(Server):
         # remove last trailing newline
         if len(stdout_data) > 0 and stdout_data[-1] == '\n':
             stdout_data = stdout_data[:-1]
-        return stdout_data
+        if status == 0:
+            return stdout_data
+        # Exit code <> 0, raise ExecutionException
+        if len(stderr_data) > 0 and stderr_data[-1] == '\n':
+            stderr_data = stderr_data[:-1]
+        raise ExecutionException("Exit code: %s" % status,
+                                  output=stdout_data,
+                                  stderr=stderr_data)
 
     def mktemp(self, template='hwswa2.XXXXX', ftype='d', path='/tmp', cleanup_later=True):
         """Creates directory/file using mktemp and returns its name"""
@@ -499,57 +539,53 @@ class LinuxServer(Server):
         logger.debug("Copying %s to %s:%s" % (localpath.decode('utf-8'), self, remotepath.decode('utf-8')))
         if not os.path.exists(localpath):
             raise LinuxServerException("Local path does not exist: %s" % localpath.decode('utf-8'))
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            if os.path.isfile(localpath):
-                if self._exists(remotepath):
-                    attrs = sftp.stat(remotepath)
-                    if stat.S_ISDIR(attrs.st_mode):
-                        remotepath = os.path.join(remotepath, os.path.basename(localpath))
-                    sftp.put(localpath, remotepath, confirm=True)
-                    sftp.chmod(remotepath, os.stat(localpath).st_mode)
-                else:
-                    sftp.put(localpath, remotepath, confirm=True)
-                    sftp.chmod(remotepath, os.stat(localpath).st_mode)
-            if os.path.isdir(localpath):
-                if self._exists(remotepath):
-                    rname = os.path.join(remotepath, os.path.basename(localpath))
-                    self.mkdir(rname)
-                    self._put_dir_content(localpath, rname)
-                else:
-                    self.mkdir(remotepath)
-                    self._put_dir_content(localpath, remotepath)
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        if os.path.isfile(localpath):
+            if self._exists(remotepath):
+                attrs = sftp.stat(remotepath)
+                if stat.S_ISDIR(attrs.st_mode):
+                    remotepath = os.path.join(remotepath, os.path.basename(localpath))
+                sftp.put(localpath, remotepath, confirm=True)
+                sftp.chmod(remotepath, os.stat(localpath).st_mode)
+            else:
+                sftp.put(localpath, remotepath, confirm=True)
+                sftp.chmod(remotepath, os.stat(localpath).st_mode)
+        if os.path.isdir(localpath):
+            if self._exists(remotepath):
+                rname = os.path.join(remotepath, os.path.basename(localpath))
+                self.mkdir(rname)
+                self._put_dir_content(localpath, rname)
+            else:
+                self.mkdir(remotepath)
+                self._put_dir_content(localpath, remotepath)
 
     def get(self, remotepath, localpath=None):
         if localpath is None or localpath == '':
             localpath = '.'
         logger.debug("Copying to %s from %s:%s" % (localpath.decode('utf-8'), self, remotepath.decode('utf-8')))
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-        else:
-            sftp = self._sshclient.open_sftp()
-            if not self._exists(remotepath):
-                raise LinuxServerException("Remote path does not exist: %s" % remotepath.decode('utf-8'))
-            if self._isdir(remotepath):
-                if os.path.exists(localpath):
-                    lname = os.path.join(localpath, os.path.basename(remotepath))
-                    os.makedirs(lname)
-                    self._get_dir_content(remotepath, lname)
-                else:
-                    os.makedirs(localpath)
-                    self._get_dir_content(remotepath, localpath)
-            elif self._isfile(remotepath):
-                attrs = sftp.stat(remotepath)
-                if os.path.exists(localpath):
-                    if os.path.isdir(localpath):
-                        localpath = os.path.join(localpath, os.path.basename(remotepath))
-                    sftp.get(remotepath, localpath)
-                    os.chmod(localpath, attrs.st_mode)
-                else:  # localpath does not exist
-                    sftp.get(remotepath, localpath)
-                    os.chmod(localpath, attrs.st_mode)
+        self._connect()
+        sftp = self._sshclient.open_sftp()
+        if not self._exists(remotepath):
+            raise LinuxServerException("Remote path does not exist: %s" % remotepath.decode('utf-8'))
+        if self._isdir(remotepath):
+            if os.path.exists(localpath):
+                lname = os.path.join(localpath, os.path.basename(remotepath))
+                os.makedirs(lname)
+                self._get_dir_content(remotepath, lname)
+            else:
+                os.makedirs(localpath)
+                self._get_dir_content(remotepath, localpath)
+        elif self._isfile(remotepath):
+            attrs = sftp.stat(remotepath)
+            if os.path.exists(localpath):
+                if os.path.isdir(localpath):
+                    localpath = os.path.join(localpath, os.path.basename(remotepath))
+                sftp.get(remotepath, localpath)
+                os.chmod(localpath, attrs.st_mode)
+            else:  # localpath does not exist
+                sftp.get(remotepath, localpath)
+                os.chmod(localpath, attrs.st_mode)
 
     def check_reboot(self, timeout=None):
         """Reboots the server and checks the time it takes to come up
@@ -600,54 +636,57 @@ class LinuxServer(Server):
 
     def shell(self):
         """Opens remote SSH session"""
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        self._connect()
+        if hwswa2.config['Lportforward']:
+            # failure to do port forwarding is not fatal error
+            server = self.Lportforward(**hwswa2.config['Lportforward'])
+            if not server:
+                print('port forwarding failed, search logs for Lportforward errors')
+        status, result = self.agent_cmd('shell', interactively=True)
+        if hwswa2.config['Lportforward'] and server:
+            server.shutdown()
+        if status:
+            return result
         else:
-            status, result = self.agent_cmd('shell', interactively=True)
-            if status:
-                return result
-            else:
-                logger.error("Execution of shell failed: %s" % result)
-                return 1
+            logger.error("Execution of shell failed: %s" % result)
+            return 1
 
     def agent_start(self):
         """Starts remote agent on server"""
         if self._agent is not None:
             return True
         try:
-            if not self._connect():
-                raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
-            else:
-                serverd_py = os.path.join(hwswa2.config['rscriptdir'], 'bin32', 'serverd.py')
-                # remote path. No need to remove it on exit because script deletes itself.
-                r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp', cleanup_later=False)
-                self.put(serverd_py, r_serverd_py)
-                debugopt = ' -d' if hwswa2.config['remote_debug'] else ''
-                stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py + debugopt, get_pty=True)
+            self._connect()
+            serverd_py = os.path.join(hwswa2.config['resources'], 'serverd.py')
+            # remote path. No need to remove it on exit because script deletes itself.
+            r_serverd_py = self.mktemp(template='serverd.XXXX', ftype='f', path='/tmp', cleanup_later=False)
+            self.put(serverd_py, r_serverd_py)
+            debugopt = ' -d' if hwswa2.config['remote_debug'] else ''
+            stdin, stdout, stderr = self._sshclient.exec_command(r_serverd_py + debugopt, get_pty=True)
+            banner = stdout.readline()
+            if not banner.startswith('started_ok'):
                 banner = stdout.readline()
-                if not banner.startswith('started_ok'):
-                    banner = stdout.readline()
-                logger.debug('remote agent started on %s: %s' % (self, banner))
-                self._agent = {'stdin': stdin,
-                               'stdout': stdout,
-                               'stderr': stderr}
-                sutype = self.account.get('sutype')
-                if sutype:
-                    supassword = self.account.get('supassword')
-                    cmd = 'elevate_' + sutype
-                    if supassword:
-                        cmd += ' ' + aux.shell_escape(supassword)
-                    elevated, reason = self.agent_cmd(cmd)
-                    if elevated:
-                        return True
-                    else:
-                        logger.error("Failed to elevate priviliges: %s" % reason)
-                        try:
-                            self.agent_stop()
-                        except Exception:
-                            pass
-                        return False
-                return True
+            logger.debug('remote agent started on %s: %s' % (self, banner))
+            self._agent = {'stdin': stdin,
+                           'stdout': stdout,
+                           'stderr': stderr}
+            sutype = self.account.get('sutype')
+            if sutype:
+                supassword = self.decrypt_in_account('supassword')
+                cmd = 'elevate_' + sutype
+                if supassword:
+                    cmd += ' ' + aux.shell_escape(supassword)
+                elevated, reason = self.agent_cmd(cmd)
+                if elevated:
+                    return True
+                else:
+                    logger.error("Failed to elevate priviliges: %s" % reason)
+                    try:
+                        self.agent_stop()
+                    except Exception:
+                        pass
+                    return False
+            return True
         except Exception as e:
             logger.error("agent not started, exception %s: %s"
                          % (type(e).__name__, e.args), exc_info=True)
@@ -716,45 +755,36 @@ class LinuxServer(Server):
 
     def agent_console(self):
         """Open agent console"""
-        if not self._connect():
-            raise LinuxServerException("Connection to %s failed: %s" % (self, self._last_connection_error))
+        self._connect()
+        status, result = self.agent_cmd('help', interactively=True)
+        if status:
+            return result
         else:
-            status, result = self.agent_cmd('help', interactively=True)
-            if status:
-                return result
-            else:
-                logger.error("Execution of shell failed: %s" % result)
-                return 1
+            logger.error("Execution of shell failed: %s" % result)
+            return 1
 
     def param_cmd(self, cmd):
-        """Execute cmd in prepared environment to obtain some server parameter
+        """Execute cmd to obtain some server parameter
 
         :param cmd: raw command to execute
         :return: (status, output, failure)
         """
-        if not self._prepare_param_scripts():
-            return False, None, "Remote scripts are not on the server"
-        prefixed_cmd = self._param_cmd_prefix + cmd
         try:
-            output = self.get_cmd_out(prefixed_cmd)
-        except TimeoutException as te:
-            output = te.details.get('output')
-            return False, output, "Timeout exception: %s" % te
+            output = self.get_cmd_out(cmd)
+        except ServerException as se:
+            output = se.details.get('output')
+            stderr = se.details.get('stderr')
+            return False, output, str(se) + ' |STDERR: ' + stderr
         else:
             return True, output, None
 
     def param_script(self, script):
-        """Execute script in prepared environment to obtain some server parameter
+        """Execute script to obtain some server parameter
 
         :param script: script content
         :return: (status, output, failure)
         """
-        if not self._prepare_param_scripts():
-            return False, None, "Remote scripts are not on the server"
-        # no need to include in cleanup sequence because it is inside binpath
-        # inside remote hwswa2 dir which is already in self._tmp
-        scriptpath = self.mktemp(ftype='f', path=self._param_binpath,
-                                 cleanup_later=False)
+        scriptpath = self.mktemp(ftype='f')
         self.write(scriptpath, script)
         self.exec_cmd('chmod +x %s' % scriptpath)
         return self.param_cmd(scriptpath)
