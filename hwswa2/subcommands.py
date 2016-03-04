@@ -359,6 +359,7 @@ def reboot():
                     if name in waiting: waiting.remove(name)
                     if not name in interrupted: interrupted.append(name)
         # show progress: Rebooted | Failed | Interrupted? | Waiting
+        progress = ""
         for (k, v) in [("Rebooted", rebooted), ('Failed', failed),
                 ('Interrupted?', interrupted), ('Waiting', waiting)]:
             if v:
