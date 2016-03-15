@@ -395,6 +395,8 @@ class Server(object):
         """
         if not field in self.account:
             return None
+        if not self.account[field]:
+            return self.account[field]
         if not self.account['encrypted']:
             return self.account[field]
         if not hwswa2.password:
