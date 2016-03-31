@@ -446,7 +446,10 @@ def bulk_exec_cmd():
                 status[name] = queue[name].get()
                 waiting.remove(name)
                 executed.append(name)
-        if executed:  progress = "Executed: " + ', '.join(executed)
+        if executed:
+            progress = "Executed: " + ', '.join(executed)
+        else:
+            progress = ""
         if waiting:
             if progress:  progress += sep
             progress += "Waiting: " + ', '.join(waiting)
