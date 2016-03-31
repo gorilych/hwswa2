@@ -72,6 +72,10 @@ Distribution archive will be stored in pyinstaller/hwswa2.tgz
 Requirements: python >=2.7, virtualenv, gcc + glibc-headers,
 python-dev, libssl-dev, libkrb5-dev, libffi-dev, libyaml-dev ..
 
+on CentOS 6:
+
+sudo yum install gcc python27-scldevel openssl-devel krb5-devel libffi-devel libyaml-devel
+
 Installation
 ------------
 
