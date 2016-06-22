@@ -27,6 +27,7 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
 
    $ yum install python-setuptools
    $ easy_install virtualenv
+   $ easy_install pip
    $ virtualenv --no-site-packages env
    $ source env/bin/activate
 
