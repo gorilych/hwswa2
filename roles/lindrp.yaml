@@ -9,7 +9,6 @@ firewall:
     roles: [linwdg, winwdg]
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 7\.[234]'
-  no_pba_account: { type: regex, value: '^OK' }
   ram(GB): 4
   swap(GB): 8
   cpu-cores: 8
