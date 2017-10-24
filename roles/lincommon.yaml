@@ -89,7 +89,7 @@ requirements:
   networks: { type: networks, value-example: [backnet, frontnet] }
   OS:
     type: regex
-    value-example: '(CentOS|Red Hat Enterprise Linux Server).* 6\.'
+    value-example: '(CentOS|Red Hat Enterprise Linux Server).* 7\.'
     join-rule: and
   architecture: x86_64
   is_admin: true
