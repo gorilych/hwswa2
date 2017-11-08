@@ -1,1 +1,5 @@
 .idea/
+# python compiled
+*.pyc
+# vim temporary
+.*.swp
