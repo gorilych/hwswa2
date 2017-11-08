@@ -7,6 +7,8 @@ firewall:
   networks: [backnet]
   direction: outgoing
   rules:  
+  - ports: 25,465
+    connect_with: {roles: [smtp]}
   - ports: 443
     connect_with: {roles: [aeh]}
   - ports: 389,3268
@@ -27,6 +29,16 @@ firewall:
     connect_with: {roles: [oaci_im]}
   - ports: 48480
     connect_with: {roles: [wpesrvdb, wpesrv]}
+- name: gr_tcp_in_backnet
+  description: Group for incoming connections in backnet
+  group: yes
+  networks: [backnet]
+  direction: incoming
+  rules:
+  - ports: 6308
+    connect_with: {roles: [aeh]}
+  - ports: 8080
+    connect_with: {roles: [deployment_workstation]}
 - name: pa_download
   description: allow access to pa repo
   direction: outgoing

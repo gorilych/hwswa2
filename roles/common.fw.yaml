@@ -1,0 +1,11 @@
+description: common firewall rules
+internal: yes
+firewall:
+- name: dns
+  description: connections to DNS resolvers
+  direction: outgoing
+  networks: [backnet, frontnet]
+  ports: 53
+  proto: [tcp,udp]
+  connect_with: {roles: [resolver]}
+
