@@ -20,7 +20,7 @@ firewall:
 - name: Incoming_to_BALINOS_backnet
   description: Allow access to Online Store
   networks: [backnet]
-  ports: 80,443,8443
+  ports: 80,443
   connect_with:
     roles: [branding, balinfe]
 - name: External_incoming

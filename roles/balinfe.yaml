@@ -24,15 +24,13 @@ firewall:
   rules:
   - ports: 6308,8440
     connect_with: { roles: [linmn] }
-  - ports: 80,443,8443
-    connect_with: { roles: [balinos] }
 - name: outgoing_frontnet
   description: outgoing connections in frontnet
   group: yes
   direction: outgoing
   networks: [frontnet]
   rules:
-  - ports: 21,443,8443,60000-65534
+  - ports: 21,443,60000-65534
     connect_with: { roles: [branding] }
 - name: incoming_backnet
   description: incoming connections in backnet
