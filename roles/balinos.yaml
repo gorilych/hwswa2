@@ -1,5 +1,5 @@
 description: Checks for BALINOS role, linux BA online store
-includes: [ lincommon, lin.oa.managed.fw, baos.fw ]
+includes: [ lincommon, lin.oa.managed.fw ]
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 7\.[234]'
   ram(GB): 1
@@ -9,3 +9,24 @@ requirements:
   /: 90
   networks: [backnet, frontnet]
   cert_baos: { type: manual, value: 'SSL certificate is needed for online store' }
+firewall:
+- name: Outgoing_to_BA
+  description: Allow access from Online Store to BA API
+  direction: outgoing
+  networks: [backnet]
+  ports: 5224
+  connect_with:
+    roles: [balinfe]
+- name: Incoming_to_BALINOS_backnet
+  description: Allow access to Online Store
+  networks: [backnet]
+  ports: 80,443,8443
+  connect_with:
+    roles: [branding, balinfe]
+- name: External_incoming
+  description: Allow access to Online Store from public network
+  networks: [frontnet]
+  ports: 443,8443
+  type: internet
+  connect_with:
+    hosts: any

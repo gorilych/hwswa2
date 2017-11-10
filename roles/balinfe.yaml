@@ -2,16 +2,9 @@ description: >
   Business Automation Application Server on Linux.
   
   Server runs Business Automation components and Business Automation UI.
-includes: [ lincommon, lin.oa.managed.fw, bafe.fw ]
+includes: [ lincommon, lin.oa.managed.fw ]
 parameters:
   no_pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
-firewall:
-- name: incoming_from_wdg
-  description: Allow access to from watchdog
-  networks: [frontnet]
-  ports: 22,443,8443
-  connect_with:
-    roles: [linwdg]
 requirements:
   OS: '(CentOS|Red Hat Enterprise Linux Server).* 7\.[234]'
   no_pba_account: { type: regex, value: '^OK' }
@@ -22,3 +15,48 @@ requirements:
   /boot: 0.2
   /: 180
   networks: [backnet, frontnet]
+firewall:
+- name: outgoing_backnet
+  description: outgoing connections in backnet
+  group: yes
+  direction: outgoing
+  networks: [backnet]
+  rules:
+  - ports: 6308,8440
+    connect_with: { roles: [linmn] }
+  - ports: 80,443,8443
+    connect_with: { roles: [balinos] }
+- name: outgoing_frontnet
+  description: outgoing connections in frontnet
+  group: yes
+  direction: outgoing
+  networks: [frontnet]
+  rules:
+  - ports: 21,443,8443,60000-65534
+    connect_with: { roles: [branding] }
+- name: incoming_backnet
+  description: incoming connections in backnet
+  networks: [backnet]
+  ports: 5224
+  connect_with: 
+    roles: [linmn, balinos]
+- name: incoming_frontnet
+  description: incoming connections in frontnet
+  networks: [frontnet]
+  ports: 443,8443
+  connect_with:
+    roles: [branding, linpps]
+- name: incoming_from_internet
+  description: Allow access to the panel
+  networks: [frontnet]
+  ports: 443,8443
+  type: internet
+  connect_with:
+    hosts: [any]
+- name: incoming_from_wdg
+  description: Allow access to from watchdog
+  networks: [frontnet]
+  ports: 22,443,8443
+  connect_with:
+    roles: [linwdg]
+
