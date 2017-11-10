@@ -16,14 +16,23 @@ requirements:
   /: 180
   networks: [backnet, frontnet]
 firewall:
+- name: incoming_backnet
+  group: yes
+  description: incoming connections in backnet
+  networks: [backnet]
+  rules:
+  - ports: 5224,6308,5432,5643,5743,5843
+    connect_with: { roles: [linmn, linmnapp] }
+  - ports: 5224
+    connect_with: { roles: [balinos] }
 - name: outgoing_backnet
   description: outgoing connections in backnet
   group: yes
   direction: outgoing
   networks: [backnet]
   rules:
-  - ports: 6308,8440
-    connect_with: { roles: [linmn] }
+  - ports: 22,6308,8440
+    connect_with: { roles: [linmn, linmnapp] }
 - name: outgoing_frontnet
   description: outgoing connections in frontnet
   group: yes
@@ -32,12 +41,6 @@ firewall:
   rules:
   - ports: 21,443,60000-65534
     connect_with: { roles: [branding] }
-- name: incoming_backnet
-  description: incoming connections in backnet
-  networks: [backnet]
-  ports: 5224
-  connect_with: 
-    roles: [linmn, balinos]
 - name: incoming_frontnet
   description: incoming connections in frontnet
   networks: [frontnet]

@@ -5,7 +5,7 @@ firewall:
   networks: [backnet]
   ports: 8008
   connect_with:
-    roles: [linmn, vzlin, vzlinbu]
+    roles: [linmn, linmnapp, vzlin, vzlinbu]
 - name: Outgoing_to_BA
   direction: outgoing
   networks: [frontnet]

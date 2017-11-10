@@ -10,7 +10,7 @@ firewall:
     connect_with: {roles: [branding]}
   - networks: [backnet]
     ports: 6308
-    connect_with: {roles: [linmn]}
+    connect_with: {roles: [linmn, linmnapp]}
   - networks: [backnet]
     ports: 5224
     connect_with: {roles: [balinfe]}
@@ -20,7 +20,7 @@ firewall:
 - name: incoming
   networks: [backnet]
   ports: 443
-  connect_with: {roles: [linmn]}
+  connect_with: {roles: [linmn, linmnapp]}
 - name: mosi_crest_graph
   direction: outgoing
   type: internet
