@@ -58,4 +58,14 @@ firewall:
   type: internet
   ports: 80,443
   connect_with: {hosts: [download.automation.odin.com]}
+- name: smtp_relay
+  description: >
+    connection to external SMTP relay.
+
+    This rule will allways fail, it is here to be shown with show-firewall
+  networks: [backnet]
+  direction: outgoing
+  type: internet
+  ports: 25,465
+  connect_with: { hosts: [ smtp.relay ] }
 
