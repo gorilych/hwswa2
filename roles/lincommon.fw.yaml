@@ -7,13 +7,3 @@ firewall:
   networks: [backnet, frontnet]
   ports: 22
   connect_with: {roles: [deployment_workstation]}
-- name: yum
-  description: >
-    connection to external yum repos.
-    
-    This rule will allways fail, it is here to be shown with show-firewall
-  networks: [backnet, frontnet]
-  ports: 80,443
-  direction: outgoing
-  type: internet
-  connect_with: { hosts: [ yum.repos ] }
