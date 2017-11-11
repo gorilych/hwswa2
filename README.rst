@@ -45,13 +45,17 @@ Distribuition is created from git repo with the use of virtualenv and pyinstalle
 
    .. code-block:: shell
 
-      (env)$ which rst2pdf >/dev/null && \
+      (hwswa2)$ which rst2pdf >/dev/null && \
              { for d in README.rst CHANGELOG.rst docs/*rst;
                  do rst2pdf $d; done; }
-      (env)$ pushd .. && rm -rf hwswa2.tgz && \
-             tar zcf hwswa2.tgz hwswa2 && popd
+      (hwswa2)$ PDFs=$(find . -type f -name '*.pdf')
+      (hwswa2)$ git archive --prefix hwswa2/ --format tar --output hwswa2.tar HEAD
+      (hwswa2)$ tar --append -f hwswa2.tar --transform 's,^\.,hwswa2,' ./virtualenv/ $PDFs
+      (hwswa2)$ gzip --to-stdout hwswa2.tar > hwswa2.tgz && rm hwswa2.tar
 
-Distribution archive will be stored in ../hwswa2.tgz
+Distribution archive will be stored in hwswa2.tgz
+
+Alternatively, you can modify build.sh for your needs.
 
 Requirements: python >=2.7, virtualenv, gcc + glibc-headers,
 python-dev, libssl-dev, libkrb5-dev, libffi-dev, libyaml-dev ..
@@ -86,7 +90,7 @@ Installation
    # cp roles/mysql.yaml roles/newrole.yaml
    # vim roles/newrole.yaml
 
-   alias hwswa2="`pwd`/hwswa2/hwswa2 -c `pwd`/cfg/main.cfg -s
+   alias hwswa2="`pwd`/hwswa2/hwswa2.py -c `pwd`/cfg/main.cfg -s
                  `pwd`/cfg/servers.yaml -n `pwd`/cfg/networks.yaml
                  -r `pwd`/reports"
 

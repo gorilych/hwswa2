@@ -23,17 +23,17 @@ source virtualenv/bin/activate
 pip install -r requirements.txt
 virtualenv --relocatable virtualenv
 
-pushd ..
-rm -rf hwswa2.tgz
-tar zcf hwswa2.tgz hwswa2
+PDFs=$(find . -type f -name '*.pdf')
+git archive --prefix hwswa2/ --format tar --output hwswa2.tar HEAD
+tar --append -f hwswa2.tar --transform 's,^\.,hwswa2,' ./virtualenv/ $PDFs
+gzip --to-stdout hwswa2.tar > hwswa2.tgz && rm hwswa2.tar
+
+sudo rm -rf /usr/local/share/hwswa2/* && tar zxf ${HWSWA2dir}/hwswa2.tgz -C /usr/local/share/
+
 popd
 
-sudo rm -rf /usr/local/share/hwswa2/* && tar zxf ${HWSWA2dir}/../hwswa2.tgz -C /usr/local/share/
+scp ${HWSWA2dir}/hwswa2.tgz me@gorilych.ru:/var/www/gorilych.ru/me/
 
-popd
-
-scp ${HWSWA2dir}/../hwswa2.tgz me@gorilych.ru:/var/www/gorilych.ru/me/
-
-echo local copy ${HWSWA2dir}/pyinstaller/hwswa2.tgz
+echo local copy ${HWSWA2dir}/hwswa2.tgz
 echo download from http://gorilych.ru/me/hwswa2.tgz
 
