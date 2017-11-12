@@ -8,12 +8,21 @@ def activate_virtualenv():
     # https://stackoverflow.com/questions/1871549/python-determine-if-running-inside-virtualenv
     if not hasattr(sys, 'real_prefix'):
         activate_this = os.path.dirname(os.path.abspath(__file__)) + os.sep + 'virtualenv' + os.sep + 'bin' + os.sep + 'activate_this.py'
+        python_exe = os.path.dirname(os.path.abspath(__file__)) + os.sep + 'virtualenv' + os.sep + 'bin' + os.sep + 'python'
         execfile(activate_this, dict(__file__=activate_this))
+
+def restart_with_new_python():
+    import os
+    import sys
+    python_exe = os.path.dirname(os.path.abspath(__file__)) + os.sep + 'virtualenv' + os.sep + 'bin' + os.sep + 'python'
+    if not sys.executable == python_exe:
         # restart itself (hwswa2.py), with the same environment and args
         os.execv(__file__, sys.argv)
 
 if __name__ == '__main__':
     activate_virtualenv()
+    restart_with_new_python()
+
 
 # Below script runs in virtualenv always
 #!/usr/bin/env python
