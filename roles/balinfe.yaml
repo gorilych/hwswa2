@@ -11,9 +11,10 @@ requirements:
   ram(GB): 4
   swap(GB): 8
   cpu-cores: 2
-  cpu-frequency: 2.3
+  cpu-frequency: 2.4
   /boot: 0.2
-  /: 180
+  /: 230
+  /var/log: 500
   networks: [backnet, frontnet]
 firewall:
 - name: incoming_backnet
