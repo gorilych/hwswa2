@@ -2,3 +2,4 @@
 .gitignore export-ignore
 build.sh export-ignore
 requirements.txt export-ignore
+.circleci/config.yml export-ignore

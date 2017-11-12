@@ -36,4 +36,3 @@ jobs:
           gzip --to-stdout hwswa2.tar > hwswa2.tgz && rm -f hwswa2.tar
     - store_artifacts:
         path: hwswa2.tgz
-        destination: builds
