@@ -29,11 +29,11 @@ jobs:
         - ./virtualenv
         key: v1-dependencies-{{ checksum "requirements.txt" }}
     - run:
-      name: create distribution archive
-      command: |
-        git archive --prefix hwswa2/ --format tar --output hwswa2.tar HEAD
-        tar --append -f hwswa2.tar --transform 's,^\.,hwswa2,' ./virtualenv/
-        gzip --to-stdout hwswa2.tar > hwswa2.tgz && rm -f hwswa2.tar
+        name: create distribution archive
+        command: |
+          git archive --prefix hwswa2/ --format tar --output hwswa2.tar HEAD
+          tar --append -f hwswa2.tar --transform 's,^\.,hwswa2,' ./virtualenv/
+          gzip --to-stdout hwswa2.tar > hwswa2.tgz && rm -f hwswa2.tar
     - store_artifacts:
-      path: hwswa2.tgz
-      destination: builds
+        path: hwswa2.tgz
+        destination: builds
