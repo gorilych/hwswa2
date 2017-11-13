@@ -13,9 +13,9 @@ jobs:
     - checkout
     - restore_cache:
         keys:
-        - v2-dependencies-{{ checksum "requirements.txt" }}
+        - v3-dependencies-{{ checksum "requirements.txt" }}
         # fallback to using the latest cache if no exact match is found
-        - v2-dependencies-
+        - v3-dependencies-
     - run:
         name: create virtualenv
         command: |
@@ -27,11 +27,11 @@ jobs:
           source virtualenv/bin/activate
           pip install -r requirements.txt
           virtualenv --relocatable virtualenv
-          find virtualenv -name '*.pyc' -delete
+          find virtualenv \( -name '*.pyc' -o -name '*.pyo' \) -delete
     - save_cache:
         paths:
         - ./virtualenv
-        key: v2-dependencies-{{ checksum "requirements.txt" }}
+        key: v3-dependencies-{{ checksum "requirements.txt" }}
     - run:
         name: create PDFs
         command: |
