@@ -4,7 +4,7 @@ firewall:
 - name: incoming
   networks: [backnet]
   ports: 64000,22
-  connect_with: {roles: [oaci_bn_vz, oaci_vz]}
+  connect_with: {roles: [oacivzbn, oacivz]}
 requirements:
   OS: 'Virtuozzo Linux release 7\.'
   ram(GB): 2

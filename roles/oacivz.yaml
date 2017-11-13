@@ -4,7 +4,7 @@ firewall:
 - name: incoming
   networks: [backnet]
   ports: 64000,22
-  connect_with: {roles: [oaci_bn_vz, oaci_vz]}
+  connect_with: {roles: [oacivzbn, oacivz]}
 - name: public_vnc
   type: internet
   ports: 5800-6800

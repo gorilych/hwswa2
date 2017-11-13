@@ -27,7 +27,7 @@ firewall:
   - ports: 4433-4435
     connect_with: {roles: [vzlin, vzlinbu]}
   - ports: 4432
-    connect_with: {roles: [oaci_im]}
+    connect_with: {roles: [oaciim]}
   - ports: 48480
     connect_with: {roles: [wpesrvdb, wpesrv]}
   - ports: 9444

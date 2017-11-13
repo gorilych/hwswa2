@@ -7,9 +7,9 @@ firewall:
   networks: [backnet]
   rules:
   - ports: 22,5432
-    connect_with: {roles: [oaci_imdb]}
+    connect_with: {roles: [oaciimdb]}
   - ports: 64000
-    connect_with: {roles: [oaci_bn_vz, oaci_vz]}
+    connect_with: {roles: [oacivzbn, oacivz]}
 - name: from_mn
   networks: [backnet]
   ports: 4465

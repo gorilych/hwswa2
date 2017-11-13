@@ -27,7 +27,7 @@ firewall:
     ports: 8008
   - connect_with: { roles: [balinos] }
     ports: 80,443
-  - connect_with: { roles: [oaci_vz] }
+  - connect_with: { roles: [oacivz] }
     ports: 80
 - name: in_frontnet
   description: Incoming connections in frontnet
