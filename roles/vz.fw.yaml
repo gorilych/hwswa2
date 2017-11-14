@@ -7,11 +7,9 @@ firewall:
   type: internet
   group: yes
   rules:
-  - ports: 5224
+  - ports: 5224,7050
     connect_with: {hosts: [ka.virtuozzo.com]}
   - ports: 80,443
-    connect_with: {hosts: [repo.virtuozzo.com, vzdownload.swsoft.com]}
+    connect_with: {hosts: [repo.virtuozzo.com, vzdownload.swsoft.com, vzup2date.parallels.com]}
   - ports: 8443
     connect_with: {hosts: [subscription.virtuozzo.com]}
-requirements:
-  CPUVTfeatures: { type: neq, value: '' }
