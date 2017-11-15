@@ -5,6 +5,7 @@ description: >
 
   https://download.automation.odin.com/oa/7.2/oapremium/portal/en/hardware_requirements/61814.htm
   https://download.automation.odin.com/oa/7.2/oapremium/portal/en/firewall_configuration/63152.htm
+  http://download.automation.odin.com/poa/Office365_APS2/doc/93734.htm
 includes: [ lincommon, lin.oa.managed.fw ]
 parameters:
   no_pba_account: getent passwd pba >/dev/null 2>&1 && echo NOK, pba account exist || echo OK, pba account does not exist
@@ -28,7 +29,7 @@ firewall:
   - ports: 5224,6308,5432,5643,5743,5843
     connect_with: { roles: [linmn, linmnapp] }
   - ports: 5224
-    connect_with: { roles: [balinos] }
+    connect_with: { roles: [balinos,branding,linuibr] }
 - name: outgoing_backnet
   description: outgoing connections in backnet
   group: yes
