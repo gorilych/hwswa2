@@ -30,3 +30,8 @@ firewall:
     ports: 80
   - connect_with: {roles: [oacivz]}
     ports: 64000
+- name: to_apsc
+  direction: outgoing
+  networks: [backnet]
+  connect_with: {roles: [linmn, linmnapp]}
+  ports: 6308
