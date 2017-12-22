@@ -16,3 +16,11 @@ firewall:
   - ports: 22,15432,9000,9898
   - ports: 9694
     protos: [udp]
+- name: outgoing_to_mn
+  group: yes
+  networks: [backnet]
+  connect_with: { roles: [linmnapp] }
+  rules:
+  - ports: 22,9000,9898
+  - ports: 9694
+    protos: [udp]
