@@ -13,6 +13,8 @@ Automatization of hardware/software check
 Creating distribution
 ---------------------
 
+TEST CI
+
 Distribuition is created from git repo with the use of virtualenv and pyinstaller.
 
 1. Obtain the latest source
