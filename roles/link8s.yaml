@@ -1,0 +1,40 @@
+description: >
+  Kubernetes master node
+
+  https://download.automation.odin.com/oa/7.3/oapremium/portal/en/gdpr_compliance_guide/97923.htm
+  https://download.automation.odin.com/oa/7.2/oapremium/portal/en/firewall_configuration/63151.htm
+includes: [ lincommon, lin.oa.managed.fw ]
+requirements:
+  OS: '(CentOS|Red Hat Enterprise Linux Server).* 7\.[456789]'
+  ram(GB): 6
+  cpu-frequency: 2
+  cpu-cores: 4
+  /: 10
+  /var/lib: 60
+  /var/log: 90
+  networks: [backnet]
+firewall:
+- name: with_mn
+  group: yes
+  networks: [backnet]
+  connect_with:
+    roles: [linmn, linmnapp]
+  rules:
+  - ports: 6443,8081
+  - ports: 53
+    protos: [TCP, UDP]
+  - direction: outgoing
+    ports: 6308,8081
+  ports: 6443,8081
+- name: with_mn_db
+  direction: outgoing
+  networks: [backnet]
+  connect_with:
+    roles: [linmn, linmndb]
+  ports: 5432
+- name: with_proxy
+  direction: outgoing
+  networks: [backnet]
+  connect_with:
+    roles: [linpps]
+  ports: 8008
