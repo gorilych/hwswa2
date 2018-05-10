@@ -21,6 +21,13 @@ firewall:
   ports: 5224
   connect_with:
     roles: [balinfe]
+- name: Outgoing_to_MN
+  description: Allow access from Online Store to Webgate service on MN
+  direction: outgoing
+  networks: [backnet]
+  ports: 8080
+  connect_with:
+    roles: [linmn, linmnapp]
 - name: Incoming_to_BALINOS_backnet
   description: Allow access to Online Store
   networks: [backnet]
